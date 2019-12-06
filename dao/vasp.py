@@ -70,3 +70,4 @@ class VaspWriter(object):
                 incar.write(str(key) + '=' + str(default_options[key]) + '\n')
 
         incar.close()
+

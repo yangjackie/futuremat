@@ -9,6 +9,7 @@ from pymatgen import Structure
 import os
 
 from dao.vasp import VaspWriter
+from settings import MPRest_key
 
 A_site_list = [['Li', 'Na', 'K', 'Rb', 'Cs'], ['Li', 'Na', 'K', 'Rb', 'Cs'], ['Mg', 'Ca', 'Sr', 'Ba'],
                ['Li', 'Na', 'K', 'Rb', 'Cs']]
@@ -39,10 +40,8 @@ default_bulk_optimisation_set = {'SYSTEM': 'entdecker',
                                  'SIGMA': '0.05',
                                  'ENCUT': '500'}
 
-try:
-    os.environ['MPRest_key']
-except KeyError:
-    raise Exception("Rest service key to Materials Project needed to connect to the database!")
+if MPRest_key=="":
+    raise Exception("Rest service key to Materials Project needed to connect to the database! Please set it in setting.py")
 
 # Connect to the Materials Project to find out the lowest energy structure for the elemental phase of the solid
 # and set up a set of folders for the geometry optimisations accordingly.
