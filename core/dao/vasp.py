@@ -1,5 +1,11 @@
 import warnings
 
+from pymatgen.core.structure import IStructure as pymatstructure
+import settings
+
+from core.internal.builders.crystal import map_pymatgen_IStructure_to_crystal
+from core.models.element import pbe_pp_choices
+
 default_ionic_optimisation_set = {
     'SYSTEM': 'entdecker',
     'PREC': 'Normal',
@@ -71,3 +77,27 @@ class VaspWriter(object):
 
         incar.close()
 
+    def write_potcar(self, crystal, filename='POTCAR', sort=False, unique=True):
+        if settings.functional is not None:
+            if settings.functional.lower() == 'pbe':
+                pass
+            else:
+                raise NotImplementedError("Current implementation will only concatenate PAW pseudopotential for PBE!")
+        else:
+            raise Exception("Please specify in the default configuration where to find VASP PAW pseudopotential files!")
+
+        if isinstance(crystal, pymatstructure):
+            crystal=map_pymatgen_IStructure_to_crystal(crystal)
+
+        all_atoms = crystal.all_atoms(sorted=sort,unqiue=unique)
+        all_atom_label = [i.clean_label for i in all_atoms]
+
+        potcars = [settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '/POTCAR' for e in
+                   all_atom_label]
+
+        with open(filename, 'w') as outfile:
+            for fn in potcars:
+                with open(fn) as infile:
+                    for line in infile:
+                        if ('Zr' in fn) and ('VRHFIN' in line): line = '   VRHFIN =Zr: 4s4p5s4d\n'
+                        outfile.write(line)

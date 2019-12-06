@@ -8,7 +8,7 @@ from pymatgen.ext.matproj import MPRester
 from pymatgen import Structure
 import os
 
-from dao.vasp import VaspWriter
+from core.dao.vasp import VaspWriter
 from settings import MPRest_key
 
 A_site_list = [['Li', 'Na', 'K', 'Rb', 'Cs'], ['Li', 'Na', 'K', 'Rb', 'Cs'], ['Mg', 'Ca', 'Sr', 'Ba'],
@@ -45,7 +45,7 @@ if MPRest_key=="":
 
 # Connect to the Materials Project to find out the lowest energy structure for the elemental phase of the solid
 # and set up a set of folders for the geometry optimisations accordingly.
-mpr = MPRester(os.environ['MPRest_key'])
+mpr = MPRester(MPRest_key)
 for element in all_elements_list:
     qs = mpr.query(criteria={"elements": {"$all": [element]}, "nelements": 1},
                    properties=["material_id", "pretty_formula", "formation_energy_per_atom", "cif", "input.kpoints"])
@@ -67,7 +67,8 @@ for element in all_elements_list:
     os.chdir(wd)
 
     # POSCAR
-    poscar = Structure.from_str(lowest_cif, fmt="cif").to(fmt="poscar")
+    structure = Structure.from_str(lowest_cif, fmt="cif")
+    poscar = structure.to(fmt="poscar")
     f = open('POSCAR', 'w')
     for l in poscar:
         f.write(l)
@@ -77,7 +78,7 @@ for element in all_elements_list:
     kpoints = lowest_k
     kpoints.write_file('KPOINTS')
 
-    # INCAR
+    # INCAR and POSCAR
     VaspWriter().write_INCAR(default_options=default_bulk_optimisation_set)
-
+    VaspWriter().write_potcar(structure)
     os.chdir(cwd)

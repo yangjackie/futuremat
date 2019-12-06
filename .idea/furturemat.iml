@@ -5,4 +5,7 @@
     <orderEntry type="jdk" jdkName="Remote Python 3.6.7 (sftp://jy8620@raijin.nci.org.au:22/apps/python3/3.6.7/bin/python3)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="PyDocumentationSettings">
+    <option name="renderExternalDocumentation" value="true" />
+  </component>
 </module>
