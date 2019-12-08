@@ -367,7 +367,7 @@ class VaspWriter(object):
         if type(filename) == str:
             f.close()
 
-    def write_KPOINTS(self, crystal, filename='KPOINTS', MP_points=None, grid=0.04, molecular=False):
+    def write_KPOINTS(self, crystal, filename='KPOINTS', MP_points=None, grid=0.025, molecular=False):
         kpoint_file = open(filename, 'w')
         kpoint_file.write("KPOINTS created by Entdecker Program\n")
         kpoint_file.write('0\n')

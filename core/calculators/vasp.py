@@ -196,8 +196,15 @@ class Vasp(Calculator):
         self.writer = VaspWriter()
         #self.reader = VaspReader()
         self.set_incar_params(**kwargs)
-        self.set_mp_grid_density(**kwargs)
         self.set_executable(**kwargs)
+        self.set_mp_grid_density(**kwargs)
+        self.completed = False
+        self.self_consistency_error = False
+
+        try:
+            self.clean_after_success = kwargs['clean_after_success']
+        except KeyError:
+            self.clean_after_success = True
 
     def set_mp_grid_density(self, **kwargs):
         if 'mp_grid_density' in kwargs.keys():
@@ -224,10 +231,20 @@ class Vasp(Calculator):
         INCAR and KPOINT files
         """
         self.writer.write_potcar(self.crystal, sort=False, unique=True)
-        self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density)
+
+        #Check if there is already a KPOINTS file exists, for example, use the setting from
+        # a previous calculation or database record, then skip writing our own KPOINTS file
+        # An extra check will be done to see if wwe will be running Gamma only calculation
+        if not os.path.isfile('./KPOINTS'):
+            self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density)
+        else:
+            f=open('./KPOINTS','r')
+            for l in f.readlines():
+                if '1 1 1' in l:
+                    self.crystal.gamma_only = True
 
         #update the vasp executable depending on the k-Point settings
-        if self.crystal.gamma_only is True:
+        if (self.crystal.gamma_only is True) and ('tst' not in self.executable):
             self.executable = 'vasp_gam'
         else:
             if self.executable == 'vasp_gam':
@@ -235,13 +252,11 @@ class Vasp(Calculator):
 
         self.writer.write_INCAR('INCAR', default_options=self.incar_params)
 
-
     def tear_down(self):
         """
         Clean up the calculation folder after VASP finishes execution
         """
-        files = ['CHG', 'CHGCAR', 'CONTCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR',
-                 'PROCAR', 'LOCPOT']
+        files = ['CHG', 'CHGCAR',  'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT']
         for f in files:
             try:
                 os.remove(f)
@@ -250,13 +265,26 @@ class Vasp(Calculator):
 
     def run(self):
         cmd = 'mpirun '+self.executable
-        #os.system("module unload intel-mpi/4.1.1.036")
-        #os.system("module load openmpi/1.10.2")
         exitcode = os.system('%s > %s' % (cmd, 'vasp.log'))
         if exitcode != 0:
             raise RuntimeError('Vasp exited with exit code: %d.  ' % exitcode)
 
+    def check_status(self):
+        """
+        Read the VASP output file to check the termination status of VASP calculation.
+        """
+        #this should go to dao instead?
+        f=open('./OUTCAR','r')
+        for l in f.readlines():
+            if 'General timing and accounting informations for this job:' in l:
+                self.completed = True
+            elif 'Call to ZHEGV failed' in l:
+                self.self_consistency_error = True
+
     def execute(self):
         self.setup()
         self.run()
-        self.tear_down()
+        self.check_status()
+
+        if self.completed and self.clean_after_success:
+            self.tear_down()

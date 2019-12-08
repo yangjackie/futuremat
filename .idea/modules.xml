@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/furturemat.iml" filepath="$PROJECT_DIR$/.idea/furturemat.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/futuremat.iml" filepath="$PROJECT_DIR$/.idea/futuremat.iml" />
     </modules>
   </component>
 </project>

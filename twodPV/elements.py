@@ -56,8 +56,8 @@ for element in all_elements_list:
     f.close()
 
     ## KPOINTS
-    #kpoints = lowest_k
-    #kpoints.write_file('KPOINTS')
+    kpoints = lowest_k
+    kpoints.write_file('KPOINTS')
 
     ## INCAR and POSCAR
     #VaspWriter().write_INCAR(default_options=default_bulk_optimisation_set)
