@@ -1,7 +1,7 @@
 from libc.math cimport sin, cos
 from math import pi,pow
-from core.models.vector3d cimport cVector3D
-from core.models.matrix3d cimport cMatrix3D
+from vector3d cimport cVector3D
+from matrix3d cimport cMatrix3D
 
 cdef class Lattice:
     cdef double parameters[6], _vectors[3][3], _inv_vectors[3][3]
@@ -346,8 +346,8 @@ cdef class Lattice:
         :param int n_c: How far along the :math:`c` lattice direction to go.
         :return: A nested list of all the translation vectors in fractional sapce.
         """
-        return [cVector3D(*[i, j, k]) for i in xrange(-1 * n_a, n_a + 1) for j in xrange(-1 * n_b, n_b + 1) for k in
-                xrange(-1 * n_c, n_c + 1)]
+        return [cVector3D(*[i, j, k]) for i in range(-1 * n_a, n_a + 1) for j in range(-1 * n_b, n_b + 1) for k in
+                range(-1 * n_c, n_c + 1)]
 
     @staticmethod
     def isotropic_grid(n):

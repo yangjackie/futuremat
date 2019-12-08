@@ -20,25 +20,6 @@ all_elements_list = list(itertools.chain(*[A_site_list, B_site_list, C_site_list
 all_elements_list = list(itertools.chain(*all_elements_list))
 all_elements_list = list(set(all_elements_list))
 
-default_bulk_optimisation_set = {'SYSTEM': 'entdecker',
-                                 'ADDGRID': '.TRUE.',
-                                 'AMIN': '0.01',
-                                 'EDIFF': '1e-05',
-                                 'IALGO': '38',
-                                 'IBRION': '2',
-                                 'ISIF': '3',
-                                 'ISMEAR': '0',
-                                 'ISPIN': '2',
-                                 'ISTART': '1',
-                                 'ISYM': '0',
-                                 'LCHARG': '.FALSE.',
-                                 'LREAL': '.FALSE.',
-                                 'LVTOT': '.FALSE.',
-                                 'LWAVE': '.FALSE.',
-                                 'NSW': '1500',
-                                 'PREC': 'Normal',
-                                 'SIGMA': '0.05',
-                                 'ENCUT': '500'}
 
 if MPRest_key=="":
     raise Exception("Rest service key to Materials Project needed to connect to the database! Please set it in setting.py")
@@ -74,11 +55,12 @@ for element in all_elements_list:
         f.write(l)
     f.close()
 
-    # KPOINTS
-    kpoints = lowest_k
-    kpoints.write_file('KPOINTS')
+    ## KPOINTS
+    #kpoints = lowest_k
+    #kpoints.write_file('KPOINTS')
 
-    # INCAR and POSCAR
-    VaspWriter().write_INCAR(default_options=default_bulk_optimisation_set)
-    VaspWriter().write_potcar(structure)
+    ## INCAR and POSCAR
+    #VaspWriter().write_INCAR(default_options=default_bulk_optimisation_set)
+    #VaspWriter().write_potcar(structure)
+
     os.chdir(cwd)

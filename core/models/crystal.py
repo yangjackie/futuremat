@@ -38,6 +38,9 @@ class Crystal(object):
         ## set up the crystal for each atoms in the crystal
         #self.__link_crystal_to_atoms()
 
+        # check if the MP-k point for this crystal contains only gamma point
+        self.gamma_only = False
+
     def copy(self):
         return self.__class__(self.lattice.copy(), [m.copy() for m in self.asymmetric_unit], self.space_group)
 
@@ -53,7 +56,7 @@ class Crystal(object):
             for atom in molecule.atoms:
                 atom.crystal = self
 
-    def all_atoms(self, sorted=True, unqiue=True):
+    def all_atoms(self, sort=True, unique=True):
         """
         Method to retrieve all atoms in the asymmetric unit of the crystal as a flattened list.
         This is useful, for example, when trying to retrieve all atoms in the unit cell
@@ -67,17 +70,17 @@ class Crystal(object):
             for atom in mol.atoms:
                 all_atoms.append(atom)
 
-        if not unqiue:
-            if sorted:
+        if not unique:
+            if sort:
                 all_atoms.sort(key=lambda x: x.label, reverse=False)
-            if not sorted:
+            if not sort:
                 pass
         else:
             _unique_atoms=[]
             for a in all_atoms:
                 if a not in _unique_atoms:
                     _unique_atoms.append(a)
-            all_atoms=copy.deepcopy(_unique_atoms)
+            all_atoms=_unique_atoms
 
         return all_atoms
 
@@ -90,3 +93,4 @@ class Crystal(object):
         """
         labels = [x.label for x in self.all_atoms()]
         return dict((x,labels.count(x)) for x in set(labels))
+

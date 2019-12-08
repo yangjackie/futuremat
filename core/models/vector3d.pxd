@@ -1,4 +1,4 @@
-from core.models.matrix3d cimport cMatrix3D
+from matrix3d cimport cMatrix3D
 
 cdef class cVector3D:
     cdef double xyz[3]

@@ -1,5 +1,5 @@
-from entdecker.core.models import Atom
-from entdecker.core.models.vector3d import cVector3D
+from core.models import Atom
+from core.models.vector3d import cVector3D
 from fractions import Fraction
 
 
