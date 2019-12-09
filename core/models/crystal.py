@@ -36,7 +36,7 @@ class Crystal(object):
         self.space_group = space_group
 
         ## set up the crystal for each atoms in the crystal
-        #self.__link_crystal_to_atoms()
+        self.__link_crystal_to_atoms()
 
         # check if the MP-k point for this crystal contains only gamma point
         self.gamma_only = False

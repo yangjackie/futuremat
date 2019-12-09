@@ -233,6 +233,7 @@ class VaspReader(FileReader):
         crystal = Crystal(lattice=Lattice.from_lattice_vectors(lattice_vectors),
                           asymmetric_unit=[Molecule(atoms=_atoms)],
                           space_group=CrystallographicSpaceGroups.get(1))  # all vasp input assumes P1
+
         return crystal
 
 class VaspWriter(object):
@@ -301,7 +302,7 @@ class VaspWriter(object):
         # Write atom positions in scaled or cartesian coordinatesq
 
         # Get all atoms and corresponding symbols
-        all_atoms = crystal.all_atoms(sorted=sort)
+        all_atoms = crystal.all_atoms(sort=sort)
         all_atom_label = [i.clean_label for i in all_atoms]
         # all_unqiue_labels = list(set([i.clean_label for i in all_atoms]))
         if sort:
@@ -353,15 +354,13 @@ class VaspWriter(object):
         else:
             f.write('Cartesian\n')
 
-        cform = ' %19.16f'
-
         #print 'In vasp writer, how many atoms '+str(len(all_atoms))
         for iatom, atom in enumerate(all_atoms):
             for i in range(3):
                 if direct:
-                    f.write(cform % atom.scaled_position[i])
+                    f.write(' %19.16f'% atom.scaled_position[i])
                 else:
-                    f.write(cform % atom.position[i])
+                    f.write(' %19.16f'% atom.position[i])
             f.write('\n')
 
         if type(filename) == str:

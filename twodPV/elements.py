@@ -1,6 +1,7 @@
 """
 The elements module, holding lists of elements that will goes into
-the A, B and C sites of an inorganic perovskite
+the A, B and C sites of an inorganic perovskite. This module contains
+code that will set up the calculation folder for each element involved.
 
 """
 import itertools

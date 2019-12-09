@@ -1,4 +1,7 @@
 import os
+import logging
+
+logger = logging.getLogger("futuremat.core.calculators.vasp")
 
 from core.calculators.abstract_calculator import Calculator
 from core.dao.vasp import *
@@ -194,7 +197,7 @@ class Vasp(Calculator):
 
     def __init__(self, **kwargs):
         self.writer = VaspWriter()
-        #self.reader = VaspReader()
+        # self.reader = VaspReader()
         self.set_incar_params(**kwargs)
         self.set_executable(**kwargs)
         self.set_mp_grid_density(**kwargs)
@@ -207,10 +210,15 @@ class Vasp(Calculator):
             self.clean_after_success = True
 
     def set_mp_grid_density(self, **kwargs):
+        self.mp_grid_density = None
+        self.MP_points = None
         if 'mp_grid_density' in kwargs.keys():
             self.mp_grid_density = kwargs['mp_grid_density']
         else:
-            self.mp_grid_density = 0.04
+            if 'MP_points' in kwargs.keys():
+                self.MP_points = kwargs['MP_points']
+            else:
+                self.mp_grid_density = 0.04
 
     def set_incar_params(self, **kwargs):
         self.incar_params = {}
@@ -218,45 +226,63 @@ class Vasp(Calculator):
             if key.lower() in all_incar_keys:
                 self.incar_params[key.lower()] = kwargs[key]
 
-    def set_executable(self,**kwargs):
+    def set_executable(self, **kwargs):
         if 'executable' not in kwargs.keys():
             self.executable = 'vasp_std'
         else:
-            assert kwargs['executable'] in ['vasp_gam','vasp_std-tst-xy','vasp_std-tst-xz','vasp_std-tst-yz']
+            assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-tst-xy', 'vasp_std-tst-xz', 'vasp_std-tst-yz']
             self.executable = kwargs['executable']
+
+    def _update_executable(self):
+        # update the vasp executable depending on the k-Point settings
+        if (self.crystal.gamma_only is True) and ('tst' not in self.executable):
+            logger.info("Using gamma only version VASP for calculations @ Gamma point only.")
+            self.executable = 'vasp_gam'
+        else:
+            if self.executable == 'vasp_gam':
+                self.executable = 'vasp_std'
+        logger.info("VASP calculation to be executed with the following binary: " + str(self.executable))
 
     def setup(self):
         """
         This methods set up a VASP calculation for a given crystal, including writing out the POTCAR,
         INCAR and KPOINT files
         """
-        self.writer.write_potcar(self.crystal, sort=False, unique=True)
+        logger.info('Setting up VASP calculation, write input file ...')
 
-        #Check if there is already a KPOINTS file exists, for example, use the setting from
+        self.writer.write_structure(self.crystal, filename='POSCAR')
+        logger.info('POSCAR written')
+
+        self.writer.write_potcar(self.crystal, sort=False, unique=True)
+        logger.info('POTCAR written')
+
+        # Check if there is already a KPOINTS file exists, for example, use the setting from
         # a previous calculation or database record, then skip writing our own KPOINTS file
         # An extra check will be done to see if wwe will be running Gamma only calculation
+        self._setup_kpoints()
+        self._update_executable()
+
+        self.writer.write_INCAR('INCAR', default_options=self.incar_params)
+        logger.info("INCAR written")
+
+    def _setup_kpoints(self):
         if not os.path.isfile('./KPOINTS'):
-            self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density)
+            logger.info('No existing KPOINTS file, autogenerate Monkhorst-Pack K-point with density of ' + str(
+                self.mp_grid_density) + ' A^-1.')
+            self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density, MP_points=self.MP_points)
         else:
-            f=open('./KPOINTS','r')
+            logger.info('Found existing KPOINTS, using previous set up')
+            f = open('./KPOINTS', 'r')
             for l in f.readlines():
                 if '1 1 1' in l:
                     self.crystal.gamma_only = True
-
-        #update the vasp executable depending on the k-Point settings
-        if (self.crystal.gamma_only is True) and ('tst' not in self.executable):
-            self.executable = 'vasp_gam'
-        else:
-            if self.executable == 'vasp_gam':
-                self.executable = 'vasp_std'
-
-        self.writer.write_INCAR('INCAR', default_options=self.incar_params)
 
     def tear_down(self):
         """
         Clean up the calculation folder after VASP finishes execution
         """
-        files = ['CHG', 'CHGCAR',  'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT']
+        logger.info("Clean up directory after VASP executed successfully.")
+        files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT']
         for f in files:
             try:
                 os.remove(f)
@@ -264,7 +290,8 @@ class Vasp(Calculator):
                 pass
 
     def run(self):
-        cmd = 'mpirun '+self.executable
+        logger.info("Start executing VASP")
+        cmd = 'mpirun ' + self.executable
         exitcode = os.system('%s > %s' % (cmd, 'vasp.log'))
         if exitcode != 0:
             raise RuntimeError('Vasp exited with exit code: %d.  ' % exitcode)
@@ -273,13 +300,16 @@ class Vasp(Calculator):
         """
         Read the VASP output file to check the termination status of VASP calculation.
         """
-        #this should go to dao instead?
-        f=open('./OUTCAR','r')
+        # this should go to dao instead?
+        f = open('./OUTCAR', 'r')
         for l in f.readlines():
             if 'General timing and accounting informations for this job:' in l:
                 self.completed = True
             elif 'Call to ZHEGV failed' in l:
                 self.self_consistency_error = True
+        logger.info("VASP calculation completed successfully? "+str(self.completed))
+        if not self.completed:
+            logger.info("VASP crashed out due to error in SCF cycles: "+str(self.self_consistency_error))
 
     def execute(self):
         self.setup()
