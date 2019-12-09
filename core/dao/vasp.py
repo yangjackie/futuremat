@@ -1,4 +1,5 @@
 import warnings
+import logging
 
 from pymatgen.core.structure import IStructure as pymatstructure
 import settings
@@ -7,6 +8,9 @@ from core.internal.builders.crystal import map_pymatgen_IStructure_to_crystal, e
 from core.models.element import pbe_pp_choices
 from core.models import *
 from core.dao.abstract_io import *
+
+logger = logging.getLogger("futuremat.core.dao.vasp")
+
 
 default_ionic_optimisation_set = {
     'SYSTEM': 'entdecker',
@@ -261,7 +265,7 @@ class VaspWriter(object):
                 incar.write(str(key).upper() + ' = ' + str(default_options[key]).upper() + '\n')
         incar.close()
 
-    def write_potcar(self, crystal, filename='POTCAR', sort=False, unique=True):
+    def write_potcar(self, crystal, filename='POTCAR', sort=True, unique=True):
         if settings.functional is not None:
             if settings.functional.lower() == 'pbe':
                 pass
@@ -273,14 +277,24 @@ class VaspWriter(object):
         if isinstance(crystal, pymatstructure):
             crystal=map_pymatgen_IStructure_to_crystal(crystal)
 
-        _all_atoms = crystal.all_atoms(sort=sort,unique=unique)
-        all_atom_label = [i.clean_label for i in _all_atoms]
+        _all_atoms = crystal.all_atoms(unique=unique)
+        _all_atom_label = [i.clean_label for i in _all_atoms]
+        all_atom_label = []
+
+        if unique:
+            for l in _all_atom_label:
+                if l not in all_atom_label:
+                    all_atom_label.append(l)
+        else:
+            all_atom_label = _all_atom_label
+
 
         potcars = [settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '/POTCAR' for e in
                    all_atom_label]
 
         with open(filename, 'w') as outfile:
             for fn in potcars:
+                logger.info("Getting pseudopotential "+fn)
                 with open(fn) as infile:
                     for line in infile:
                         if ('Zr' in fn) and ('VRHFIN' in line): line = '   VRHFIN =Zr: 4s4p5s4d\n'

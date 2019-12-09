@@ -307,9 +307,9 @@ class Vasp(Calculator):
                 self.completed = True
             elif 'Call to ZHEGV failed' in l:
                 self.self_consistency_error = True
-        logger.info("VASP calculation completed successfully? "+str(self.completed))
+        logger.info("VASP calculation completed successfully?     "+str(self.completed))
         if not self.completed:
-            logger.info("VASP crashed out due to error in SCF cycles: "+str(self.self_consistency_error))
+            logger.info("VASP crashed out due to error in SCF cycles? "+str(self.self_consistency_error))
 
     def execute(self):
         self.setup()

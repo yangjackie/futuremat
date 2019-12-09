@@ -18,6 +18,12 @@ class PBS(Scheduler):
                dry_run: bool = False) -> None:
         nodelist = config['nodes']
         nodes, nodename, nodedct = task.resources.select(nodelist)
+
+        #this is a hack to interact with our own code to find out
+        #which node has this job been submitted to
+        f = open(str(task.folder)+'/node_info','w')
+        f.write(nodename+'\n')
+        f.close()
    
         nodelist = config['nodes']
         for i in nodelist:

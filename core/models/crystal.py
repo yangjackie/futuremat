@@ -62,7 +62,6 @@ class Crystal(object):
         This is useful, for example, when trying to retrieve all atoms in the unit cell
         for the crystal structure to be written out in the input file for DFT calculations,
         after the crystal has been converted to P1.
-
         :return: A list of all atoms in the asymmetric unit.
         """
         all_atoms = []

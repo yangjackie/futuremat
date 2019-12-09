@@ -93,7 +93,7 @@ def make_distorted_structures_from_optimised():
                         crystal.lattice.beta = crystal.lattice.beta * (1 + random.randrange(-100, 100) / 500)
                         crystal.lattice.gamma = crystal.lattice.gamma * (1 + random.randrange(-100, 100) / 500)
 
-                        wd = cwd + '/' + A_site_list[i][j] + B_site_list[i][k] + C_site_list[i][
+                        wd = cwd + '/relax_randomized/' + A_site_list[i][j] + B_site_list[i][k] + C_site_list[i][
                             l] + '_full_relax_rand_' + str(c) + '/'
                         if not os.path.exists(wd):
                             os.makedirs(wd)

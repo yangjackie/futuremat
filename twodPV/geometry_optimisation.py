@@ -29,6 +29,19 @@ _default_bulk_optimisation_set = {'ADDGRID': True,
 
 default_bulk_optimisation_set = {key.lower(): value for key, value in _default_bulk_optimisation_set.items()}
 
+def __update_core_info():
+    try:
+        f=open('node_info','r')
+        for l in f.readlines():
+            if 'normalbw' in l:
+                ncpus=28
+            elif 'normalsl' in l:
+                ncpus=32
+            else:
+                ncpus=16
+        default_bulk_optimisation_set.update({'NPAR':ncpus})
+    except:
+        pass
 
 def default_structural_optimisation():
     """
@@ -38,6 +51,9 @@ def default_structural_optimisation():
     mq submit twodPV.geometry_optimisation@default_structural_relaxation -R <resources> opt/
     """
     logger = setup_logger(output_filename='relax.log')
+
+    #TODO figure out the number of cores per node and update NPAR/KPAR values
+    __update_core_info()
 
     try:
         os.remove("./WAVECAR")
@@ -66,7 +82,7 @@ def default_structural_optimisation():
         # then use the converged wavefunction to carry out spin-polarised optimisation
         logger.info(
             "Spin-polarised SCF convergence failed, try generate a non-spin-polarised wavefunction as starting guess")
-        default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 5, 'LWAVE': True, 'clean_after_success': False})
+        default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 1, 'LWAVE': True, 'clean_after_success': False})
         vasp = Vasp(**default_bulk_optimisation_set)
         vasp.set_crystal(structure)
         vasp.execute()
@@ -80,7 +96,7 @@ def default_structural_optimisation():
             vasp.set_crystal(structure)
             vasp.execute()
 
-            logger.info("VASP terminated properly: "+str(vasp.completed))
+            logger.info("VASP terminated properly: " + str(vasp.completed))
             if not vasp.completed:
                 logger.info("VASP did not completed properly, you might want to check it by hand.")
 
@@ -89,7 +105,7 @@ def default_two_d_optimisation():
     # Method to be called for optimising a single 2D slab, where the lattice parameters in the
     # xy-plane (parallel to the 2D material will be optimised) while keeping z-direction fixed.
     # this can be achieved by using a specific vasp executable.
-    default_bulk_optimisation_set.update({'executable': 'vasp_std-tst-xy', 'MP_points': [6, 6, 6]})
+    default_bulk_optimisation_set.update({'executable': 'vasp_std-tst-xy', 'MP_points': [6, 6, 6], 'idipol': 3})
     default_structural_optimisation()
 
 

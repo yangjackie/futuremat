@@ -6,7 +6,7 @@ def setup_logger(debug_filename = None, output_filename = None, level=logging.IN
     logger.setLevel(level)
     # create the logging file handler
 
-    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+    FORMAT = "[%(asctime)s - %(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 
     formatter = logging.Formatter(FORMAT)
 
