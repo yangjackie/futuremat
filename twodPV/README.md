@@ -65,7 +65,7 @@ made of SrTiO3 with 3 atomic layer), excute the following in the folder above:
 which requested a `normalsl` node with 32 cores for 1 h walltime. (You need to make sure the python code is 
 in your `PYTHONPATH`, of course.)
 
-*** Job resubmission due to error
+***Job resubmission due to error***
 
 The `myqueue` package contains useful command line tools that can help you to efficiently resubmit failed VASP jobs,
 particuarly those failed due to time out. Our implemented method automatically start a geometry optimisation 

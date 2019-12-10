@@ -311,6 +311,7 @@ class Vasp(Calculator):
             if line.rfind('Call to ZHEGV failed') > -1:
                 self.self_consistency_error = True
                 self.completed = False
+                logger.info("VASP crashed out due to error in SCF cycles? " + str(self.self_consistency_error))
                 break
             if line.rfind('--------------------------------------- Iteration') > -1:
                 opt_iterations = int(line.split()[2].replace('(', ''))
@@ -352,27 +353,16 @@ class Vasp(Calculator):
                 self.completed = True
             else:
                 self.completed = False
+
+        logger.info("VASP calculation completed successfully?     " + str(self.completed))
+        logger.info("VASP crashed out due to error in SCF cycles? " + str(self.self_consistency_error))
         return converged
 
-    def check_status(self):
-        """
-        Read the VASP output file to check the termination status of VASP calculation.
-        """
-        # this should go to dao instead?
-        f = open('./OUTCAR', 'r')
-        for l in f.readlines():
-            if 'General timing and accounting informations for this job:' in l:
-                self.completed = True
-            elif 'Call to ZHEGV failed' in l:
-                self.self_consistency_error = True
-        logger.info("VASP calculation completed successfully?     " + str(self.completed))
-        if not self.completed:
-            logger.info("VASP crashed out due to error in SCF cycles? " + str(self.self_consistency_error))
 
     def execute(self):
         self.setup()
         self.run()
-        self.check_status()
+        self.check_convergence()
 
         if self.completed and self.clean_after_success:
             self.tear_down()
