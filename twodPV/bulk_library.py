@@ -47,7 +47,7 @@ def make_starting_bulk_strutures():
                                         size=(1, 1, 1))
                     atoms = map_ase_atoms_to_crystal(atoms)
 
-                    wd = cwd + '/' + A_site_list[i][j] + B_site_list[i][k] + C_site_list[i][l] + '_Pm3m' + '/'
+                    wd = cwd + '/relax_Pm3m/' + A_site_list[i][j] + B_site_list[i][k] + C_site_list[i][l] + '_Pm3m' + '/'
                     if not os.path.exists(wd):
                         os.makedirs(wd)
 

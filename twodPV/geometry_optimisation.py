@@ -92,7 +92,7 @@ def default_structural_optimisation():
         # then use the converged wavefunction to carry out spin-polarised optimisation
         logger.info(
             "Spin-polarised SCF convergence failed, try generate a non-spin-polarised wavefunction as starting guess")
-        default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 1, 'LWAVE': True, 'clean_after_success': False})
+        default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 3, 'LWAVE': True, 'clean_after_success': False})
         vasp = Vasp(**default_bulk_optimisation_set)
         vasp.set_crystal(structure)
         vasp.execute()

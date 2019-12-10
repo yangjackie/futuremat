@@ -230,7 +230,8 @@ class Vasp(Calculator):
         if 'executable' not in kwargs.keys():
             self.executable = 'vasp_std'
         else:
-            assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-tst-xy', 'vasp_std-tst-xz', 'vasp_std-tst-yz']
+            assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-tst-xy', 'vasp_std-tst-xz',
+                                            'vasp_std-tst-yz']
             self.executable = kwargs['executable']
 
     def _update_executable(self):
@@ -282,7 +283,8 @@ class Vasp(Calculator):
         Clean up the calculation folder after VASP finishes execution
         """
         logger.info("Clean up directory after VASP executed successfully.")
-        files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT', 'node_info']
+        files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT',
+                 'node_info']
         for f in files:
             try:
                 os.remove(f)
@@ -296,6 +298,62 @@ class Vasp(Calculator):
         if exitcode != 0:
             raise RuntimeError('Vasp exited with exit code: %d.  ' % exitcode)
 
+    def check_convergence(self):
+        """Method that checks whether a calculation has converged. Adapted from ASE."""
+        converged = None
+
+        ibrion = None
+        nsw = None
+        opt_iterations = None
+        ediff = None
+        # First check electronic convergence
+        for line in open('./OUTCAR', 'r'):
+            if line.rfind('Call to ZHEGV failed') > -1:
+                self.self_consistency_error = True
+                self.completed = False
+                break
+            if line.rfind('--------------------------------------- Iteration') > -1:
+                opt_iterations = int(line.split()[2].replace('(', ''))
+            if line.rfind('   IBRION ') > -1:
+                ibrion = int(line.split()[2])
+            if line.rfind('   NSW    ') > -1:
+                nsw = int(line.split()[2])
+            if line.rfind('EDIFF  ') > -1:
+                ediff = float(line.split()[2])
+            if line.rfind('total energy-change') > -1:
+                # I saw this in an atomic oxygen calculation. it
+                # breaks this code, so I am checking for it here.
+                if 'MIXING' in line:
+                    continue
+                split = line.split(':')
+                a = float(split[1].split('(')[0])
+                b = split[1].split('(')[1][0:-2]
+                # sometimes this line looks like (second number wrong format!):
+                # energy-change (2. order) :-0.2141803E-08  ( 0.2737684-111)
+                # we are checking still the first number so
+                # let's "fix" the format for the second one
+                if 'e' not in b.lower():
+                    # replace last occurrence of - (assumed exponent) with -e
+                    bsplit = b.split('-')
+                    bsplit[-1] = 'e' + bsplit[-1]
+                    b = '-'.join(bsplit).replace('-e', 'e-')
+                b = float(b)
+                if [abs(a), abs(b)] < [ediff, ediff]:
+                    self.completed = True
+                else:
+                    self.completed = False
+                    continue
+
+        # Then if ibrion in [1,2,3] check whether ionic relaxation
+        # condition been fulfilled
+
+        if (ibrion in [1, 2, 3]) and (nsw not in [0]):
+            if opt_iterations < nsw:
+                self.completed = True
+            else:
+                self.completed = False
+        return converged
+
     def check_status(self):
         """
         Read the VASP output file to check the termination status of VASP calculation.
@@ -307,9 +365,9 @@ class Vasp(Calculator):
                 self.completed = True
             elif 'Call to ZHEGV failed' in l:
                 self.self_consistency_error = True
-        logger.info("VASP calculation completed successfully?     "+str(self.completed))
+        logger.info("VASP calculation completed successfully?     " + str(self.completed))
         if not self.completed:
-            logger.info("VASP crashed out due to error in SCF cycles? "+str(self.self_consistency_error))
+            logger.info("VASP crashed out due to error in SCF cycles? " + str(self.self_consistency_error))
 
     def execute(self):
         self.setup()

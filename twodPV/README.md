@@ -24,7 +24,7 @@ In this case, the `pbs.py` module in the original `myqueue` package is redirecte
 module. A key modification in this module is that a file called `node_info` is created upon
 submitting the job to the queue with 
 
-`mq submit *folder/`
+`mq submit folder/`
 
 command. This writes the name of the node where this job has been submitted to in the submission directory.
 Upon start of a TASK, this file will be read in order to get the number of cores per node information
@@ -33,15 +33,21 @@ See (./geometry_optimisation.py).
 
 ### Key steps in the workflow
 
-** Building the bulk perovskite library and distorted structures
+***Building the bulk perovskite library and distorted structures***
 
+The `./bulk_library.py` script sets up calculation folders for bulk perovskites. Furthermore, for each
+perovskite strutures, 10 randomly distorted structures will be made. This allows one to assess the 
+energy landscape of perovskites given its chemical compositions ABC3.
 
+***Energies of the consitituting elements***
 
-** Energies of the consitituting elements
+The `./elements.py` script sets up calculation folder to perform geometry optimisations on the consitutent elements,
+from which the energy (chemical potentials) can be extracted for the calculations of the formation energies of different
+perovskite structures in both the bulk and 2D phases.
 
-** Building the 2D PV library
+***Building the 2D PV library***
 
-** Geometry optimisations
+***Geometry optimisations***
 
 The `./geometry_optimisation.py` module contains codes that ochestrate the geometry optimisation workflow adopted in this work for
 for all structures. Basically all structures will be optimised with full spin polarisation (`ISPIN=2` in VASP). 

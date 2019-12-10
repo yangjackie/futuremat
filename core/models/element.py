@@ -96,9 +96,37 @@ __max_covalent_by_symbol = {("C", "H"): 1.28
     , ("O", "F"): 1.50
     , ("N", "F"): 1.45
     , ("F", "F"): 1.50
-                           }
-_max_covalent_by_symbol={}
+                            }
+_max_covalent_by_symbol = {}
 
 for k, v in __max_covalent_by_symbol.items():
     _max_covalent_by_symbol[(k[1], k[0])] = v
     _max_covalent_by_symbol[(k[0], k[1])] = v
+
+# Store the ionic radii for elements in different charge states. May not be the most correct value, guide only.
+# (Note pymatgen does store ionic radii, but might not have them for every charge state).
+ionic_radii = {'Li': {1: 0.76},
+               'Na': {1: 1.02},
+               'K': {1: 1.38},
+               'Rb': {1: 1.52},
+               'Cs': {1: 1.67},
+               'Mg': {2: 0.721},
+               'Ca': {2: 1},
+               'Sr': {2: 1.18},
+               'Ba': {2: 1.35},
+               'F': {-1: 1.33},
+               'Cl': {-1: 1.81},
+               'Br': {-1: 1.96},
+               'I': {-1: 2.2},
+               'O': {-2: 1.4},
+               'S': {-2: 1.84},
+               'Se': {-2: 1.98},
+               'Te': {-2: 2.21},
+               'Pb': {2: 1.19},
+               'Ge': {2: 0.73},
+               'Sn': {2: (1.19 + 0.73) / 2},
+               'V': {2: 0.79, 5: 0.54},
+               'Ta': {2: 0.72, 5: 0.64},
+               'Nb': {2: 0.72, 5: 0.64},
+               'Ti': {4: 0.605},
+               'Zr': {4: 0.72}}
