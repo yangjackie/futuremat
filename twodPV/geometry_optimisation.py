@@ -1,10 +1,12 @@
 import os
 import copy
 import logging
+from myqueue.config import config
 
 from core.calculators.vasp import Vasp
 from core.dao.vasp import *
 from core.utils.loggings import setup_logger
+
 
 # we set the default calculation to be spin-polarized.
 _default_bulk_optimisation_set = {'ADDGRID': True,
@@ -31,6 +33,7 @@ default_bulk_optimisation_set = {key.lower(): value for key, value in _default_b
 
 def __update_core_info():
     try:
+        ncpus=None
         f=open('node_info','r')
         for l in f.readlines():
             if 'normalbw' in l:
@@ -49,10 +52,17 @@ def default_structural_optimisation():
     To submit this optimisation job using the command line argument from myqueue package, do
 
     mq submit twodPV.geometry_optimisation@default_structural_relaxation -R <resources> opt/
+
+    Note that this method is implemented in such a way that an existing CONTCAR will be read first, if it can be found,
+    otherwise, it will read in the POSCAR file. So restart mechansim is already built in. For example, if a VASP calculation
+    is timeout in the opt/ folder with ID, running the following command
+
+    mq resubmit -i ID
+
+    should resubmit a job continuing the previous unfinished structural optimisation.
     """
     logger = setup_logger(output_filename='relax.log')
 
-    #TODO figure out the number of cores per node and update NPAR/KPAR values
     __update_core_info()
 
     try:
@@ -114,3 +124,4 @@ def default_symmetry_preserving_optimisation():
     # structure.
     default_bulk_optimisation_set.update({'ISIF': 7, 'MP_points': [4, 4, 1]})
     default_structural_optimisation()
+

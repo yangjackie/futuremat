@@ -282,7 +282,7 @@ class Vasp(Calculator):
         Clean up the calculation folder after VASP finishes execution
         """
         logger.info("Clean up directory after VASP executed successfully.")
-        files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT']
+        files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT', 'node_info']
         for f in files:
             try:
                 os.remove(f)
