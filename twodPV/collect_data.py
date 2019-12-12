@@ -42,7 +42,7 @@ def formation_energy(atoms):
     fe = atoms.get_calculator().get_potential_energy()
     for k in _atom_dict(atoms).keys():
         fe = fe - _atom_dict(atoms)[k] * reference_atomic_energies[k]
-    return fe
+    return fe/atoms.get_number_of_atoms()
 
 def element_energy(db):
     print ("========== Collecting reference energies for constituting elements ===========")
@@ -53,7 +53,7 @@ def element_energy(db):
         data={}
 
         dir = os.path.join(element_directory,dir)
-        uid = 'element_'+dir.split('/')[-1]
+        uid = 'element_'+str(dir.split('/')[-1])
 
         os.chdir(dir)
         calculator = Vasp()
@@ -101,6 +101,7 @@ def randomised_structure_formation_energy(db):
     base_dir = cwd + '/relax_randomized/'
     kvp = {}
     data = {}
+    counter = 0
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
@@ -108,17 +109,21 @@ def randomised_structure_formation_energy(db):
                     system_name = a+b+c
                     all_rand_for_this = glob.glob(base_dir+'/'+system_name+'*rand*')
                     for r in all_rand_for_this:
-                        uid = system_name+'3_random_str_'+r.split("_")[-1]
+                        uid = system_name+'3_random_str_'+str(r.split("_")[-1])
                         os.chdir(r)
-                        calculator = Vasp()
-                        calculator.check_convergence()
-                        if calculator.completed:
-                            atoms = [k for k in read_vasp_xml(index=-1)][-1]
-                            kvp['uid'] = uid
-                            kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
-                            kvp['formation_energy'] = formation_energy(atoms)
-                            print("System " + uid + " formation energy :" + str(kvp['formation_energy']) + ' eV')
-                            populate_db(db, atoms, kvp, data)
+                        try:
+                            calculator = Vasp()
+                            calculator.check_convergence()
+                            if calculator.completed:
+                                atoms = [k for k in read_vasp_xml(index=-1)][-1]
+                                kvp['uid'] = uid
+                                kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
+                                kvp['formation_energy'] = formation_energy(atoms)
+                                counter+=1
+                                print(str(counter)+'\t'+"System " + uid + " formation energy :" + str(kvp['formation_energy']) + ' eV')
+                                populate_db(db, atoms, kvp, data)
+                        except:
+                            continue #if job failed we dont worry too much about it
                         os.chdir(cwd)
 
 def collect(db):
@@ -130,6 +135,7 @@ def collect(db):
         try:
             step(db)
         except Exception as x:
+            print(x)
             error = '{}: {}'.format(x.__class__.__name__, x)
             errors.append(error)
     return errors
@@ -137,8 +143,6 @@ def collect(db):
 if __name__=="__main__":
     # We use absolute path because of chdir below!
     dbname = os.path.join(os.getcwd(), '2dpv.db')
-
     db = connect(dbname)
     print('Established a sqlite3 database object '+str(db))
-
     collect(db)
