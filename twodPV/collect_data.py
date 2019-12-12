@@ -9,10 +9,13 @@ more easily accessible by other users using the existing ase functionalities.
 
 import argparse
 import os
+import glob
 
 from core.calculators.vasp import Vasp
 from ase.io.vasp import *
 from ase.db import connect
+
+from twodPV.bulk_library import A_site_list,B_site_list,C_site_list
 
 reference_atomic_energies={}
 
@@ -35,6 +38,12 @@ def populate_db(db,atoms,kvp,data):
     except KeyError:
         db.write(atoms,data=data,**kvp)
 
+def formation_energy(atoms):
+    fe = atoms.get_calculator().get_potential_energy()
+    for k in _atom_dict(atoms).keys():
+        fe = fe - _atom_dict(atoms)[k] * reference_atomic_energies[k]
+    return fe
+
 def element_energy(db):
     print ("========== Collecting reference energies for constituting elements ===========")
     cwd = os.getcwd()
@@ -54,15 +63,69 @@ def element_energy(db):
             e = list(_atom_dict(atoms).keys())[-1]
             reference_atomic_energies[e] = atoms.get_calculator().get_potential_energy()/_atom_dict(atoms)[e]
             kvp['uid'] = uid
+            kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
             populate_db(db,atoms,kvp,data)
         else:
             raise Exception("Vasp calculation incomplete in "+dir+". Please check!")
         os.chdir(cwd)
 
-def collect(db):
+def pm3m_formation_energy(db):
+    print("========== Collecting formation energies for bulk perovskites in Pm3m symmetry ===========")
+    cwd = os.getcwd()
+    base_dir = cwd + '/relax_Pm3m/'
+    kvp = {}
+    data = {}
+    for i in range(len(A_site_list)):
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    system_name = a+b+c
+                    uid = system_name+'3_pm3m'
 
+                    dir = os.path.join(base_dir,system_name+"_Pm3m")
+                    os.chdir(dir)
+                    calculator = Vasp()
+                    calculator.check_convergence()
+                    if calculator.completed:
+                        atoms = [k for k in read_vasp_xml(index=-1)][-1]
+                        kvp['uid'] = uid
+                        kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
+                        kvp['formation_energy'] = formation_energy(atoms)
+                        print("System "+uid+" formation energy :"+str(kvp['formation_energy'])+' eV')
+                        populate_db(db,atoms,kvp,data)
+                    os.chdir(cwd)
+
+def randomised_structure_formation_energy(db):
+    print("========== Collecting formation energies for distorted perovskites  ===========")
+    cwd = os.getcwd()
+    base_dir = cwd + '/relax_randomized/'
+    kvp = {}
+    data = {}
+    for i in range(len(A_site_list)):
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    system_name = a+b+c
+                    all_rand_for_this = glob.glob(base_dir+'/'+system_name+'*rand*')
+                    for r in all_rand_for_this:
+                        uid = system_name+'3_random_str_'+r.split("_")[-1]
+                        os.chdir(r)
+                        calculator = Vasp()
+                        calculator.check_convergence()
+                        if calculator.completed:
+                            atoms = [k for k in read_vasp_xml(index=-1)][-1]
+                            kvp['uid'] = uid
+                            kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
+                            kvp['formation_energy'] = formation_energy(atoms)
+                            print("System " + uid + " formation energy :" + str(kvp['formation_energy']) + ' eV')
+                            populate_db(db, atoms, kvp, data)
+                        os.chdir(cwd)
+
+def collect(db):
     errors = []
-    steps = [element_energy]
+    steps = [element_energy,
+             pm3m_formation_energy,
+             randomised_structure_formation_energy]
     for step in steps:
         try:
             step(db)
@@ -72,14 +135,10 @@ def collect(db):
     return errors
 
 if __name__=="__main__":
-    parser = argparse.ArgumentParser(description='Collect data for c2db.db')
-    parser.add_argument('-n', '--dry-run', action='store_true')
-    args = parser.parse_args()
-
     # We use absolute path because of chdir below!
     dbname = os.path.join(os.getcwd(), '2dpv.db')
-    if not args.dry_run:
-        db = connect(dbname)
-        print('Established a sqlite3 database object '+str(db))
+
+    db = connect(dbname)
+    print('Established a sqlite3 database object '+str(db))
 
     collect(db)
