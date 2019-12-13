@@ -115,13 +115,13 @@ def default_two_d_optimisation():
     # Method to be called for optimising a single 2D slab, where the lattice parameters in the
     # xy-plane (parallel to the 2D material will be optimised) while keeping z-direction fixed.
     # this can be achieved by using a specific vasp executable.
-    default_bulk_optimisation_set.update({'executable': 'vasp_std-tst-xy', 'MP_points': [6, 6, 6], 'idipol': 3})
+    default_bulk_optimisation_set.update({'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
     default_structural_optimisation()
 
 
 def default_symmetry_preserving_optimisation():
     # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
     # structure.
-    default_bulk_optimisation_set.update({'ISIF': 7, 'MP_points': [4, 4, 1]})
+    default_bulk_optimisation_set.update({'ISIF': 7, 'MP_points': [6, 6, 6]})
     default_structural_optimisation()
 

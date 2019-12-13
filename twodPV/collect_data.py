@@ -15,59 +15,67 @@ from core.calculators.vasp import Vasp
 from ase.io.vasp import *
 from ase.db import connect
 
-from twodPV.bulk_library import A_site_list,B_site_list,C_site_list
+from twodPV.bulk_library import A_site_list, B_site_list, C_site_list
 
-reference_atomic_energies={}
+reference_atomic_energies = {}
+
 
 def _atom_dict(atoms):
     """
     Get a dictionary of number of each element in the chemical structure.
     """
     unique = list(set(atoms.get_chemical_symbols()))
-    return {u:atoms.get_chemical_symbols().count(u) for u in unique}
+    return {u: atoms.get_chemical_symbols().count(u) for u in unique}
 
-def populate_db(db,atoms,kvp,data):
-    row=None
+
+def populate_db(db, atoms, kvp, data):
+    row = None
     try:
-        row = db.get(selection=[('uid','=',kvp['uid'])])
-        #There is already something matching this row, we will update the key-value pairs and data before commit
+        row = db.get(selection=[('uid', '=', kvp['uid'])])
+        # There is already something matching this row, we will update the key-value pairs and data before commit
         kvp.update(row.key_value_pairs)
         if data is not None:
             data.update(row.data)
-        db.write(atoms,data=data,id=row.id,**kvp)
+        db.write(atoms, data=data, id=row.id, **kvp)
     except KeyError:
-        db.write(atoms,data=data,**kvp)
+        try:
+            db.write(atoms, data=data, **kvp)
+        except Exception as e:
+            print(e)
+
 
 def formation_energy(atoms):
     fe = atoms.get_calculator().get_potential_energy()
     for k in _atom_dict(atoms).keys():
         fe = fe - _atom_dict(atoms)[k] * reference_atomic_energies[k]
-    return fe/atoms.get_number_of_atoms()
+    return fe / atoms.get_number_of_atoms()
+
 
 def element_energy(db):
-    print ("========== Collecting reference energies for constituting elements ===========")
+    print("========== Collecting reference energies for constituting elements ===========")
     cwd = os.getcwd()
-    element_directory = cwd+'/elements/'
-    for dir in [o for o in os.listdir(element_directory) if os.path.isdir(os.path.join(element_directory,o))]:
-        kvp={}
-        data={}
+    element_directory = cwd + '/elements/'
+    for dir in [o for o in os.listdir(element_directory) if os.path.isdir(os.path.join(element_directory, o))]:
+        kvp = {}
+        data = {}
 
-        dir = os.path.join(element_directory,dir)
-        uid = 'element_'+str(dir.split('/')[-1])
+        dir = os.path.join(element_directory, dir)
+        uid = 'element_' + str(dir.split('/')[-1])
 
         os.chdir(dir)
         calculator = Vasp()
         calculator.check_convergence()
         if calculator.completed:
-            atoms = [i for i in read_vasp_xml(index=-1)][-1] #just to be explicit that we want the very last one
+            atoms = [i for i in read_vasp_xml(index=-1)][-1]  # just to be explicit that we want the very last one
             e = list(_atom_dict(atoms).keys())[-1]
-            reference_atomic_energies[e] = atoms.get_calculator().get_potential_energy()/_atom_dict(atoms)[e]
+            reference_atomic_energies[e] = atoms.get_calculator().get_potential_energy() / _atom_dict(atoms)[e]
             kvp['uid'] = uid
             kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
-            populate_db(db,atoms,kvp,data)
+            populate_db(db, atoms, kvp, data)
         else:
-            raise Exception("Vasp calculation incomplete in "+dir+". Please check!")
+            raise Exception("Vasp calculation incomplete in " + dir + ". Please check!")
         os.chdir(cwd)
+
 
 def pm3m_formation_energy(db):
     print("========== Collecting formation energies for bulk perovskites in Pm3m symmetry ===========")
@@ -79,10 +87,10 @@ def pm3m_formation_energy(db):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
                 for c in C_site_list[i]:
-                    system_name = a+b+c
-                    uid = system_name+'3_pm3m'
+                    system_name = a + b + c
+                    uid = system_name + '3_pm3m'
 
-                    dir = os.path.join(base_dir,system_name+"_Pm3m")
+                    dir = os.path.join(base_dir, system_name + "_Pm3m")
                     os.chdir(dir)
                     calculator = Vasp()
                     calculator.check_convergence()
@@ -91,9 +99,10 @@ def pm3m_formation_energy(db):
                         kvp['uid'] = uid
                         kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
                         kvp['formation_energy'] = formation_energy(atoms)
-                        print("System "+uid+" formation energy :"+str(kvp['formation_energy'])+' eV')
-                        populate_db(db,atoms,kvp,data)
+                        print("System " + uid + " formation energy :" + str(kvp['formation_energy']) + ' eV')
+                        populate_db(db, atoms, kvp, data)
                     os.chdir(cwd)
+
 
 def randomised_structure_formation_energy(db):
     print("========== Collecting formation energies for distorted perovskites  ===========")
@@ -106,10 +115,10 @@ def randomised_structure_formation_energy(db):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
                 for c in C_site_list[i]:
-                    system_name = a+b+c
-                    all_rand_for_this = glob.glob(base_dir+'/'+system_name+'*rand*')
+                    system_name = a + b + c
+                    all_rand_for_this = glob.glob(base_dir + '/' + system_name + '*rand*')
                     for r in all_rand_for_this:
-                        uid = system_name+'3_random_str_'+str(r.split("_")[-1])
+                        uid = system_name + '3_random_str_' + str(r.split("_")[-1])
                         os.chdir(r)
                         try:
                             calculator = Vasp()
@@ -119,18 +128,67 @@ def randomised_structure_formation_energy(db):
                                 kvp['uid'] = uid
                                 kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
                                 kvp['formation_energy'] = formation_energy(atoms)
-                                counter+=1
-                                print(str(counter)+'\t'+"System " + uid + " formation energy :" + str(kvp['formation_energy']) + ' eV')
+                                counter += 1
+                                print(str(counter) + '\t' + "System " + uid + " formation energy :" + str(
+                                    kvp['formation_energy']) + ' eV')
                                 populate_db(db, atoms, kvp, data)
                         except:
-                            continue #if job failed we dont worry too much about it
+                            continue  # if job failed we dont worry too much about it
                         os.chdir(cwd)
+
+
+def two_d_formation_energies(db, orientation='100', termination='AO2', thicknesess=[3, 5, 7, 9]):
+    cwd = os.getcwd()
+    base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_small/'
+    kvp = {}
+    data = {}
+    counter = 0
+    for i in range(len(A_site_list)):
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    system_name = a + b + c
+                    for thick in thicknesess:
+                        work_dir = base_dir + system_name + "_" + str(thick)
+                        os.chdir(work_dir)
+
+                        uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(thick)
+                        try:
+                            calculator = Vasp()
+                            calculator.check_convergence()
+                            if calculator.completed:
+                                atoms = [k for k in read_vasp_xml(index=-1)][-1]
+                                kvp['uid'] = uid
+                                kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
+                                kvp['formation_energy'] = formation_energy(atoms)
+                                kvp['orientation'] = '['+str(orientation)+']'
+                                kvp['termination'] = termination
+                                kvp['nlayer'] = thick
+                                counter += 1
+                                print(str(counter) + '\t' + "System " + uid + " formation energy :" + str(
+                                    kvp['formation_energy']) + ' eV')
+                                populate_db(db, atoms, kvp, data)
+                        except:
+                            print("-------------> failed in " + str(os.getcwd()))
+                            continue
+                        os.chdir(cwd)
+
+
+def __two_d_100_AO_energies(db):
+    two_d_formation_energies(db, orientation='100', termination='AO')
+
+
+def __two_d_100_BO2_energies(db):
+    two_d_formation_energies(db, orientation='100', termination='BO2')
+
 
 def collect(db):
     errors = []
-    steps = [element_energy,
-             pm3m_formation_energy,
-             randomised_structure_formation_energy]
+    steps = [element_energy, #do not skip this step, always need this to calculate formation energy on-the-fly
+             #pm3m_formation_energy,
+             #randomised_structure_formation_energy,
+             __two_d_100_BO2_energies,
+             __two_d_100_AO_energies]
     for step in steps:
         try:
             step(db)
@@ -140,9 +198,10 @@ def collect(db):
             errors.append(error)
     return errors
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     # We use absolute path because of chdir below!
     dbname = os.path.join(os.getcwd(), '2dpv.db')
     db = connect(dbname)
-    print('Established a sqlite3 database object '+str(db))
+    print('Established a sqlite3 database object ' + str(db))
     collect(db)
