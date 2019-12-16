@@ -151,13 +151,13 @@ def default_two_d_optimisation():
     # xy-plane (parallel to the 2D material will be optimised) while keeping z-direction fixed.
     # this can be achieved by using a specific vasp executable.
     default_bulk_optimisation_set.update(
-        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3, 'potim': 0.15})
+        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
     default_structural_optimisation()
 
 
 def spin_unploarised_two_d_optimisation():
     default_bulk_optimisation_set.update(
-        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3, 'potim': 0.15})
+        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
     spin_unpolarised_optimization()
 
 

@@ -18,8 +18,7 @@ params = {'legend.fontsize': '8',
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
-termination_types = {'100': ['AO', 'BO2'],
-                    '111': ['AO3', 'B']}
+termination_types = {'100': ['AO', 'BO2']}
 
 
 def plot_thickness_dependent_formation_energies(db, orientation='100', output=None):

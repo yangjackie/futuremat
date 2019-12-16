@@ -234,7 +234,13 @@ class VaspReader(FileReader):
             _counter += 1
 
         from core.models.lattice import Lattice
-        crystal = Crystal(lattice=Lattice.from_lattice_vectors(lattice_vectors),
+        lattice = Lattice(0,0,0,0,0,0)
+        logger.warning("===                                WARNING                                           ===")
+        logger.warning("=== Setting Lattice Vector as originally provided in the POSCAR to prevent rotation! ===")
+        logger.warning("=== Check this is what you wanted and it gives back exactly the same thing as wanted!===")
+        lattice.lattice_vectors = lattice_vectors
+
+        crystal = Crystal(lattice=lattice,
                           asymmetric_unit=[Molecule(atoms=_atoms)],
                           space_group=CrystallographicSpaceGroups.get(1))  # all vasp input assumes P1
 
@@ -335,7 +341,7 @@ class VaspWriter(object):
             label_count = [1 for _ in all_atom_label]
 
         # Create the label
-        label = 'Atomistic Systems created by ENTDECKER'
+        label = 'Atomistic Systems created by FUTUREMAT'
 
         #for i, l in enumerate(all_unqiue_labels):
         #    label += l + '_' + str(label_count[i]) + '_'

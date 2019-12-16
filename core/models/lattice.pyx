@@ -6,7 +6,7 @@ from matrix3d cimport cMatrix3D
 cdef class Lattice:
     cdef double parameters[6], _vectors[3][3], _inv_vectors[3][3]
     cdef public object _crystal
-    cdef object vecs, ivecs
+    cdef object vecs, ivecs, __lattice_vectors
     cdef str lattice_system
 
     def __init__(self, a, b, c, alpha, beta, gamma, crystal=None):
@@ -30,8 +30,11 @@ cdef class Lattice:
         self.gamma = gamma
         self._crystal = crystal
 
+        self.__lattice_vectors = False
+
         self.vecs = False
         self.ivecs = False
+
 
     cpdef copy(self):
         return self.__class__(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
@@ -275,7 +278,15 @@ cdef class Lattice:
 
     property lattice_vectors:
         def __get__(self):
-            return self.vectors
+            if self.__lattice_vectors is None:
+                return self.vectors
+            else:
+                return self.__lattice_vectors
+        def __set__(self, lv):
+            if lv is None:
+                pass
+            elif isinstance(lv,cMatrix3D):
+                self.__lattice_vectors = lv
 
     property vectors:
         def __get__(self):
