@@ -47,6 +47,9 @@ perovskite structures in both the bulk and 2D phases.
 
 ***Building the 2D PV library***
 
+The `./2D_library.py`'` script will build 2D slabs with different orientations, surface terminations and thicknesses. 
+Corresponding folders will be set up to run the calculations.
+
 ***Geometry optimisations***
 
 The `./geometry_optimisation.py` module contains codes that ochestrate the geometry optimisation workflow adopted in this work for

@@ -7,7 +7,6 @@ from core.calculators.vasp import Vasp
 from core.dao.vasp import *
 from core.utils.loggings import setup_logger
 
-
 # we set the default calculation to be spin-polarized.
 _default_bulk_optimisation_set = {'ADDGRID': True,
                                   'AMIN': 0.01,
@@ -31,20 +30,22 @@ _default_bulk_optimisation_set = {'ADDGRID': True,
 
 default_bulk_optimisation_set = {key.lower(): value for key, value in _default_bulk_optimisation_set.items()}
 
+
 def __update_core_info():
     try:
-        ncpus=None
-        f=open('node_info','r')
+        ncpus = None
+        f = open('node_info', 'r')
         for l in f.readlines():
             if 'normalbw' in l:
-                ncpus=28
+                ncpus = 28
             elif 'normalsl' in l:
-                ncpus=32
+                ncpus = 32
             else:
-                ncpus=16
-        default_bulk_optimisation_set.update({'NPAR':ncpus})
+                ncpus = 16
+        default_bulk_optimisation_set.update({'NPAR': ncpus})
     except:
         pass
+
 
 def default_structural_optimisation():
     """
@@ -111,12 +112,53 @@ def default_structural_optimisation():
                 logger.info("VASP did not completed properly, you might want to check it by hand.")
 
 
+def spin_unpolarised_optimization():
+    """
+    Perform geometry optimization without spin polarisation. It is always helpful to converge an initial
+    structure without spin polarization before further refined with a spin polarization calculations.
+    This makes the SCF converge faster and less prone to cause the structural from collapsing due to problematic
+    forces from unconverged SCF.
+    """
+    logger = setup_logger(output_filename='relax.log')
+
+    __update_core_info()
+    try:
+        os.remove("./WAVECAR")
+        logger.info("Previous WAVECAR found, remove before start new optimisation.")
+    except:
+        pass
+
+    logger.info("==========Full Structure Optimisation with VASP==========")
+
+    if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):
+        structure = VaspReader(input_location='./CONTCAR').read_POSCAR()
+        logger.info("Restart optimisation from previous CONTCAR.")
+    else:
+        structure = VaspReader(input_location='./POSCAR').read_POSCAR()
+        logger.info("Start new optimisation from POSCAR")
+
+    logger.info("Perform an initial spin-non-polarised calculations to help convergence")
+    default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500})
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+    logger.info("VASP terminated?: " + str(vasp.completed))
+
+
 def default_two_d_optimisation():
     # Method to be called for optimising a single 2D slab, where the lattice parameters in the
     # xy-plane (parallel to the 2D material will be optimised) while keeping z-direction fixed.
     # this can be achieved by using a specific vasp executable.
-    default_bulk_optimisation_set.update({'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
+    default_bulk_optimisation_set.update(
+        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3, 'potim': 0.15})
     default_structural_optimisation()
+
+
+def spin_unploarised_two_d_optimisation():
+    default_bulk_optimisation_set.update(
+        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3, 'potim': 0.15})
+    spin_unpolarised_optimization()
 
 
 def default_symmetry_preserving_optimisation():
@@ -124,4 +166,3 @@ def default_symmetry_preserving_optimisation():
     # structure.
     default_bulk_optimisation_set.update({'ISIF': 7, 'MP_points': [6, 6, 6]})
     default_structural_optimisation()
-

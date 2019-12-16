@@ -18,7 +18,7 @@ params = {'legend.fontsize': '8',
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
-termiation_types = {'100': ['AO', 'BO2'],
+termination_types = {'100': ['AO', 'BO2'],
                     '111': ['AO3', 'B']}
 
 
@@ -61,8 +61,8 @@ def plot_thickness_dependent_formation_energies(db, orientation='100', output=No
                     row = db.get(selection=[('uid', '=', uid)])
                     pm3m_formation_e = row.key_value_pairs['formation_energy']
 
-                    two_d_en_diff = [[] for _ in range(len(termiation_types[orientation]))]
-                    for term_type_id, term_type in enumerate(termiation_types[orientation]):
+                    two_d_en_diff = [[] for _ in range(len(termination_types[orientation]))]
+                    for term_type_id, term_type in enumerate(termination_types[orientation]):
                         for t in thicknesses:
                             uid = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(t)
                             try:
@@ -102,9 +102,9 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
 
     for i in range(len(A_site_list)):
 
-        bulk_e_diff = [[] for _ in range(len(termiation_types[orientation]))]
-        twod_e_diff = [[] for _ in range(len(termiation_types[orientation]))]
-        names = [[] for _ in range(len(termiation_types[orientation]))]
+        bulk_e_diff = [[] for _ in range(len(termination_types[orientation]))]
+        twod_e_diff = [[] for _ in range(len(termination_types[orientation]))]
+        names = [[] for _ in range(len(termination_types[orientation]))]
 
         for a in A_site_list[i]:
             for b in B_site_list[i]:
@@ -130,7 +130,7 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
                             continue
 
                     # Find the formation energy of the corresponding two-D structures
-                    for term_type_id, term_type in enumerate(termiation_types[orientation]):
+                    for term_type_id, term_type in enumerate(termination_types[orientation]):
                         uid = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(thick)
                         try:
                             row = db.get(selection=[('uid', '=', uid)])
@@ -175,7 +175,7 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
 
             if ylabel is not None:
                 axs[_p].set_ylabel(ylabel)
-            axs[_p].annotate(str(termiation_types[orientation][_p]) + '-termination', xy=(1, 0.9),
+            axs[_p].annotate(str(termination_types[orientation][_p]) + '-termination', xy=(1, 0.9),
                              xycoords='axes fraction',
                              fontsize=16, horizontalalignment='right', verticalalignment='bottom')
         axs[0].set_title(title)

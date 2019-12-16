@@ -16,8 +16,8 @@ from twodPV.elements import A_site_list, B_site_list, C_site_list
 
 thicknesses = [3, 5, 7, 9]
 
-orientation_dict = {  '100': {'a': (1, 0, 0), 'b': (0, 1, 0),
-            'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
+orientation_dict = {  #'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
+            #'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
     '111': {'a': (1, 1, 0), 'b': (-1, 0, 1),
             'origio': {'AO3': (0, 0, 0), 'B': (0, 0, 0.25)}}}
 
