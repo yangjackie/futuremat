@@ -25,7 +25,7 @@ _default_bulk_optimisation_set = {'ADDGRID': True,
                                   'PREC': 'Normal',
                                   'SIGMA': 0.05,
                                   'ENCUT': 500,
-                                  'EDIFF': '1e-05',
+                                  'EDIFF': '1e-04',
                                   'executable': 'vasp_std'}
 
 default_bulk_optimisation_set = {key.lower(): value for key, value in _default_bulk_optimisation_set.items()}
@@ -62,6 +62,8 @@ def default_structural_optimisation():
 
     should resubmit a job continuing the previous unfinished structural optimisation.
     """
+    #spin_unpolarised_optimization()
+
     logger = setup_logger(output_filename='relax.log')
 
     __update_core_info()
@@ -138,7 +140,7 @@ def spin_unpolarised_optimization():
         logger.info("Start new optimisation from POSCAR")
 
     logger.info("Perform an initial spin-non-polarised calculations to help convergence")
-    default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500})
+    default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04'})
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
     vasp.execute()

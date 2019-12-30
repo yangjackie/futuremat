@@ -181,14 +181,28 @@ def __two_d_100_AO_energies(db):
 def __two_d_100_BO2_energies(db):
     two_d_formation_energies(db, orientation='100', termination='BO2')
 
+def __two_d_111_B_energies(db):
+    two_d_formation_energies(db, orientation='111', termination='B')
+
+def __two_d_111_AO3_energies(db):
+    two_d_formation_energies(db, orientation='111', termination='AO3')
+
+def __two_d_110_O2_energies(db):
+    two_d_formation_energies(db, orientation='110', termination='O2')
+
+def __two_d_110_ABO_energies(db):
+    two_d_formation_energies(db, orientation='111', termination='ABO')
 
 def collect(db):
     errors = []
     steps = [element_energy, #do not skip this step, always need this to calculate formation energy on-the-fly
              #pm3m_formation_energy,
              #randomised_structure_formation_energy,
-             __two_d_100_BO2_energies,
-             __two_d_100_AO_energies]
+             #__two_d_100_BO2_energies,
+             #__two_d_100_AO_energies,
+             #__two_d_111_B_energies,
+             #__two_d_111_AO3_energies,
+             __two_d_110_O2_energies]
     for step in steps:
         try:
             step(db)

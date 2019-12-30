@@ -11,7 +11,6 @@ from core.dao.abstract_io import *
 
 logger = logging.getLogger("futuremat.core.dao.vasp")
 
-
 default_ionic_optimisation_set = {
     'SYSTEM': 'entdecker',
     'PREC': 'Normal',
@@ -103,6 +102,7 @@ xc_defaults = {'lda': {'pp': 'LDA'},
                'hf': {'pp': 'PBE', 'lhfcalc': True, 'aexx': 1.0,
                       'aldac': 0.0, 'aggac': 0.0}}
 
+
 class VaspReader(FileReader):
     def __init__(self, input_location=None, file_content=None):
         super(self.__class__, self).__init__(input_location=input_location,
@@ -114,7 +114,6 @@ class VaspReader(FileReader):
             splitted = line.split('=')
             incar[splitted[0]] = splitted[1]
         return incar
-
 
     def get_free_energies(self):
         if 'OSZICAR' in self.input_location:
@@ -153,7 +152,7 @@ class VaspReader(FileReader):
         _frame_counter = 0
         _lvs = []
         _atoms = []
-        all_frames=[]
+        all_frames = []
         _atom_counter = 0
         for line in self.file_content:
 
@@ -174,23 +173,23 @@ class VaspReader(FileReader):
 
             if _counter > 7:
                 if 'Direct configuration' not in line:
-                    if _counter==len(self.file_content)-1:
+                    if _counter == len(self.file_content) - 1:
                         break
                     # read in the atomic coordinates
                     coord = cVector3D(float(line.split()[0]), float(line.split()[1]), float(line.split()[2]))
                     _atoms.append(Atom(label=_atomic_labels[_atom_counter], scaled_position=coord))
-                    _atom_counter+=1
+                    _atom_counter += 1
                 else:
                     from core.models.lattice import Lattice
                     crystal = Crystal(lattice=Lattice.from_lattice_vectors(lattice_vectors),
                                       asymmetric_unit=[Molecule(atoms=_atoms)],
                                       space_group=CrystallographicSpaceGroups.get(1))
                     all_frames.append(crystal)
-                    _frame_counter+=1
-                    _atom_counter=0
-                    _atoms=[]
+                    _frame_counter += 1
+                    _atom_counter = 0
+                    _atoms = []
             _counter += 1
-        print("Total number of frames "+str(len(all_frames)))
+        print("Total number of frames " + str(len(all_frames)))
         return all_frames
 
     def read_POSCAR(self):
@@ -234,17 +233,19 @@ class VaspReader(FileReader):
             _counter += 1
 
         from core.models.lattice import Lattice
-        lattice = Lattice(0,0,0,0,0,0)
+        lattice = Lattice.from_lattice_vectors(lattice_vectors)
+        lattice.lattice_vectors = lattice_vectors
+
         logger.warning("===                                WARNING                                           ===")
         logger.warning("=== Setting Lattice Vector as originally provided in the POSCAR to prevent rotation! ===")
         logger.warning("=== Check this is what you wanted and it gives back exactly the same thing as wanted!===")
-        lattice.lattice_vectors = lattice_vectors
 
         crystal = Crystal(lattice=lattice,
                           asymmetric_unit=[Molecule(atoms=_atoms)],
                           space_group=CrystallographicSpaceGroups.get(1))  # all vasp input assumes P1
 
         return crystal
+
 
 class VaspWriter(object):
 
@@ -263,9 +264,9 @@ class VaspWriter(object):
         keylist = list(sorted(keylist))
 
         for key in keylist:
-            if str(default_options[key]).lower()=='true':
+            if str(default_options[key]).lower() == 'true':
                 default_options[key] = '.true.'
-            elif str(default_options[key]).lower()=='false':
+            elif str(default_options[key]).lower() == 'false':
                 default_options[key] = '.false.'
             if key not in ['frame', 'kwargs', 'self', 'SYSTEM', 'filename']:
                 incar.write(str(key).upper() + ' = ' + str(default_options[key]).upper() + '\n')
@@ -281,7 +282,7 @@ class VaspWriter(object):
             raise Exception("Please specify in the default configuration where to find VASP PAW pseudopotential files!")
 
         if isinstance(crystal, pymatstructure):
-            crystal=map_pymatgen_IStructure_to_crystal(crystal)
+            crystal = map_pymatgen_IStructure_to_crystal(crystal)
 
         _all_atoms = crystal.all_atoms(unique=unique)
         _all_atom_label = [i.clean_label for i in _all_atoms]
@@ -294,19 +295,18 @@ class VaspWriter(object):
         else:
             all_atom_label = _all_atom_label
 
-
         potcars = [settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '/POTCAR' for e in
                    all_atom_label]
 
         with open(filename, 'w') as outfile:
             for fn in potcars:
-                logger.info("Getting pseudopotential "+fn)
+                logger.info("Getting pseudopotential " + fn)
                 with open(fn) as infile:
                     for line in infile:
                         if ('Zr' in fn) and ('VRHFIN' in line): line = '   VRHFIN =Zr: 4s4p5s4d\n'
                         outfile.write(line)
 
-    def write_structure(self, crystal, filename='POSCAR', direct=False,sort=True):
+    def write_structure(self, crystal, filename='POSCAR', direct=False, sort=True):
         """Method to write VASP position (POSCAR/CONTCAR) files.
 
         Adopted from ASE with modifications
@@ -343,7 +343,7 @@ class VaspWriter(object):
         # Create the label
         label = 'Atomistic Systems created by FUTUREMAT'
 
-        #for i, l in enumerate(all_unqiue_labels):
+        # for i, l in enumerate(all_unqiue_labels):
         #    label += l + '_' + str(label_count[i]) + '_'
         f.write(label + '\n')
 
@@ -374,13 +374,13 @@ class VaspWriter(object):
         else:
             f.write('Cartesian\n')
 
-        #print 'In vasp writer, how many atoms '+str(len(all_atoms))
+        # print 'In vasp writer, how many atoms '+str(len(all_atoms))
         for iatom, atom in enumerate(all_atoms):
             for i in range(3):
                 if direct:
-                    f.write(' %19.16f'% atom.scaled_position[i])
+                    f.write(' %19.16f' % atom.scaled_position[i])
                 else:
-                    f.write(' %19.16f'% atom.position[i])
+                    f.write(' %19.16f' % atom.position[i])
             f.write('\n')
 
         if type(filename) == str:
@@ -397,11 +397,54 @@ class VaspWriter(object):
         else:
             from core.utils.kpoints import kpoints_from_grid
             kpoints = kpoints_from_grid(crystal, grid=grid, molecular=molecular)
-            if [int(k) for k in kpoints] == [1,1,1]:
+            if [int(k) for k in kpoints] == [1, 1, 1]:
                 crystal.gamma_only = True
             kpoint_file.write(str(int(kpoints[0])) + ' ' + str(int(kpoints[1])) + ' ' + str(int(kpoints[2])) + '\n')
         kpoint_file.write("0 0 0")
 
-        #TODO - write K-POINT paths for bandstructure calculations
+        # TODO - write K-POINT paths for bandstructure calculations
 
         kpoint_file.close()
+
+
+def prepare_potcar(poscar_file):
+    crystal = VaspReader(input_location=poscar_file).read_POSCAR()
+    VaspWriter().write_potcar(crystal)
+    # write out the crystal again to get rid of the atom re-ordering problem?
+    VaspWriter().write_structure(crystal)
+
+
+def prepare_kpoints(poscar_file, MP_points, grid):
+    crystal = VaspReader(input_location=poscar_file).read_POSCAR()
+    VaspWriter().write_KPOINTS(crystal, MP_points=MP_points, grid=grid, molecular=False)
+
+
+def convert_xml_to_pickle():
+    import pickle
+    from pymatgen.io.vasp.outputs import Vasprun
+    vasprun = Vasprun('./vasprun.xml')
+    pickle.dump(vasprun.as_dict(), open('./vasprun.p', 'wb'))
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description='cmd utils for VASP IO',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--genpot", action='store_true')
+    parser.add_argument("--gen_mp_k", action='store_true')
+    parser.add_argument("--mp_points", type=str, default=None,
+                        help='string of comma separated integer denoting number of K-points along each reciprocal space direction.')
+    parser.add_argument("--mp_grid", type=float, default=0.025, help='grid spacing for generating MP Kpoints')
+    parser.add_argument('--convert_xml', action='store_true')
+    args = parser.parse_args()
+
+    if args.genpot:
+        prepare_potcar("./POSCAR")
+
+    if args.gen_mp_k:
+        prepare_kpoints("./POSCAR", MP_points=args.mp_points, grid=args.mp_grid)
+
+    if args.convert_xml:
+        convert_xml_to_pickle()
+

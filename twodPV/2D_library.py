@@ -5,7 +5,7 @@ are built will be written to a directory with the corresponding set ups for VASP
 """
 
 from ase.io import read, write
-from ase.build import cut, stack, mx2, add_vacuum
+from ase.build import cut, stack, mx2, add_vacuum, rotate
 from ase.io.vasp import write_vasp
 
 from core.dao.vasp import *
@@ -16,10 +16,12 @@ from twodPV.elements import A_site_list, B_site_list, C_site_list
 
 thicknesses = [3, 5, 7, 9]
 
-orientation_dict = {  #'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
-            #'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
-    '111': {'a': (1, 1, 0), 'b': (-1, 0, 1),
-            'origio': {'AO3': (0, 0, 0), 'B': (0, 0, 0.25)}}}
+orientation_dict = {  # '100': {'a': (1, 0, 0), 'b': (0, 1, 0),
+    # 'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
+    #'111': {'a': (1, 1, 0), 'b': (-1, 0, 1),
+    #        'origio': {'AO3': (0, 0, 0), 'B': (0, 0, 0.25)}},
+    '110': {'a': (1, 1, 0), 'b': (0, 0, 1),
+            'origio': {'O2': (0.05, 0, 0), 'ABO': (0, 0, 0)}}}
 
 cwd = os.getcwd()
 
@@ -48,5 +50,8 @@ for i in range(len(A_site_list)):
                                 os.makedirs(slab_wd)
 
                             os.chdir(slab_wd)
+                            if orient in ['110','111']:
+                                rotate(slab, slab.cell[0], [1, 0, 0], slab.cell[1], [0, 1, 0])
+
                             write_vasp('POSCAR', slab, vasp5=True, sort=True)
                             os.chdir(wd)

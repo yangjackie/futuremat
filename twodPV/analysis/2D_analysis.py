@@ -37,7 +37,7 @@ def plot_thickness_dependent_formation_energies(db, orientation='100', output=No
             axs = [ax11, ax21]
             color = '#7AC7A9'
             title = '$A^{I}B^{II}_{M}X_{3}$'
-            ylabel = '$\\min[E_{f}^{Pm\\bar{3}m}-E_{f}^{\mbox{\\Large{full relax}}}]$ (eV/atom)'
+            ylabel = '$\\min[E_{f}^{2D,n}-E_{f}^{Pm\\bar{3}m}]$ (eV/atom)'
         if i == 1:
             axs = [ax12, ax22]
             color = '#90CA57'

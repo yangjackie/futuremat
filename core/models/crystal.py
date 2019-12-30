@@ -27,6 +27,7 @@ class Crystal(object):
         self.asymmetric_unit = asymmetric_unit
 
         # auto set up the reverse link
+        #TODO - need to realign molecule at origin and axis! To be consistent for treating molecular crystals!!!
         for molecule in self.asymmetric_unit:
             molecule._crystal = self
         self.lattice._crystal = self

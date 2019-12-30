@@ -1,3 +1,4 @@
+from core.models import cMatrix3D
 from core.models.lattice import Lattice as fLattice
 from core.models.crystal import Crystal
 from core.models.molecule import Molecule
@@ -5,6 +6,7 @@ from core.models.atom import Atom
 from core.models.element import element_name_dict
 from core.models.vector3d import cVector3D
 from core.resources.crystallographic_space_groups import CrystallographicSpaceGroups
+
 
 def expand_to_P1_strucutre(crystal):
     expanded_mol_list = []
@@ -19,6 +21,7 @@ def expand_to_P1_strucutre(crystal):
                    asymmetric_unit=expanded_mol_list,
                    space_group=CrystallographicSpaceGroups.get(1))
 
+
 def map_pymatgen_IStructure_to_crystal(structure):
     """
     Given a Pymatgen IStructure object, map it to a crystal structure in our internal model
@@ -27,11 +30,11 @@ def map_pymatgen_IStructure_to_crystal(structure):
     :return: a fully constructed crystal structure in P1 setting
     """
     return Crystal(lattice=fLattice(structure.lattice.a,
-                                            structure.lattice.b,
-                                            structure.lattice.c,
-                                            structure.lattice.alpha,
-                                            structure.lattice.beta,
-                                            structure.lattice.gamma),
+                                    structure.lattice.b,
+                                    structure.lattice.c,
+                                    structure.lattice.alpha,
+                                    structure.lattice.beta,
+                                    structure.lattice.gamma),
                    asymmetric_unit=[Molecule(atoms=[
                        Atom(label=element_name_dict[structure.atomic_numbers[i]], position=structure.cart_coords[i]) for
                        i in range(len(structure.atomic_numbers))])],
@@ -77,8 +80,19 @@ def map_ase_atoms_to_crystal(atoms):
     :param atoms: An input ASE atoms object
     :return: a fully constructed crystal structure in P1 setting
     """
-    return Crystal(lattice=fLattice(*atoms.get_cell_lengths_and_angles()),
+
+    # this is dumb, but anyway, prevents re-orienting things when the lattice is constructed
+    _lv = atoms.get_cell().array
+    _a = cVector3D(*_lv[0])
+    _b = cVector3D(*_lv[1])
+    _c = cVector3D(*_lv[2])
+    _lv = cMatrix3D(_a, _b, _c)
+    lattice = fLattice.from_lattice_vectors(_lv)
+    lattice.lattice_vectors = _lv
+
+    return Crystal(lattice=lattice,
                    asymmetric_unit=[Molecule(atoms=[
-                       Atom(label=atoms.get_chemical_symbols()[i], scaled_position=cVector3D(*atoms.get_scaled_positions()[i])) for
+                       Atom(label=atoms.get_chemical_symbols()[i],
+                            scaled_position=cVector3D(*atoms.get_scaled_positions()[i])) for
                        i in range(len(atoms.get_chemical_symbols()))])],
                    space_group=CrystallographicSpaceGroups.get(1))
