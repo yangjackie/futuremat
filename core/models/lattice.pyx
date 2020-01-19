@@ -278,7 +278,7 @@ cdef class Lattice:
 
     property lattice_vectors:
         def __get__(self):
-            if self.__lattice_vectors is None:
+            if (self.__lattice_vectors is None) or (not self.__lattice_vectors):
                 return self.vectors
             else:
                 return self.__lattice_vectors

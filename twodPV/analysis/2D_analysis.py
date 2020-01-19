@@ -18,7 +18,7 @@ params = {'legend.fontsize': '8',
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
-termination_types = {'100': ['AO', 'BO2']}
+termination_types = {'100': ['AO', 'BO2'], '110': ['O2', 'ABO'], '111': ['AO3', 'B']}
 
 
 def plot_thickness_dependent_formation_energies(db, orientation='100', output=None):
@@ -62,6 +62,7 @@ def plot_thickness_dependent_formation_energies(db, orientation='100', output=No
 
                     two_d_en_diff = [[] for _ in range(len(termination_types[orientation]))]
                     for term_type_id, term_type in enumerate(termination_types[orientation]):
+
                         for t in thicknesses:
                             uid = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(t)
                             try:
@@ -73,7 +74,7 @@ def plot_thickness_dependent_formation_energies(db, orientation='100', output=No
                                 continue
 
                         axs[term_type_id].plot(thicknesses, two_d_en_diff[term_type_id], 'o:', c=color, alpha=0.9)
-                        axs[term_type_id].plot([3,9],[0,0],'k--')
+                        axs[term_type_id].plot([3, 9], [0, 0], 'k--')
 
                         if ylabel is not None:
                             axs[term_type_id].set_ylabel(ylabel)
@@ -81,8 +82,13 @@ def plot_thickness_dependent_formation_energies(db, orientation='100', output=No
                     axs[0].set_title(title)
                     axs[1].set_xlabel('Layers')
 
+    if orientation=='111':
+        ax21.set_ylim([-1,2])
+        ax22.set_ylim([-2,2.5])
+        ax23.set_ylim([-0.5,2])
+
     if output is None:
-        output = 'two_d_' + str(orientation) + '_' +'thickness_dependent.png'
+        output = 'two_d_' + str(orientation) + '_' + 'thickness_dependent.png'
     plt.tight_layout()
     plt.savefig(output)
     plt.show()
@@ -134,9 +140,12 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
                         try:
                             row = db.get(selection=[('uid', '=', uid)])
                             twod_formation_e = row.key_value_pairs['formation_energy']
-                            bulk_e_diff[term_type_id].append(pm3m_formation_e - lowest_relaxed)
-                            twod_e_diff[term_type_id].append(twod_formation_e - pm3m_formation_e)
-                            names[term_type_id].append(system_name + '$_{3}$')
+
+                            if twod_formation_e - pm3m_formation_e <=10.0:
+
+                                bulk_e_diff[term_type_id].append(pm3m_formation_e - lowest_relaxed)
+                                twod_e_diff[term_type_id].append(twod_formation_e - pm3m_formation_e)
+                                names[term_type_id].append(system_name + '$_{3}$')
                         except KeyError:
                             print('WARNING: No value for ' + uid + ' Skip!')
                             continue
@@ -169,6 +178,9 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
                 if (y > 0.2) or (y < -0.2):
                     axs[_p].text(x + 0.01, y + 0.01, names[_p][u], fontsize=14, color='#688291')
 
+            #if max(_x)>10:
+            #    axs[_p].set_xlim([min(_x) - 0.02, 3])
+            #else:
             axs[_p].set_xlim([min(_x) - 0.02, max(_x) + 0.12])
             axs[_p].set_ylim([min(_y) - 0.02, max(_y) + 0.05])
 

@@ -137,6 +137,7 @@ bool_keys = [
     'ldiag',  # algorithm: perform sub space rotation
     'ldipol',  # potential correction mode
     'lelf',  # create ELFCAR
+    'lepsilon',
     'lhfcalc',  # switch to turn on Hartree Fock calculations
     'loptics',  # calculate the frequency dependent dielectric matrix
     'lpard',  # evaluate partial (band and/or k-point) decomposed charge density
@@ -230,8 +231,7 @@ class Vasp(Calculator):
         if 'executable' not in kwargs.keys():
             self.executable = 'vasp_std'
         else:
-            assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-tst-xy', 'vasp_std-tst-xz',
-                                            'vasp_std-tst-yz']
+            assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-xy', 'vasp_std-xz','vasp_std-yz']
             self.executable = kwargs['executable']
 
     def _update_executable(self):

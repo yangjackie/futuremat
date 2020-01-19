@@ -19,8 +19,9 @@ import os
 import random
 from ase.spacegroup import crystal as ase_crystal
 from ase import Atom
+from ase.db import connect
 
-from core.internal.builders.crystal import map_ase_atoms_to_crystal
+from core.internal.builders.crystal import map_ase_atoms_to_crystal, build_supercell
 from core.dao.vasp import VaspWriter, VaspReader
 
 # define the chemistry of the perovskites that we are interested in
@@ -103,15 +104,44 @@ def make_distorted_structures_from_optimised():
                         vasp_writer.write_structure(crystal)
                         os.chdir(cwd)
 
+def prepare_property_calculation_folder(db=None,property='phonon',supercell=[1,1,1]):
+    cwd = os.getcwd()
+    db = connect(cwd + '/2dpv.db')
+    print("Successfully connected to the database")
+    for i in range(len(A_site_list)):
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    system_name = a + b + c
+                    uid = system_name + '3_pm3m'
+                    print(uid)
+                    row = db.get(selection=[('uid', '=', uid)])
+                    crystal = row.toatoms()
+                    crystal = map_ase_atoms_to_crystal(crystal)
+                    if property is 'phonon':
+                        crystal = build_supercell(crystal, expansion=supercell)
+                        wd = cwd + '/relax_Pm3m/' + system_name + '_Pm3m' + '/phonon_G/'
+                    if not os.path.exists(wd):
+                        os.makedirs(wd)
+                    os.chdir(wd)
+                    vasp_writer = VaspWriter()
+                    vasp_writer.write_structure(crystal)
+                    os.chdir(cwd)
 
 if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser(description='bulk library set up routine',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--perovskite", action='store_true')
     parser.add_argument("--distort", action='store_true')
+    parser.add_argument("--db", type=str, default=os.getcwd() + '/2dpv.db',
+                        help="Name of the database that contains the results of the screenings.")
+    parser.add_argument("--setup_gamma_phonon", action='store_true',
+                        help="Setup calculation folders for Gamma point phonon")
     args = parser.parse_args()
 
     if args.perovskite:
         make_starting_bulk_strutures()
     if args.distort:
         make_distorted_structures_from_optimised()
+    if args.setup_gamma_phonon:
+        prepare_property_calculation_folder(db=args.db,property='phonon')

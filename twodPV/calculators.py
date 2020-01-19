@@ -41,7 +41,7 @@ def __update_core_info():
             elif 'normalsl' in l:
                 ncpus = 32
             else:
-                ncpus = 16
+                ncpus = 48
         default_bulk_optimisation_set.update({'NPAR': ncpus})
     except:
         pass
@@ -62,7 +62,7 @@ def default_structural_optimisation():
 
     should resubmit a job continuing the previous unfinished structural optimisation.
     """
-    #spin_unpolarised_optimization()
+    # spin_unpolarised_optimization()
 
     logger = setup_logger(output_filename='relax.log')
 
@@ -153,13 +153,13 @@ def default_two_d_optimisation():
     # xy-plane (parallel to the 2D material will be optimised) while keeping z-direction fixed.
     # this can be achieved by using a specific vasp executable.
     default_bulk_optimisation_set.update(
-        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
+        {'executable': 'vasp_std-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
     default_structural_optimisation()
 
 
 def spin_unploarised_two_d_optimisation():
     default_bulk_optimisation_set.update(
-        {'executable': 'vasp_std-tst-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
+        {'executable': 'vasp_std-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
     spin_unpolarised_optimization()
 
 
@@ -168,3 +168,63 @@ def default_symmetry_preserving_optimisation():
     # structure.
     default_bulk_optimisation_set.update({'ISIF': 7, 'MP_points': [6, 6, 6]})
     default_structural_optimisation()
+
+
+def default_bulk_phonon_G_calculation():
+    return __default_G_phonon(two_d=False)
+
+def default_twod_phonon_G_calculation():
+    return __default_G_phonon(two_d=True)
+
+
+def __default_G_phonon(two_d=False):
+    logger = setup_logger(output_filename='phonon.log')
+
+    try:
+        os.remove("./WAVECAR")
+        logger.info("Previous WAVECAR found, remove before start new optimisation.")
+    except:
+        pass
+
+    if two_d:
+        kpoints = [4, 4, 1]
+    else:
+        kpoints = [6, 6, 6]
+
+    default_bulk_optimisation_set.update(
+        {'PREC': 'Accurate',
+         'ISPIN': 1,
+         'NSW': 0,
+         'LWAVE': True,
+         'ISYM': 0,
+         'MP_points': kpoints,
+         'clean_after_success': False})
+
+    if two_d:
+        default_bulk_optimisation_set.update({'idipol': 3})
+
+    __G_phonon()
+    default_bulk_optimisation_set.update(
+        {'ISPIN': 2,
+         'LWAVE': False,
+         'NSW': 1,
+         'PREC': 'Accurate',
+         'EDIFF': 1e-05,
+         'IBRION': 8,
+         'ISIF': 0,
+         'ISYM': 0,
+         'LREAL': 'Auto',
+         'POTIM': 0.01,
+         'clean_after_success': True})
+    __G_phonon()
+
+
+def __G_phonon():
+    __update_core_info()
+    logger.info("==========Gamma point phonon calculation with VASP==========")
+    structure = VaspReader(input_location='./POSCAR').read_POSCAR()
+    logger.info("Start from supercell defined in POSCAR")
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+    logger.info("VASP terminated properly: " + str(vasp.completed))

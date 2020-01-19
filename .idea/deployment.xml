@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="jy8620@raijin.nci.org.au:22">
+  <component name="PublishConfigData" autoUpload="Always">
     <serverData>
-      <paths name="jy8620@raijin.nci.org.au:22">
+      <paths name="jy8620@gadi">
         <serverdata>
           <mappings>
             <mapping deploy="/futuremat" local="$PROJECT_DIR$" />

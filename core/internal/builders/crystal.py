@@ -22,6 +22,46 @@ def expand_to_P1_strucutre(crystal):
                    space_group=CrystallographicSpaceGroups.get(1))
 
 
+def build_supercell(crystal, expansion=[1, 1, 1]):
+    """
+    Method to make a supercell using the input crystal as the primitive crystal structure. Given the
+    transformation specified by a list of three integers `[n_{x},n_{y},n_{z}]`, a super cell with cell
+    lengths `[n_{x}a,n_{y}b,n_{z}c]` will be built.
+
+    :param crystal: Input crystal structure.
+    :param expansion: A list of three integers specifying how big the supercell will be.
+    :return: crystal: A fully constructed crystal object with new lattice parameters.
+    :rtype: :class:`.Crystal`
+    """
+    crystal_in_p1_setting = expand_to_P1_strucutre(crystal)
+
+    lattice = fLattice(a=crystal.lattice.a * expansion[0],
+                       b=crystal.lattice.b * expansion[1],
+                       c=crystal.lattice.c * expansion[2],
+                       alpha=crystal.lattice.alpha,
+                       beta=crystal.lattice.beta,
+                       gamma=crystal.lattice.gamma)
+
+    asymmetric_unit = [x for x in crystal_in_p1_setting.asymmetric_unit]
+
+    for n_x in range(expansion[0]):
+        for n_y in range(expansion[1]):
+            for n_z in range(expansion[2]):
+
+                tr_vec = crystal.lattice.lattice_vectors.get_row(0).vec_scale(n_x) + \
+                         crystal.lattice.lattice_vectors.get_row(1).vec_scale(n_y) + \
+                         crystal.lattice.lattice_vectors.get_row(2).vec_scale(n_z)
+
+                if (n_x == 0) and (n_y == 0) and (n_z == 0):
+                    pass
+                else:
+                    for mol in crystal_in_p1_setting.asymmetric_unit:
+                        new_atoms = [Atom(label=atom.label, position=atom.position + tr_vec) for atom in mol.atoms]
+                        asymmetric_unit.append(Molecule(atoms=new_atoms))
+
+    return Crystal(lattice=lattice, asymmetric_unit=asymmetric_unit, space_group=CrystallographicSpaceGroups.get(1))
+
+
 def map_pymatgen_IStructure_to_crystal(structure):
     """
     Given a Pymatgen IStructure object, map it to a crystal structure in our internal model

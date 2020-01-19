@@ -35,6 +35,7 @@ def populate_db(db, atoms, kvp, data):
         # There is already something matching this row, we will update the key-value pairs and data before commit
         kvp.update(row.key_value_pairs)
         if data is not None:
+            print("Update...")
             data.update(row.data)
         db.write(atoms, data=data, id=row.id, **kvp)
     except KeyError:
@@ -191,7 +192,7 @@ def __two_d_110_O2_energies(db):
     two_d_formation_energies(db, orientation='110', termination='O2')
 
 def __two_d_110_ABO_energies(db):
-    two_d_formation_energies(db, orientation='111', termination='ABO')
+    two_d_formation_energies(db, orientation='110', termination='ABO')
 
 def collect(db):
     errors = []
@@ -200,9 +201,10 @@ def collect(db):
              #randomised_structure_formation_energy,
              #__two_d_100_BO2_energies,
              #__two_d_100_AO_energies,
-             #__two_d_111_B_energies,
+             __two_d_111_B_energies]
              #__two_d_111_AO3_energies,
-             __two_d_110_O2_energies]
+             #__two_d_110_O2_energies,
+             #__two_d_110_ABO_energies]
     for step in steps:
         try:
             step(db)
