@@ -147,6 +147,21 @@ class VaspReader(FileReader):
                 free_energies.append(float(line.split()[4]))
         return free_energies
 
+    def get_vibrational_eigenfrequencies_from_outcar(self):
+        """
+        Given the OUTCAR from a phonon calculation, read in all the phonon frequencies.
+
+        :return list phonon_frequencies: A list of all the Gamma point phonon frequencies, given in the unit of THz.
+        """
+        phonon_frequencies = []
+        for line in self.file_content:
+            if ('f' in line) and ('=' in line) and ('THz' in line) and ('cm-1' in line) and ('meV' in line):
+                if 'f/i' not in line:
+                    phonon_frequencies.append(float(line.split()[3]))
+                else:
+                    phonon_frequencies.append(-1.0*float(line.split()[2])) #negative frequencies, instabilities!
+        return phonon_frequencies
+
     def read_XDATCAR(self):
         _counter = 0
         _frame_counter = 0

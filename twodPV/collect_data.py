@@ -10,8 +10,10 @@ more easily accessible by other users using the existing ase functionalities.
 import argparse
 import os
 import glob
+import numpy as np
 
 from core.calculators.vasp import Vasp
+from core.dao.vasp import VaspReader
 from ase.io.vasp import *
 from ase.db import connect
 
@@ -32,11 +34,14 @@ def populate_db(db, atoms, kvp, data):
     row = None
     try:
         row = db.get(selection=[('uid', '=', kvp['uid'])])
+        print("Updating an existing row.")
         # There is already something matching this row, we will update the key-value pairs and data before commit
-        kvp.update(row.key_value_pairs)
+        if kvp is not None:
+            kvp.update(row.key_value_pairs)
         if data is not None:
-            print("Update...")
             data.update(row.data)
+        if atoms is None:
+            atoms = row.toatoms()
         db.write(atoms, data=data, id=row.id, **kvp)
     except KeyError:
         try:
@@ -105,6 +110,39 @@ def pm3m_formation_energy(db):
                     os.chdir(cwd)
 
 
+def __pm3m_phonon_frequencies(db):
+    print("========== Collecting phonon frequencies for bulk perovskites in Pm3m symmetry ===========")
+    property_populator(system='pm3m', property='phonon', db=db)
+
+
+def property_populator(property='phonon', db=None, system=None):
+    cwd = os.getcwd()
+
+    if system is 'pm3m':
+        base_dir = cwd + '/relax_Pm3m/'
+
+    kvp = {}
+    data = {}
+    for i in range(len(A_site_list)):
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    system_name = a + b + c
+
+                    if system is 'pm3m':
+                        uid = system_name + '3_pm3m'
+                        kvp['uid'] = uid
+
+                    if property is 'phonon':
+                        dir = os.path.join(base_dir, system_name + "_Pm3m/phonon_G")
+                        reader = VaspReader(input_location=dir + '/OUTCAR')
+                        freqs = reader.get_vibrational_eigenfrequencies_from_outcar()
+                        kvp['gamma_phonon_freq'] = np.array(freqs)
+                    row = db.get(selection=[('uid', '=', kvp['uid'])])
+                    print(row)
+                    populate_db(db, None, data, kvp)
+
+
 def randomised_structure_formation_energy(db):
     print("========== Collecting formation energies for distorted perovskites  ===========")
     cwd = os.getcwd()
@@ -162,7 +200,7 @@ def two_d_formation_energies(db, orientation='100', termination='AO2', thicknese
                                 kvp['uid'] = uid
                                 kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
                                 kvp['formation_energy'] = formation_energy(atoms)
-                                kvp['orientation'] = '['+str(orientation)+']'
+                                kvp['orientation'] = '[' + str(orientation) + ']'
                                 kvp['termination'] = termination
                                 kvp['nlayer'] = thick
                                 counter += 1
@@ -182,29 +220,35 @@ def __two_d_100_AO_energies(db):
 def __two_d_100_BO2_energies(db):
     two_d_formation_energies(db, orientation='100', termination='BO2')
 
+
 def __two_d_111_B_energies(db):
     two_d_formation_energies(db, orientation='111', termination='B')
+
 
 def __two_d_111_AO3_energies(db):
     two_d_formation_energies(db, orientation='111', termination='AO3')
 
+
 def __two_d_110_O2_energies(db):
     two_d_formation_energies(db, orientation='110', termination='O2')
+
 
 def __two_d_110_ABO_energies(db):
     two_d_formation_energies(db, orientation='110', termination='ABO')
 
+
 def collect(db):
     errors = []
-    steps = [element_energy, #do not skip this step, always need this to calculate formation energy on-the-fly
+    steps = [element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
              #pm3m_formation_energy,
              #randomised_structure_formation_energy,
-             #__two_d_100_BO2_energies,
-             #__two_d_100_AO_energies,
-             __two_d_111_B_energies]
-             #__two_d_111_AO3_energies,
-             #__two_d_110_O2_energies,
-             #__two_d_110_ABO_energies]
+             # __two_d_100_BO2_energies,
+             # __two_d_100_AO_energies,
+             # __two_d_111_B_energies,
+             # __two_d_111_AO3_energies,
+             # __two_d_110_O2_energies,
+             # __two_d_110_ABO_energies
+             __pm3m_phonon_frequencies]
     for step in steps:
         try:
             step(db)
