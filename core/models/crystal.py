@@ -69,7 +69,6 @@ class Crystal(object):
         for mol in self.asymmetric_unit:
             for atom in mol.atoms:
                 all_atoms.append(atom)
-
         if not unique:
             if sort:
                 all_atoms.sort(key=lambda x: x.label, reverse=False)

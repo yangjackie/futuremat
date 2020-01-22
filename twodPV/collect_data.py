@@ -137,10 +137,8 @@ def property_populator(property='phonon', db=None, system=None):
                         dir = os.path.join(base_dir, system_name + "_Pm3m/phonon_G")
                         reader = VaspReader(input_location=dir + '/OUTCAR')
                         freqs = reader.get_vibrational_eigenfrequencies_from_outcar()
-                        kvp['gamma_phonon_freq'] = np.array(freqs)
-                    row = db.get(selection=[('uid', '=', kvp['uid'])])
-                    print(row)
-                    populate_db(db, None, data, kvp)
+                        data['gamma_phonon_freq'] = np.array(freqs)
+                        populate_db(db, None, kvp, data)
 
 
 def randomised_structure_formation_energy(db):
@@ -176,9 +174,14 @@ def randomised_structure_formation_energy(db):
                         os.chdir(cwd)
 
 
-def two_d_formation_energies(db, orientation='100', termination='AO2', thicknesess=[3, 5, 7, 9]):
+def two_d_formation_energies(db, orientation='100', termination='AO2', thicknesess=[3, 5, 7, 9], large_cell=False):
     cwd = os.getcwd()
-    base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_small/'
+
+    if not large_cell:
+        base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_small/'
+    else:
+        base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_r2_r2_cell/'
+
     kvp = {}
     data = {}
     counter = 0
@@ -190,8 +193,11 @@ def two_d_formation_energies(db, orientation='100', termination='AO2', thicknese
                     for thick in thicknesess:
                         work_dir = base_dir + system_name + "_" + str(thick)
                         os.chdir(work_dir)
-
-                        uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(thick)
+                        if not large_cell:
+                            uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(thick)
+                        else:
+                            uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(
+                                thick) + "_large_cell"
                         try:
                             calculator = Vasp()
                             calculator.check_convergence()
@@ -221,6 +227,14 @@ def __two_d_100_BO2_energies(db):
     two_d_formation_energies(db, orientation='100', termination='BO2')
 
 
+def __two_d_100_AO_energies_large_cell(db):
+    two_d_formation_energies(db, orientation='100', termination='AO', large_cell=True, thicknesess=[3])
+
+
+def __two_d_100_BO2_energies_large_cell(db):
+    two_d_formation_energies(db, orientation='100', termination='BO2', large_cell=True, thicknesess=[3])
+
+
 def __two_d_111_B_energies(db):
     two_d_formation_energies(db, orientation='111', termination='B')
 
@@ -240,15 +254,15 @@ def __two_d_110_ABO_energies(db):
 def collect(db):
     errors = []
     steps = [element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
-             #pm3m_formation_energy,
-             #randomised_structure_formation_energy,
-             # __two_d_100_BO2_energies,
-             # __two_d_100_AO_energies,
+             # pm3m_formation_energy,
+             # randomised_structure_formation_energy,
+             __two_d_100_BO2_energies_large_cell,
+             __two_d_100_AO_energies_large_cell]
              # __two_d_111_B_energies,
              # __two_d_111_AO3_energies,
              # __two_d_110_O2_energies,
              # __two_d_110_ABO_energies
-             __pm3m_phonon_frequencies]
+             #__pm3m_phonon_frequencies]
     for step in steps:
         try:
             step(db)

@@ -82,10 +82,10 @@ def plot_thickness_dependent_formation_energies(db, orientation='100', output=No
                     axs[0].set_title(title)
                     axs[1].set_xlabel('Layers')
 
-    if orientation=='111':
-        ax21.set_ylim([-1,2])
-        ax22.set_ylim([-2,2.5])
-        ax23.set_ylim([-0.5,2])
+    if orientation == '111':
+        ax21.set_ylim([-1, 2])
+        ax22.set_ylim([-2, 2.5])
+        ax23.set_ylim([-0.5, 2])
 
     if output is None:
         output = 'two_d_' + str(orientation) + '_' + 'thickness_dependent.png'
@@ -141,8 +141,7 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
                             row = db.get(selection=[('uid', '=', uid)])
                             twod_formation_e = row.key_value_pairs['formation_energy']
 
-                            if twod_formation_e - pm3m_formation_e <=10.0:
-
+                            if twod_formation_e - pm3m_formation_e <= 10.0:
                                 bulk_e_diff[term_type_id].append(pm3m_formation_e - lowest_relaxed)
                                 twod_e_diff[term_type_id].append(twod_formation_e - pm3m_formation_e)
                                 names[term_type_id].append(system_name + '$_{3}$')
@@ -178,9 +177,9 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
                 if (y > 0.2) or (y < -0.2):
                     axs[_p].text(x + 0.01, y + 0.01, names[_p][u], fontsize=14, color='#688291')
 
-            #if max(_x)>10:
+            # if max(_x)>10:
             #    axs[_p].set_xlim([min(_x) - 0.02, 3])
-            #else:
+            # else:
             axs[_p].set_xlim([min(_x) - 0.02, max(_x) + 0.12])
             axs[_p].set_ylim([min(_y) - 0.02, max(_y) + 0.05])
 
@@ -199,6 +198,70 @@ def plot_energy_versus_bulk(db, orientation='100', thick=3, output=None):
     plt.show()
 
 
+def plot_super_cell_dependent_formation_energies(db, orientation='100', thick=3, output=None):
+    figs, ((ax11), (ax21)) = plt.subplots(ncols=2, nrows=1, figsize=(12, 6))
+
+    for i in range(len(A_site_list)):
+
+        small_cell_e_diff = [[] for _ in range(len(termination_types[orientation]))]
+        large_cell_e_diff = [[] for _ in range(len(termination_types[orientation]))]
+
+        if i == 0:
+            color = '#7AC7A9'
+        if i == 1:
+            color = '#90CA57'
+        if i == 2:
+            color = '#F1D628'
+        if i == 3:
+            color = '#2B8283'
+
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    # Energy of the bulk material in the perovskite structure
+                    system_name = a + b + c
+                    uid = system_name + '3_pm3m'
+                    row = db.get(selection=[('uid', '=', uid)])
+                    pm3m_formation_e = row.key_value_pairs['formation_energy']
+
+                    # Find the formation energy of the corresponding two-D structures
+                    for term_type_id, term_type in enumerate(termination_types[orientation]):
+                        uid_small = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(thick)
+                        uid_large = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(
+                            thick) + "_large_cell"
+                        twod_formation_e_small = None
+                        twod_formation_e_large = None
+
+                        try:
+                            row = db.get(selection=[('uid', '=', uid_small)])
+                            twod_formation_e_small = row.key_value_pairs['formation_energy']
+                        except:
+                            pass
+
+                        try:
+                            row = db.get(selection=[('uid', '=', uid_large)])
+                            twod_formation_e_large = row.key_value_pairs['formation_energy']
+                        except:
+                            pass
+
+                        if (twod_formation_e_large is not None) and (twod_formation_e_small is not None):
+                            small_cell_e_diff[term_type_id].append(twod_formation_e_small - pm3m_formation_e)
+                            large_cell_e_diff[term_type_id].append(twod_formation_e_large - pm3m_formation_e)
+
+        ax11.plot(small_cell_e_diff[0], large_cell_e_diff[0], 'o', c=color)
+        ax11.plot(small_cell_e_diff[0], small_cell_e_diff[0], 'k-')
+        ax11.set_xlabel(termination_types[orientation][0] + " (small cell) $E_{f}^{2D}-E_{f}^{Pm\\bar{2}m}$ (eV)")
+        ax11.set_ylabel(termination_types[orientation][0] + " (large cell) $E_{f}^{2D}-E_{f}^{Pm\\bar{2}m}$ (eV)")
+
+        ax21.plot(small_cell_e_diff[1], large_cell_e_diff[1], 'o', c=color)
+        ax21.plot(small_cell_e_diff[1], small_cell_e_diff[1], 'k-')
+        ax21.set_xlabel(termination_types[orientation][1] + " (small cell) $E_{f}^{2D}-E_{f}^{Pm\\bar{2}m}$ (eV)")
+        ax21.set_ylabel(termination_types[orientation][1] + " (large cell) $E_{f}^{2D}-E_{f}^{Pm\\bar{2}m}$ (eV)")
+    plt.tight_layout()
+    plt.savefig(output)
+    plt.show()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Switches for analyzing the energy landscapes of 2D perovskites',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -210,6 +273,8 @@ if __name__ == "__main__":
                         help="Plot size dependent formation energies.")
     parser.add_argument("--vbulk", action='store_true',
                         help="Plot energy compared to the bulk perovskite")
+    parser.add_argument("--supercell_effect", action='store_true',
+                        help="Compare the formation energies calculated with different supercell size")
     parser.add_argument("--db", type=str, default=os.getcwd() + '/2dpv.db',
                         help="Name of the database that contains the results of the screenings.")
     parser.add_argument("--output", type=str, default=None,
@@ -226,3 +291,6 @@ if __name__ == "__main__":
 
     if args.size_dependent_energies:
         plot_thickness_dependent_formation_energies(args.db, orientation=args.orient, output=args.output)
+
+    if args.supercell_effect:
+        plot_super_cell_dependent_formation_energies(args.db, orientation='100', output=args.output)

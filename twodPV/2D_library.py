@@ -15,9 +15,11 @@ import os
 
 from twodPV.elements import A_site_list, B_site_list, C_site_list
 
-thicknesses = [3, 5, 7, 9]
-
-orientation_dict = {'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
+#thicknesses = [3, 5, 7, 9]
+thicknesses = [3]
+orientation_dict = {#'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
+                    #        'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
+                    '100': {'a': (1, 1, 0), 'b': (-1, 1, 0),
                             'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
                     '111': {'a': (1, 1, 0), 'b': (-1, 0, 1),
                             'origio': {'AO3': (0, 0, 0), 'B': (0, 0, 0.25)}},
@@ -47,7 +49,7 @@ def setup_two_d_structure_folders(orientation=None, termination=None, db=None):
                         add_vacuum(slab, 40)
 
                         slab_wd = cwd + '/slab_' + str(orientation) + '_' + str(
-                            termination) + '_small_oriented/' + a + b + c + "_" + str(thick) + '/'
+                            termination) + '_r2_r2_cell/' + a + b + c + "_" + str(thick) + '/'
 
                         if not os.path.exists(slab_wd):
                             os.makedirs(slab_wd)
@@ -109,6 +111,11 @@ if __name__ == "__main__":
     parser.add_argument("--db", type=str, default=os.getcwd() + '/2dpv.db',
                         help="Name of the database that contains the results of the screenings.")
     args = parser.parse_args()
+
+    if os.path.exists(args.db):
+        args.db = connect(args.db)
+    else:
+        raise Exception("Database " + args.db + " does not exists, cannot proceed!")
 
     if args.setup_twod:
         setup_two_d_structure_folders(orientation=args.orient, termination=args.termination, db=args.db)

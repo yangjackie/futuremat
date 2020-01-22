@@ -109,6 +109,7 @@ int_keys = [
     'nkredy',  # define sub grid of q-points in y direction for HF
     'nkredz',  # define sub grid of q-points in z direction for HF
     'npar',  # parallelization over bands
+    'kpar', #parallelization over k-point
     'nsim',  # evaluate NSIM bands simultaneously if using RMM-DIIS
     'nsw',  # number of steps for ionic upd.
     'nupdown',  # fix spin moment to specified value
@@ -231,7 +232,7 @@ class Vasp(Calculator):
         if 'executable' not in kwargs.keys():
             self.executable = 'vasp_std'
         else:
-            assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-xy', 'vasp_std-xz','vasp_std-yz']
+            #assert kwargs['executable'] in ['vasp_std', 'vasp_gam', 'vasp_std-xy', 'vasp_std-xz','vasp_std-yz']
             self.executable = kwargs['executable']
 
     def _update_executable(self):

@@ -1,7 +1,4 @@
 import os
-import copy
-import logging
-from myqueue.config import config
 
 from core.calculators.vasp import Vasp
 from core.dao.vasp import *
@@ -19,7 +16,7 @@ _default_bulk_optimisation_set = {'ADDGRID': True,
                                   'NSW': 500,
                                   'ISYM': 0,
                                   'LCHARG': False,
-                                  'LREAL': False,
+                                  'LREAL': 'Auto',
                                   'LVTOT': False,
                                   'LWAVE': False,
                                   'PREC': 'Normal',
@@ -41,8 +38,8 @@ def __update_core_info():
             elif 'normalsl' in l:
                 ncpus = 32
             else:
-                ncpus = 48
-        default_bulk_optimisation_set.update({'NPAR': ncpus})
+                ncpus = 16
+        default_bulk_optimisation_set.update({'NPAR': ncpus, 'NCORE': 3})
     except:
         pass
 
@@ -62,33 +59,26 @@ def default_structural_optimisation():
 
     should resubmit a job continuing the previous unfinished structural optimisation.
     """
-    # spin_unpolarised_optimization()
 
     logger = setup_logger(output_filename='relax.log')
-
     __update_core_info()
+    logger.info("==========Full Structure Optimisation with VASP==========")
+    structure = __load_structure(logger)
 
+    # default_bulk_optimisation_set.update({"MAGMOM": "5*0 11*0 16*4 48*0"})
+    __default_spin_polarised_vasp_optimisation_procedure(logger, structure)
+
+
+def __default_spin_polarised_vasp_optimisation_procedure(logger, structure):
     try:
         os.remove("./WAVECAR")
         logger.info("Previous WAVECAR found, remove before start new optimisation.")
     except:
         pass
 
-    logger.info("==========Full Structure Optimisation with VASP==========")
-
-    if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):
-        structure = VaspReader(input_location='./CONTCAR').read_POSCAR()
-        logger.info("Restart optimisation from previous CONTCAR.")
-    else:
-        structure = VaspReader(input_location='./POSCAR').read_POSCAR()
-        logger.info("Start new optimisation from POSCAR")
-
-    # default_bulk_optimisation_set.update()
-    # we need some mechanism to automatically update KPAR and NPAR values based on the queue type
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
     vasp.execute()
-
     if vasp.self_consistency_error:
         # Spin polarisation calculations might be very difficult to converge.
         # For this case, we converge a non-spin polarisation calculation first and
@@ -114,6 +104,118 @@ def default_structural_optimisation():
                 logger.info("VASP did not completed properly, you might want to check it by hand.")
 
 
+def __load_structure(logger):
+    if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):
+        structure = VaspReader(input_location='./CONTCAR').read_POSCAR()
+        logger.info("Restart optimisation from previous CONTCAR.")
+    else:
+        structure = VaspReader(input_location='./POSCAR').read_POSCAR()
+        logger.info("Start new optimisation from POSCAR")
+    return structure
+
+
+def GGA_U_structure_optimisation():
+    logger = setup_logger(output_filename='relax.log')
+    __update_core_info()
+    logger.info("==========Full GGA+U Structure Optimisation with VASP==========")
+    structure = __load_structure(logger)
+    gga_u_options = __set_U_correction_dictionary(structure)
+    default_bulk_optimisation_set.update(gga_u_options)
+
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+
+def GGA_U_high_spin_structure_optimisation():
+    logger = setup_logger(output_filename='relax.log')
+    __update_core_info()
+    logger.info("==========Full GGA+U high spin Structure Optimisation with VASP==========")
+    structure = __load_structure(logger)
+    gga_u_options = __set_U_correction_dictionary(structure)
+    default_bulk_optimisation_set.update(gga_u_options)
+
+    magmom_options = __set_high_spin_magmom_dictionary(structure)
+    default_bulk_optimisation_set.update(magmom_options)
+
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+
+def high_spin_structure_optimisation():
+    logger = setup_logger(output_filename='relax.log')
+    __update_core_info()
+    logger.info("==========Full  high spin Structure Optimisation with VASP==========")
+    structure = __load_structure(logger)
+
+    magmom_options = __set_high_spin_magmom_dictionary(structure)
+    default_bulk_optimisation_set.update(magmom_options)
+
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+
+def __set_U_correction_dictionary(structure):
+    from core.models.element import U_corrections, orbital_index
+    LDAUL = ''
+    LDAUU = ''
+    labels = [x.label for x in structure.all_atoms(unique=True, sort=True)]
+    unique_labels = []
+    for l in labels:
+        if l not in unique_labels:
+            unique_labels.append(l)
+    for label in unique_labels:
+        if label in U_corrections.keys():
+            orbital = list(U_corrections[label].keys())[-1]
+            LDAUL += ' ' + str(orbital_index[orbital])
+            LDAUU += ' ' + str(U_corrections[label][orbital])
+        else:
+            LDAUL += ' -1'
+            LDAUU += ' 0'
+    GGA_U_options = {'LDAU': '.TRUE.', 'LDAUTYPE': 2, 'LDAUJ': '0 ' * len(unique_labels), 'LDAUL': LDAUL,
+                     'LDAUU': LDAUU}
+    return GGA_U_options
+
+
+def __set_high_spin_magmom_dictionary(structure):
+    # this sets transition metal ions into its highest spin state for performing calculations in an initial high-spin FM states
+    MAGMOM = ''
+    labels = [x.label for x in structure.all_atoms(unique=True, sort=True)]
+    unique_labels = []
+    for l in labels:
+        if l not in unique_labels:
+            unique_labels.append(l)
+    from core.models.element import high_spin_states
+    for l in unique_labels:
+        if l in high_spin_states.keys():
+            MAGMOM += str(structure.all_atoms_count_dictionaries()[l]) + '*' + str(high_spin_states[l]) + ' '
+        else:
+            MAGMOM += str(structure.all_atoms_count_dictionaries()[l]) + '*0 '
+    return {"MAGMOM": MAGMOM}
+
+
+def default_xy_strained_optimisation():
+    default_bulk_optimisation_set.update({'executable': 'vasp_std-z'})
+    default_structural_optimisation()
+
+
+def default_spin_unpolarised_xy_strained_optimisation():
+    default_bulk_optimisation_set.update({'executable': 'vasp_std-z'})
+    spin_unpolarised_optimization()
+
+
+def default_highspin_xy_strained_optimisation():
+    default_bulk_optimisation_set.update({'executable': 'vasp_std-z'})
+    high_spin_structure_optimisation()
+
+
+def default_GGA_U_highspin_xy_strained_optimisation():
+    default_bulk_optimisation_set.update({'executable': 'vasp_std-z'})
+    GGA_U_high_spin_structure_optimisation()
+
+
 def spin_unpolarised_optimization():
     """
     Perform geometry optimization without spin polarisation. It is always helpful to converge an initial
@@ -132,12 +234,7 @@ def spin_unpolarised_optimization():
 
     logger.info("==========Full Structure Optimisation with VASP==========")
 
-    if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):
-        structure = VaspReader(input_location='./CONTCAR').read_POSCAR()
-        logger.info("Restart optimisation from previous CONTCAR.")
-    else:
-        structure = VaspReader(input_location='./POSCAR').read_POSCAR()
-        logger.info("Start new optimisation from POSCAR")
+    structure = __load_structure(logger)
 
     logger.info("Perform an initial spin-non-polarised calculations to help convergence")
     default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04'})
@@ -172,6 +269,7 @@ def default_symmetry_preserving_optimisation():
 
 def default_bulk_phonon_G_calculation():
     return __default_G_phonon(two_d=False)
+
 
 def default_twod_phonon_G_calculation():
     return __default_G_phonon(two_d=True)
