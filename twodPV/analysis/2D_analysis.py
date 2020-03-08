@@ -7,10 +7,11 @@ rc('text', usetex=True)
 
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
+import numpy as np
 
 from twodPV.bulk_library import A_site_list, B_site_list, C_site_list
 
-params = {'legend.fontsize': '8',
+params = {'legend.fontsize': '12',
           'figure.figsize': (6, 5),
           'axes.labelsize': 20,
           'axes.titlesize': 16,
@@ -245,20 +246,21 @@ def plot_super_cell_dependent_formation_energies(db, orientation='100', thick=3,
                             pass
 
                         if (twod_formation_e_large is not None) and (twod_formation_e_small is not None):
-                            _a=twod_formation_e_small - pm3m_formation_e
-                            _b=twod_formation_e_large - pm3m_formation_e
+                            _a = twod_formation_e_small - pm3m_formation_e
+                            _b = twod_formation_e_large - pm3m_formation_e
                             small_cell_e_diff[term_type_id].append(_a)
                             large_cell_e_diff[term_type_id].append(_b)
-                            if abs(_a-_b) > 0.09:
+                            if abs(_a - _b) > 0.09:
                                 from core.models.element import ionic_radii
-                                from twodPV.analysis.bulk_energy_landscape import charge_state_A_site,charge_state_B_site,charge_state_C_site
+                                from twodPV.analysis.bulk_energy_landscape import charge_state_A_site, \
+                                    charge_state_B_site, charge_state_C_site
                                 import math
                                 tolerance_f = ionic_radii[a][charge_state_A_site[i]] + ionic_radii[c][
                                     charge_state_C_site[i]]
                                 tolerance_f /= ionic_radii[b][charge_state_B_site[i]] + ionic_radii[c][
                                     charge_state_C_site[i]]
                                 tolerance_f /= math.sqrt(2)
-                                print(system_name,term_type,abs(_a-_b),tolerance_f)
+                                print(system_name, term_type, abs(_a - _b), tolerance_f)
 
         ax11.plot(small_cell_e_diff[0], large_cell_e_diff[0], 'o', c=color)
         ax11.plot(small_cell_e_diff[0], small_cell_e_diff[0], 'k-')
@@ -274,6 +276,46 @@ def plot_super_cell_dependent_formation_energies(db, orientation='100', thick=3,
     plt.show()
 
 
+def plot_thickness_dependent_imaginary_frequency_distribution(db, orientation='100', output=None, term_type='AO'):
+    plt.figure(figsize=(8, 6))
+    color_dict = {3: '#A3586D', 5: '#5C4A72', 7: '#F3B05A', 9: '#F4874B'}
+    thickness_freqs = {3: [], 5: [], 7: [], 9: []}
+    thickness_bins = {3: [], 5: [], 7: [], 9: []}
+
+    for thick in [3, 5, 7, 9]:
+        this_freq = []
+        for i in range(len(A_site_list)):
+            for a in A_site_list[i]:
+                for b in B_site_list[i]:
+                    for c in C_site_list[i]:
+                        system_name = a + b + c
+                        uid = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(thick)
+                        row = db.get(selection=[('uid', '=', uid)])
+                        gamma_point_freqs = row.data['gamma_phonon_freq']
+                        gamma_point_freqs = [(f ** 2).real for f in gamma_point_freqs if f.imag != 0.0]
+                        this_freq.append(min(gamma_point_freqs))
+        this_freq = [f for f in this_freq if f > -5]
+        hist, bin_edge = np.histogram(this_freq, bins=[-5 + j * 0.1 for j in range(55)], range=(-5, 0))
+        thickness_freqs[thick] = list(hist)
+        thickness_bins[thick] = list(bin_edge)[:-1]
+        print(len(thickness_bins[thick]), len(thickness_freqs[thick]))
+
+    p1 = plt.bar(thickness_bins[3], thickness_freqs[3], 0.09, alpha=0.7, label='$n=3$', color=color_dict[3])
+    p2 = plt.bar(thickness_bins[5], thickness_freqs[5], 0.09, alpha=0.7, bottom=thickness_freqs[3], label='$n=5$',
+                 color=color_dict[5])
+    p3 = plt.bar(thickness_bins[7], thickness_freqs[7], 0.09, alpha=0.7,
+                 bottom=[thickness_freqs[3][l] + thickness_freqs[5][l] for l in range(len(thickness_freqs[3]))],
+                 label='$n=7$', color=color_dict[7])
+    p4 = plt.bar(thickness_bins[9], thickness_freqs[9], 0.09, alpha=0.7,
+                 bottom=[thickness_freqs[3][l] + thickness_freqs[5][l] + thickness_freqs[7][l] for l in
+                         range(len(thickness_freqs[3]))], label='$n=9$', color=color_dict[9])
+
+    plt.tight_layout()
+    plt.xlabel("$|\omega_{\min}|^2$ (THz$^2$)")
+    plt.ylabel("Occurences")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output)
 
 
 if __name__ == "__main__":
@@ -287,12 +329,14 @@ if __name__ == "__main__":
                         help="Plot size dependent formation energies.")
     parser.add_argument("--vbulk", action='store_true',
                         help="Plot energy compared to the bulk perovskite")
-#    parser.add_argument("--supercell_effect", action='store_true',
-#                        help="Compare the formation energies calculated with different supercell size")
+    #    parser.add_argument("--supercell_effect", action='store_true',
+    #                        help="Compare the formation energies calculated with different supercell size")
     parser.add_argument("--db", type=str, default=os.getcwd() + '/2dpv.db',
                         help="Name of the database that contains the results of the screenings.")
     parser.add_argument("--output", type=str, default=None,
                         help='Output file name for figure generated.')
+    parser.add_argument("--freq_distribute", action='store_true',
+                        help='Distribution of imaginary phonon frequencies with respect to thickness.')
     args = parser.parse_args()
 
     if os.path.exists(args.db):
@@ -305,6 +349,10 @@ if __name__ == "__main__":
 
     if args.size_dependent_energies:
         plot_thickness_dependent_formation_energies(args.db, orientation=args.orient, output=args.output)
+
+    if args.freq_distribute:
+        plot_thickness_dependent_imaginary_frequency_distribution(args.db, orientation=args.orient, output=args.output,
+                                                                  term_type=args.terminations)
 
 #    if args.supercell_effect:
 #        plot_super_cell_dependent_formation_energies(args.db, orientation='100', output=args.output)
