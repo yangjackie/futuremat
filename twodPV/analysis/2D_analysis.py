@@ -228,7 +228,7 @@ def plot_super_cell_dependent_formation_energies(db, orientation='100', thick=3,
                     for term_type_id, term_type in enumerate(termination_types[orientation]):
                         uid_small = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(thick)
                         uid_large = system_name + '3_' + str(orientation) + "_" + str(term_type) + "_" + str(
-                            thick) + "_large_cell"
+                            thick) + "_large_cell_full_B_octa"
                         twod_formation_e_small = None
                         twod_formation_e_large = None
 
@@ -245,8 +245,20 @@ def plot_super_cell_dependent_formation_energies(db, orientation='100', thick=3,
                             pass
 
                         if (twod_formation_e_large is not None) and (twod_formation_e_small is not None):
-                            small_cell_e_diff[term_type_id].append(twod_formation_e_small - pm3m_formation_e)
-                            large_cell_e_diff[term_type_id].append(twod_formation_e_large - pm3m_formation_e)
+                            _a=twod_formation_e_small - pm3m_formation_e
+                            _b=twod_formation_e_large - pm3m_formation_e
+                            small_cell_e_diff[term_type_id].append(_a)
+                            large_cell_e_diff[term_type_id].append(_b)
+                            if abs(_a-_b) > 0.09:
+                                from core.models.element import ionic_radii
+                                from twodPV.analysis.bulk_energy_landscape import charge_state_A_site,charge_state_B_site,charge_state_C_site
+                                import math
+                                tolerance_f = ionic_radii[a][charge_state_A_site[i]] + ionic_radii[c][
+                                    charge_state_C_site[i]]
+                                tolerance_f /= ionic_radii[b][charge_state_B_site[i]] + ionic_radii[c][
+                                    charge_state_C_site[i]]
+                                tolerance_f /= math.sqrt(2)
+                                print(system_name,term_type,abs(_a-_b),tolerance_f)
 
         ax11.plot(small_cell_e_diff[0], large_cell_e_diff[0], 'o', c=color)
         ax11.plot(small_cell_e_diff[0], small_cell_e_diff[0], 'k-')
@@ -262,6 +274,8 @@ def plot_super_cell_dependent_formation_energies(db, orientation='100', thick=3,
     plt.show()
 
 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Switches for analyzing the energy landscapes of 2D perovskites',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -273,8 +287,8 @@ if __name__ == "__main__":
                         help="Plot size dependent formation energies.")
     parser.add_argument("--vbulk", action='store_true',
                         help="Plot energy compared to the bulk perovskite")
-    parser.add_argument("--supercell_effect", action='store_true',
-                        help="Compare the formation energies calculated with different supercell size")
+#    parser.add_argument("--supercell_effect", action='store_true',
+#                        help="Compare the formation energies calculated with different supercell size")
     parser.add_argument("--db", type=str, default=os.getcwd() + '/2dpv.db',
                         help="Name of the database that contains the results of the screenings.")
     parser.add_argument("--output", type=str, default=None,
@@ -292,5 +306,5 @@ if __name__ == "__main__":
     if args.size_dependent_energies:
         plot_thickness_dependent_formation_energies(args.db, orientation=args.orient, output=args.output)
 
-    if args.supercell_effect:
-        plot_super_cell_dependent_formation_energies(args.db, orientation='100', output=args.output)
+#    if args.supercell_effect:
+#        plot_super_cell_dependent_formation_energies(args.db, orientation='100', output=args.output)

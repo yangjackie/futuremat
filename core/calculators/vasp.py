@@ -26,6 +26,7 @@ float_keys = [
     'enaug',  # Density cutoff
     'encut',  # Planewave cutoff
     'encutfock',  # FFT grid in the HF related routines
+    'encutgw',
     'hfscreen',  # attribute to change from PBE0 to HSE
     'potim',  # time-step for ion-motion (fs)
     'nelect',  # total number of electrons
@@ -72,6 +73,7 @@ string_keys = [
     'system',  # name of System
     'tebeg',  #
     'teend',  # temperature during run
+    'precfock'
 ]
 
 int_keys = [
@@ -125,6 +127,7 @@ int_keys = [
     'snl',  # Maximum dimentionality of the Lanczos matrix
     'lbfgsmem',  # Steps saved for inverse Hessian for IOPT = 1 (LBFGS)
     'fnmin',  # Max iter. before adjusting dt and alpha for IOPT = 7 (FIRE)
+    'omegamax'
 ]
 
 bool_keys = [
@@ -159,6 +162,7 @@ bool_keys = [
     'lnebcell',  # Turn on SS-NEB
     'lglobal',  # Optmizize NEB globally for LBFGS (IOPT = 1)
     'llineopt',  # Use force based line minimizer for translation (IOPT = 1)
+    'lrpa', # whether exchange-correlation kernel should be used
 ]
 
 list_keys = [
@@ -207,9 +211,24 @@ class Vasp(Calculator):
         self.self_consistency_error = False
 
         try:
+            self.magnetic = kwargs['magnetic']
+        except KeyError:
+            self.magnetic = False
+
+        try:
+            self.use_gw = kwargs['use_gw']
+        except KeyError:
+            self.use_gw = False
+
+        try:
             self.clean_after_success = kwargs['clean_after_success']
         except KeyError:
             self.clean_after_success = True
+
+        try:
+            self.gamma_centered = kwargs['Gamma_centered']
+        except KeyError:
+            self.gamma_centered = False
 
     def set_mp_grid_density(self, **kwargs):
         self.mp_grid_density = None
@@ -252,10 +271,10 @@ class Vasp(Calculator):
         """
         logger.info('Setting up VASP calculation, write input file ...')
 
-        self.writer.write_structure(self.crystal, filename='POSCAR')
+        self.writer.write_structure(self.crystal, filename='POSCAR', magnetic=self.magnetic)
         logger.info('POSCAR written')
 
-        self.writer.write_potcar(self.crystal, sort=False, unique=True)
+        self.writer.write_potcar(self.crystal, sort=False, unique=True, magnetic=self.magnetic, use_GW=self.use_gw)
         logger.info('POTCAR written')
 
         # Check if there is already a KPOINTS file exists, for example, use the setting from
@@ -271,7 +290,7 @@ class Vasp(Calculator):
         if not os.path.isfile('./KPOINTS'):
             logger.info('No existing KPOINTS file, autogenerate Monkhorst-Pack K-point with density of ' + str(
                 self.mp_grid_density) + ' A^-1.')
-            self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density, MP_points=self.MP_points)
+            self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density, K_points=self.MP_points, gamma_centered=self.gamma_centered)
         else:
             logger.info('Found existing KPOINTS, using previous set up')
             f = open('./KPOINTS', 'r')
@@ -285,7 +304,7 @@ class Vasp(Calculator):
         """
         logger.info("Clean up directory after VASP executed successfully.")
         files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT',
-                 'node_info']
+                 'node_info', "WAVECAR", "WAVEDER"]
         for f in files:
             try:
                 os.remove(f)
@@ -301,14 +320,13 @@ class Vasp(Calculator):
 
     def check_convergence(self):
         """Method that checks whether a calculation has converged. Adapted from ASE."""
-        converged = None
-
         ibrion = None
         nsw = None
         opt_iterations = None
         ediff = None
         # First check electronic convergence
-        for line in open('./OUTCAR', 'r'):
+        outcar = open('./OUTCAR', 'r')
+        for line in outcar.readlines():
             if line.rfind('Call to ZHEGV failed') > -1:
                 self.self_consistency_error = True
                 self.completed = False
@@ -322,6 +340,8 @@ class Vasp(Calculator):
                 nsw = int(line.split()[2])
             if line.rfind('EDIFF  ') > -1:
                 ediff = float(line.split()[2])
+            if line.rfind('NELM') > -1:
+                nelm = int(line.split()[2].replace(';', ''))
             if line.rfind('total energy-change') > -1:
                 # I saw this in an atomic oxygen calculation. it
                 # breaks this code, so I am checking for it here.
@@ -346,6 +366,8 @@ class Vasp(Calculator):
                     self.completed = False
                     continue
 
+        outcar.close()
+
         # Then if ibrion in [1,2,3] check whether ionic relaxation
         # condition been fulfilled
 
@@ -355,9 +377,16 @@ class Vasp(Calculator):
             else:
                 self.completed = False
 
+        if (ibrion == -1) and (nsw == 0):
+            if nelm == 1:
+                outcar = open('./OUTCAR', 'r')
+                for line in outcar.readlines():
+                    if line.rfind('General timing and accounting informations for this job:') > -1:
+                        self.completed = True
+
+
         logger.info("VASP calculation completed successfully?     " + str(self.completed))
         logger.info("VASP crashed out due to error in SCF cycles? " + str(self.self_consistency_error))
-        return converged
 
 
     def execute(self):
@@ -367,3 +396,4 @@ class Vasp(Calculator):
 
         if self.completed and self.clean_after_success:
             self.tear_down()
+

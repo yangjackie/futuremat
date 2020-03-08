@@ -93,3 +93,15 @@ class Crystal(object):
         labels = [x.label for x in self.all_atoms()]
         return dict((x,labels.count(x)) for x in set(labels))
 
+    @property
+    def mag_group(self):
+        keyfunc = lambda a: (a.label, a.magmom)
+        from itertools import groupby
+        all_atoms = []
+
+        for mol in self.asymmetric_unit:
+            for atom in mol.atoms:
+                all_atoms.append(atom)
+        all_atoms = sorted(all_atoms, key=keyfunc)
+        self.__mag_group = groupby(all_atoms, keyfunc)
+        return self.__mag_group

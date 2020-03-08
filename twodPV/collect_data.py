@@ -115,11 +115,19 @@ def __pm3m_phonon_frequencies(db):
     property_populator(system='pm3m', property='phonon', db=db)
 
 
+def __two_d_100_AO_phonon_frequencies(db):
+    for thickness in [3, 5, 7, 9]:
+        system = '100_AO_' + str(thickness)
+        property_populator(system=system, property='phonon', db=db)
+
+
 def property_populator(property='phonon', db=None, system=None):
     cwd = os.getcwd()
 
     if system is 'pm3m':
         base_dir = cwd + '/relax_Pm3m/'
+    else:
+        base_dir = cwd + '/slab_'+system.replace(system.split("_")[-1],'small')
 
     kvp = {}
     data = {}
@@ -127,16 +135,23 @@ def property_populator(property='phonon', db=None, system=None):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
                 for c in C_site_list[i]:
-                    system_name = a + b + c
+                    chemistry = a + b + c
 
                     if system is 'pm3m':
-                        uid = system_name + '3_pm3m'
+                        uid = chemistry + '3_pm3m'
+                        system_folder = chemistry + '_Pm3m'
+                        kvp['uid'] = uid
+                    else:
+                        uid = chemistry + '3_' + str(system)
+                        system_folder = chemistry + "_" + str(system.split("_")[-1])
                         kvp['uid'] = uid
 
                     if property is 'phonon':
-                        dir = os.path.join(base_dir, system_name + "_Pm3m/phonon_G")
+                        dir = os.path.join(base_dir, system_folder + "/phonon_G")
+                        print(str(dir))
                         reader = VaspReader(input_location=dir + '/OUTCAR')
                         freqs = reader.get_vibrational_eigenfrequencies_from_outcar()
+                        print(freqs)
                         data['gamma_phonon_freq'] = np.array(freqs)
                         populate_db(db, None, kvp, data)
 
@@ -180,7 +195,7 @@ def two_d_formation_energies(db, orientation='100', termination='AO2', thicknese
     if not large_cell:
         base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_small/'
     else:
-        base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_r2_r2_cell/'
+        base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_full_B_octa/'
 
     kvp = {}
     data = {}
@@ -197,7 +212,7 @@ def two_d_formation_energies(db, orientation='100', termination='AO2', thicknese
                             uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(thick)
                         else:
                             uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(
-                                thick) + "_large_cell"
+                                thick) + "_large_cell_full_B_octa"
                         try:
                             calculator = Vasp()
                             calculator.check_convergence()
@@ -253,16 +268,17 @@ def __two_d_110_ABO_energies(db):
 
 def collect(db):
     errors = []
-    steps = [element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
+    steps = [__two_d_100_AO_phonon_frequencies]
+            #element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
              # pm3m_formation_energy,
              # randomised_structure_formation_energy,
-             __two_d_100_BO2_energies_large_cell,
-             __two_d_100_AO_energies_large_cell]
-             # __two_d_111_B_energies,
-             # __two_d_111_AO3_energies,
-             # __two_d_110_O2_energies,
-             # __two_d_110_ABO_energies
-             #__pm3m_phonon_frequencies]
+             #__two_d_100_BO2_energies_large_cell,
+             #__two_d_100_AO_energies_large_cell
+    # __two_d_111_B_energies,
+    # __two_d_111_AO3_energies,
+    # __two_d_110_O2_energies,
+    # __two_d_110_ABO_energies
+    # __pm3m_phonon_frequencies]
     for step in steps:
         try:
             step(db)
