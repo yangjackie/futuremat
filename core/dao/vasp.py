@@ -453,24 +453,28 @@ class VaspWriter(object):
         if type(filename) == str:
             f.close()
 
-    def write_KPOINTS(self, crystal, filename='KPOINTS', K_points=None, grid=0.025, molecular=False, gamma_centered=False):
+    def write_KPOINTS(self, crystal, filename='KPOINTS', K_points=None, grid=0.025, molecular=False, gamma_centered=False, kpoint_str=None):
         kpoint_file = open(filename, 'w')
-        kpoint_file.write("KPOINTS created by Entdecker Program\n")
-        kpoint_file.write('0\n')
-        if not gamma_centered:
-            kpoint_file.write('Monkhorst-Pack\n')
-        else:
-            kpoint_file.write('Gamma\n')
 
-        if K_points is not None:
-            kpoint_file.write(str(K_points[0]) + ' ' + str(K_points[1]) + ' ' + str(K_points[2]) + '\n')
+        if kpoint_str is None:
+            kpoint_file.write("KPOINTS created by Entdecker Program\n")
+            kpoint_file.write('0\n')
+            if not gamma_centered:
+                kpoint_file.write('Monkhorst-Pack\n')
+            else:
+                kpoint_file.write('Gamma\n')
+
+            if K_points is not None:
+                kpoint_file.write(str(K_points[0]) + ' ' + str(K_points[1]) + ' ' + str(K_points[2]) + '\n')
+            else:
+                from core.utils.kpoints import kpoints_from_grid
+                kpoints = kpoints_from_grid(crystal, grid=grid, molecular=molecular)
+                if [int(k) for k in kpoints] == [1, 1, 1]:
+                    crystal.gamma_only = True
+                kpoint_file.write(str(int(kpoints[0])) + ' ' + str(int(kpoints[1])) + ' ' + str(int(kpoints[2])) + '\n')
+            kpoint_file.write("0 0 0")
         else:
-            from core.utils.kpoints import kpoints_from_grid
-            kpoints = kpoints_from_grid(crystal, grid=grid, molecular=molecular)
-            if [int(k) for k in kpoints] == [1, 1, 1]:
-                crystal.gamma_only = True
-            kpoint_file.write(str(int(kpoints[0])) + ' ' + str(int(kpoints[1])) + ' ' + str(int(kpoints[2])) + '\n')
-        kpoint_file.write("0 0 0")
+            kpoint_file.write(kpoint_str)
 
         # TODO - write K-POINT paths for bandstructure calculations
 

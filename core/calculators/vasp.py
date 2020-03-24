@@ -105,6 +105,7 @@ int_keys = [
     'nelm',  # nr. of electronic steps (default 60)
     'nelmdl',  # nr. of initial electronic steps
     'nelmin',
+    'nedos',
     'nfree',  # number of steps per DOF when calculting Hessian using finitite differences
     'nkred',  # define sub grid of q-points for HF with nkredx=nkredy=nkredz
     'nkredx',  # define sub grid of q-points in x direction for HF
@@ -230,6 +231,11 @@ class Vasp(Calculator):
         except KeyError:
             self.gamma_centered = False
 
+        try:
+            self.kpoint_str = kwargs['KPOINT_string']
+        except KeyError:
+            self.kpoint_str = None
+
     def set_mp_grid_density(self, **kwargs):
         self.mp_grid_density = None
         self.MP_points = None
@@ -287,16 +293,19 @@ class Vasp(Calculator):
         logger.info("INCAR written")
 
     def _setup_kpoints(self):
-        if not os.path.isfile('./KPOINTS'):
-            logger.info('No existing KPOINTS file, autogenerate Monkhorst-Pack K-point with density of ' + str(
-                self.mp_grid_density) + ' A^-1.')
-            self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density, K_points=self.MP_points, gamma_centered=self.gamma_centered)
+        if self.kpoint_str is None:
+            if not os.path.isfile('./KPOINTS'):
+                logger.info('No existing KPOINTS file, autogenerate Monkhorst-Pack K-point with density of ' + str(
+                    self.mp_grid_density) + ' A^-1.')
+                self.writer.write_KPOINTS(self.crystal, grid=self.mp_grid_density, K_points=self.MP_points, gamma_centered=self.gamma_centered)
+            else:
+                logger.info('Found existing KPOINTS, using previous set up')
+                f = open('./KPOINTS', 'r')
+                for l in f.readlines():
+                    if '1 1 1' in l:
+                        self.crystal.gamma_only = True
         else:
-            logger.info('Found existing KPOINTS, using previous set up')
-            f = open('./KPOINTS', 'r')
-            for l in f.readlines():
-                if '1 1 1' in l:
-                    self.crystal.gamma_only = True
+            self.writer.write_KPOINTS(self.crystal, kpoint_str=self.kpoint_str)
 
     def tear_down(self):
         """

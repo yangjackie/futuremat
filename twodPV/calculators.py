@@ -29,7 +29,7 @@ _default_bulk_optimisation_set = {'ADDGRID': True,
 default_bulk_optimisation_set = {key.lower(): value for key, value in _default_bulk_optimisation_set.items()}
 
 
-def __update_core_info():
+def update_core_info():
     try:
         ncpus = None
         f = open('node_info', 'r')
@@ -50,7 +50,7 @@ def default_run_with_existing_vasp_setup():
     Run vasp calculation in folders where all POSCAR, INCAR, POTCAR and KPOINTs are already in place
     """
     logger = setup_logger(output_filename='relax.log')
-    __update_core_info()
+    update_core_info()
     logger.info("==========Run Vasp with pre-existing setup==========")
     try:
         os.remove("./WAVECAR")
@@ -90,9 +90,9 @@ def default_structural_optimisation():
     """
 
     logger = setup_logger(output_filename='relax.log')
-    __update_core_info()
+    update_core_info()
     logger.info("==========Full Structure Optimisation with VASP==========")
-    structure = __load_structure(logger)
+    structure = load_structure(logger)
 
     # default_bulk_optimisation_set.update({"MAGMOM": "5*0 11*0 16*4 48*0"})
     __default_spin_polarised_vasp_optimisation_procedure(logger, structure)
@@ -133,7 +133,7 @@ def __default_spin_polarised_vasp_optimisation_procedure(logger, structure):
                 logger.info("VASP did not completed properly, you might want to check it by hand.")
 
 
-def __load_structure(logger):
+def load_structure(logger):
     if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):
         structure = VaspReader(input_location='./CONTCAR').read_POSCAR()
         logger.info("Restart optimisation from previous CONTCAR.")
@@ -152,7 +152,7 @@ def spin_unpolarised_optimization():
     """
     logger = setup_logger(output_filename='relax.log')
 
-    __update_core_info()
+    update_core_info()
     try:
         os.remove("./WAVECAR")
         logger.info("Previous WAVECAR found, remove before start new optimisation.")
@@ -161,7 +161,7 @@ def spin_unpolarised_optimization():
 
     logger.info("==========Full Structure Optimisation with VASP==========")
 
-    structure = __load_structure(logger)
+    structure = load_structure(logger)
 
     logger.info("Perform an initial spin-non-polarised calculations to help convergence")
     default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04'})
@@ -242,13 +242,13 @@ def __default_G_phonon(two_d=False):
          'ISYM': 0,
          'LREAL': 'Auto',
          'POTIM': 0.01,
-         "NELM" : 200,
+         "NELM": 200,
          'clean_after_success': True})
     __G_phonon()
 
 
 def __G_phonon():
-    __update_core_info()
+    update_core_info()
     logger.info("==========Gamma point phonon calculation with VASP==========")
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()
     logger.info("Start from supercell defined in POSCAR")
@@ -262,7 +262,7 @@ def __G_phonon():
 # Procedures for calculating frequency dependent dielectric
 # constants
 # =================================================================
-__single_point_pbe = {'PREC': 'HIGH',
+single_point_pbe = {'PREC': 'HIGH',
                       'ISMEAR': 0,
                       'SIGMA': 0.01,
                       'EDIFF': 1e-05,
@@ -272,14 +272,15 @@ __single_point_pbe = {'PREC': 'HIGH',
                       'AMIN': 0.01,
                       'ISYM': 0,
                       'PREC': 'HIGH',
-                      #'ENCUT': 100,
-                      'LWAVE': True,
-                      'clean_after_success': False,
-                      'use_gw': True,
-                      'MP_points': [4, 4, 1],
-                      'Gamma_centered': True}
+                      'ENCUT': 500,
+                    'NSW': 0,
+                    'LWAVE': True,
+                    'clean_after_success': False,
+                    'use_gw': True,
+                    'MP_points': [4, 4, 1],
+                    'Gamma_centered': True}
 
-__pbe_omega = {'PREC': 'HIGH',
+pbe_omega = {'PREC': 'HIGH',
                'ISMEAR': 0,
                'SIGMA': 0.01,
                'EDIFF': 1e-05,
@@ -290,33 +291,35 @@ __pbe_omega = {'PREC': 'HIGH',
                'OMEGAMAX': 40,
                'ISPIN': 1,
                'ISYM': 0,
-               'LPEAD': True,
-               #'ENCUT': 100,
-               'clean_after_success': False,
-               'use_gw': True,
-               'MP_points': [4, 4, 1],
-               'Gamma_centered': True}
+             'LPEAD': True,
+             'ENCUT': 500,
+              'NEDOS': 1000,
+             'clean_after_success': False,
+             'use_gw': True,
+             'MP_points': [4, 4, 1],
+             'Gamma_centered': True}
 
-__pbe_rpa_omega = {'PREC': 'HIGH',
-               'ISMEAR': 0,
-               'SIGMA': 0.01,
-               'EDIFF': 1e-05,
-               'AMIN': 0.01,
-               'ALGO': 'CHI',
-               'LRPA': True,
-               'LOPTICS': True,
-               'NELM': 1,
-               'OMEGAMAX': 40,
-               'ISPIN': 1,
-               'ISYM': 0,
-               #'ENCUT': 100,
-                'ENCUTGW': 100,
-               'clean_after_success': True,
-               'use_gw': True,
-               'MP_points': [4, 4, 1],
-               'Gamma_centered': True}
+pbe_rpa_omega = {'PREC': 'HIGH',
+                   'ISMEAR': 0,
+                   'SIGMA': 0.01,
+                   'EDIFF': 1e-05,
+                   'AMIN': 0.01,
+                   'ALGO': 'CHI',
+                   'LRPA': True, #this option turns off the exchange-correlation kernel
+                   'LOPTICS': True,
+                   'NELM': 1,
+                   'OMEGAMAX': 10,
+                   'ISPIN': 1,
+                 'ISYM': 0,
+                 'ENCUT': 500,
+                 'ENCUTGW': 100,
+                'NEDOS': 1000,
+                 'clean_after_success': True,
+                 'use_gw': True,
+                 'MP_points': [4, 4, 1],
+                 'Gamma_centered': True}
 
-__hse06_set = {'LHFCALC': True,
+hse06_set = {'LHFCALC': True,
                'HFSCREEN': 0.2,
                'PRECFOCK': 'FAST'}
 
@@ -324,8 +327,10 @@ __hse06_set = {'LHFCALC': True,
 def rpa_dielectric_constants_pbe():
     return rpa_dielectric_constants(hybrid_GGA=False)
 
+
 def rpa_dielectric_constants_hse06():
     return rpa_dielectric_constants(hybrid_GGA=True)
+
 
 def rpa_dielectric_constants(hybrid_GGA=False):
     logger = setup_logger(output_filename="dielectrics.log")
@@ -349,7 +354,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     for k in single_pt_set.keys():
         logger.info("      " + str(k) + "=" + str(single_pt_set[k]))
 
-    single_pt_set.update(__single_point_pbe)
+    single_pt_set.update(single_point_pbe)
     vasp = Vasp(**single_pt_set)
     vasp.set_crystal(structure)
     vasp.execute()
@@ -372,12 +377,12 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     shutil.copy('vasprun.xml', 'vasprun.PBE.xml')
 
     if hybrid_GGA:
-        #==================================================
+        # ==================================================
         # Ground state hybrid-GGA calculation
-        #==================================================
+        # ==================================================
         logger.info('Hybrid GGA (HSE06) self-consistent run')
-        single_pt_set.update(__hse06_set)
-        single_pt_set.update({'ALGO':'ALL'})
+        single_pt_set.update(hse06_set)
+        single_pt_set.update({'ALGO': 'ALL'})
         vasp = Vasp(**single_pt_set)
         vasp.set_crystal(structure)
         vasp.execute()
@@ -399,22 +404,22 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     # stage II - frequency dependent dielectric constant with independent-particle picture
     # ====================================================================================
     logger.info("Frequency dependent dielectric constant with PBE (independent particle approximation) run")
-    __pbe_omega.update({'NBANDS': nbands})
-    #parallisation wont work properly
+    pbe_omega.update({'NBANDS': nbands})
+    # parallisation wont work properly
     try:
-        del __pbe_omega['NPAR']
+        del pbe_omega['NPAR']
     except KeyError:
         pass
 
     if hybrid_GGA:
         logger.info("Update INCAR configuration for hybrid GGA")
-        __pbe_omega.update(__hse06_set)
+        pbe_omega.update(hse06_set)
 
     logger.info("INCAR settings: ")
-    for k in __pbe_omega.keys():
-        logger.info("       " + str(k) + '=' + str(__pbe_omega[k]))
+    for k in pbe_omega.keys():
+        logger.info("       " + str(k) + '=' + str(pbe_omega[k]))
 
-    vasp = Vasp(**__pbe_omega)
+    vasp = Vasp(**pbe_omega)
     vasp.set_crystal(structure)
     vasp.execute()
 
@@ -432,21 +437,21 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     # stage III - frequency dependent dielectric constant with RPA
     # ====================================================================================
     logger.info("Frequency dependent dielectric constant under PBE-RPA")
-    __pbe_rpa_omega.update({'NBANDS': nbands})
+    pbe_rpa_omega.update({'NBANDS': nbands})
     try:
-        del __pbe_rpa_omega['NPAR']
+        del pbe_rpa_omega['NPAR']
     except KeyError:
         pass
 
     if hybrid_GGA:
         logger.info("Update INCAR configuration for hybrid GGA")
-        __pbe_rpa_omega.update(__hse06_set)
+        pbe_rpa_omega.update(hse06_set)
 
     logger.info("INCAR settings: ")
-    for k in __pbe_rpa_omega.keys():
-        logger.info("       " + str(k) + '=' + str(__pbe_rpa_omega[k]))
+    for k in pbe_rpa_omega.keys():
+        logger.info("       " + str(k) + '=' + str(pbe_rpa_omega[k]))
 
-    vasp = Vasp(**__pbe_rpa_omega)
+    vasp = Vasp(**pbe_rpa_omega)
     vasp.set_crystal(structure)
     vasp.execute()
 
@@ -462,15 +467,108 @@ def rpa_dielectric_constants(hybrid_GGA=False):
 
 
 # =================================================================
+# Procedures for calculating spin-polarized charge densities and
+# electronic band structures
+# =================================================================
+
+KPOINTS_string_dict = {'100': """KPOINTS 
+5
+Line-mode
+rec
+ 0.5 0.0 0.0 ! X
+ 0.0 0.0 0.0 ! G
+
+ 0.0 0.0 0.0 ! G
+ 0.5 0.5 0.0 ! M""",  ##cubic
+                       '110': """KPOINTS 
+5
+Line-mode
+rec
+ 0.0 0.0 0.0 ! G
+ 0.5 0.0 0.0 ! X
+ 
+ 0.5 0.0 0.0 ! X
+ 0.5 0.5 0.0 ! S
+ 
+ 0.5 0.5 0.0 ! S
+ 0.0 0.5 0.0 ! Y
+ 
+ 0.0 0.5 0.0 ! Y
+ 0.0 0.0 0.0 ! G
+ 
+ 0.0 0.0 0.0 ! G
+ 0.5 0.5 0.0 ! S""",  ##rectangular
+                       "111": """KPOINTS 
+5
+Line-mode
+rec
+  0.5 0.5 0.0 ! M
+  0.0 0.0 0.0 ! G
+  
+  0.0 0.0 0.0 ! G
+  0.5 0.0 0.0 ! K
+  
+  0.5 0.0 0.0 ! K
+  0.5 0.5 0.0 ! M"""}  ##hexagonal?
+
+
+def electronic_structure_calculator():
+    logger = setup_logger(output_filename='electronic_structures.log')
+    update_core_info()
+    logger.info("==========GGA electronic (spin-densities/band) structure calculations with VASP==========")
+    structure = load_structure(logger)
+
+    logger.info("STAGE 1 Converging spin-unploarized charge densities")
+    single_point_pbe.update(
+        {'IALGO': 48, 'ISPIN': 1, 'MP_points': [4, 4, 1], 'ENCUT': 500, 'clean_after_success': False, 'LCHARG': True,
+         'LWAVE': False})
+    vasp = Vasp(**single_point_pbe)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+    logger.info("STAGE 2 Converging spin-ploarized charge densities")
+    single_point_pbe.update(
+        {'IALGO': 48, 'ISPIN': 2, 'MP_points': [4, 4, 1], 'ENCUT': 500, 'clean_after_success': False, 'LCHARG': True,
+         'LWAVE': False, 'ICHARG': 1})
+    vasp = Vasp(**single_point_pbe)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+    # save vasprun.xml for charge-density analysis
+    shutil.copy('./vasprun.xml', './vasprun_SPIN_CHG.xml')
+    shutil.copy('./CHGCAR', './CHGCAR_SPIN')
+
+    if '100' in os.getcwd():
+        orient = '100'
+    elif '110' in os.getcwd():
+        orient = '110'
+    elif '111' in os.getcwd():
+        orient = '111'
+
+    single_point_pbe.update(
+        {'IALGO': 48, 'KPOINT_string': KPOINTS_string_dict[orient], 'clean_after_success': True, 'LWAVE': False,
+         'ICHARG': 1, "LCHARG": False})
+    logger.info("STAGE 3 Spin-polarized band structure calculations")
+    logger.info("Customized K-Point Path ")
+    logger.info(KPOINTS_string_dict[orient])
+
+    vasp = Vasp(**single_point_pbe)
+    vasp.set_crystal(structure)
+    vasp.execute()
+
+    shutil.move('./vasprun.xml', './vasprun_spin_BAND.xml')
+
+
+# =================================================================
 # Used by the bulk LCMO project
 # =================================================================
 
 
 def GGA_U_structure_optimisation():
     logger = setup_logger(output_filename='relax.log')
-    __update_core_info()
+    update_core_info()
     logger.info("==========Full GGA+U Structure Optimisation with VASP==========")
-    structure = __load_structure(logger)
+    structure = load_structure(logger)
     gga_u_options = __set_U_correction_dictionary(structure)
     default_bulk_optimisation_set.update(gga_u_options)
 
@@ -481,9 +579,9 @@ def GGA_U_structure_optimisation():
 
 def GGA_U_high_spin_structure_optimisation():
     logger = setup_logger(output_filename='relax.log')
-    __update_core_info()
+    update_core_info()
     logger.info("==========Full GGA+U high spin Structure Optimisation with VASP==========")
-    structure = __load_structure(logger)
+    structure = load_structure(logger)
     gga_u_options = __set_U_correction_dictionary(structure)
     default_bulk_optimisation_set.update(gga_u_options)
 
@@ -497,9 +595,9 @@ def GGA_U_high_spin_structure_optimisation():
 
 def high_spin_structure_optimisation():
     logger = setup_logger(output_filename='relax.log')
-    __update_core_info()
+    update_core_info()
     logger.info("==========Full  high spin Structure Optimisation with VASP==========")
-    structure = __load_structure(logger)
+    structure = load_structure(logger)
 
     magmom_options = __set_high_spin_magmom_dictionary(structure)
     default_bulk_optimisation_set.update(magmom_options)

@@ -50,32 +50,34 @@ def get_geometry_corrected_electronic_polarizability(directory=None):
     return alpha_2d
 
 def plot_frequency_dependent_electronic_polarizability(directory=None,output='dielectric.pdf'):
+    fig, ax1 = plt.subplots(figsize=(6,5))
     if directory is None:
         directory = os.getcwd()
     alpha_2d = get_geometry_corrected_electronic_polarizability(directory=directory)
     energies = list(sorted(alpha_2d.keys()))
-
-    plt.figure(figsize=(5,4))
     if max(energies)>100:
         max_en = 20
 
     else:
         max_en = max(energies)
-    xnew = np.linspace(0, max_en, num=150, endpoint=True)
+    xnew = np.linspace(0, max_en, num=600, endpoint=True)
     x = energies
     y = [alpha_2d[e]['inplane'].imag for e in energies]
     f = interp1d(x, y, kind='cubic')
-    plt.plot(xnew, f(xnew), 'b-', label='$\\alpha_{2D}^{\\parallel}$')
-
+    ax1.plot(xnew, f(xnew), 'b-')
+    ax1.set_ylabel('$\\alpha_{2D}^{\\parallel}$',color='b')
+    ax1.set_xlabel('Energy (eV)')
+    ax1.tick_params(axis='y', labelcolor='b')
+    #plt.plot(energies,y,'bo')
     y = [alpha_2d[e]['outplane'].imag for e in energies]
     f = interp1d(x, y, kind='cubic')
-    plt.plot(xnew, f(xnew), 'r-', label='$\\alpha_{2D}^{\\perp}$')
+    ax2=ax1.twinx()
+    ax2.plot(xnew, f(xnew), 'r-')#, label='$\\alpha_{2D}^{\\perp}$')
+    ax2.tick_params(axis='y', labelcolor='r')
+    ax2.set_ylabel('$\\alpha_{2D}^{\\perp}$',color='r')
 
-    plt.xlabel('Energy (eV)')
-    plt.ylabel('$\\alpha_{2D}$')
-    if max(energies)>100:
-        plt.xlim([-10,20])
-    plt.legend()
+    #if max(energies)>100:
+    ax1.set_xlim([-1,10])
     plt.tight_layout()
     plt.savefig(output)
 

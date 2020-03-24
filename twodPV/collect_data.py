@@ -120,6 +120,30 @@ def __two_d_100_AO_phonon_frequencies(db):
         system = '100_AO_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
 
+def __two_d_100_BO2_phonon_frequencies(db):
+    for thickness in [3, 5, 7, 9]:
+        system = '100_BO2_' + str(thickness)
+        property_populator(system=system, property='phonon', db=db)
+
+def __two_d_110_ABO_phonon_frequencies(db):
+    for thickness in [3, 5, 7, 9]:
+        system = '110_ABO_' + str(thickness)
+        property_populator(system=system, property='phonon', db=db)
+
+def __two_d_110_O2_phonon_frequencies(db):
+    for thickness in [3, 5, 7, 9]:
+        system = '110_O2_' + str(thickness)
+        property_populator(system=system, property='phonon', db=db)
+
+def __two_d_111_AO3_phonon_frequencies(db):
+    for thickness in [3, 5, 7, 9]:
+        system = '111_AO3_' + str(thickness)
+        property_populator(system=system, property='phonon', db=db)
+
+def __two_d_111_B_phonon_frequencies(db):
+    for thickness in [3, 5, 7, 9]:
+        system = '111_B_' + str(thickness)
+        property_populator(system=system, property='phonon', db=db)
 
 def property_populator(property='phonon', db=None, system=None):
     cwd = os.getcwd()
@@ -128,6 +152,8 @@ def property_populator(property='phonon', db=None, system=None):
         base_dir = cwd + '/relax_Pm3m/'
     else:
         base_dir = cwd + '/slab_'+system.replace(system.split("_")[-1],'small')
+        if 'AO3_3' in system:
+            base_dir = cwd + '/slab_'+system.replace("_3","_small")
 
     kvp = {}
     data = {}
@@ -149,11 +175,14 @@ def property_populator(property='phonon', db=None, system=None):
                     if property is 'phonon':
                         dir = os.path.join(base_dir, system_folder + "/phonon_G")
                         print(str(dir))
-                        reader = VaspReader(input_location=dir + '/OUTCAR')
-                        freqs = reader.get_vibrational_eigenfrequencies_from_outcar()
-                        print(freqs)
-                        data['gamma_phonon_freq'] = np.array(freqs)
-                        populate_db(db, None, kvp, data)
+                        try:
+                            reader = VaspReader(input_location=dir + '/OUTCAR')
+                            freqs = reader.get_vibrational_eigenfrequencies_from_outcar()
+                            print(freqs)
+                            data['gamma_phonon_freq'] = np.array(freqs)
+                            populate_db(db, None, kvp, data)
+                        except:
+                            pass
 
 
 def randomised_structure_formation_energy(db):
@@ -266,9 +295,10 @@ def __two_d_110_ABO_energies(db):
     two_d_formation_energies(db, orientation='110', termination='ABO')
 
 
+
 def collect(db):
     errors = []
-    steps = [__two_d_100_AO_phonon_frequencies]
+    steps = [__two_d_111_AO3_phonon_frequencies]
             #element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
              # pm3m_formation_energy,
              # randomised_structure_formation_energy,
@@ -278,6 +308,7 @@ def collect(db):
     # __two_d_111_AO3_energies,
     # __two_d_110_O2_energies,
     # __two_d_110_ABO_energies
+
     # __pm3m_phonon_frequencies]
     for step in steps:
         try:
