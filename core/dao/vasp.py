@@ -1,5 +1,7 @@
 import warnings
 import logging
+import math
+import numpy as np
 
 from pymatgen.core.structure import IStructure as pymatstructure
 import settings
@@ -8,6 +10,7 @@ from core.internal.builders.crystal import map_pymatgen_IStructure_to_crystal, e
 from core.models.element import pbe_pp_choices
 from core.models import *
 from core.dao.abstract_io import *
+from core.models.lattice import Lattice
 
 logger = logging.getLogger("futuremat.core.dao.vasp")
 
@@ -132,16 +135,16 @@ class VaspReader(FileReader):
 
             if (start_read is not None):
                 if 'w=' in line:
-                    energy=float(line.split()[1])
-                    _xrow = [float(i) for i in self.file_content[line_no+1].split()]
-                    _yrow = [float(i) for i in self.file_content[line_no+2].split()]
-                    _zrow = [float(i) for i in self.file_content[line_no+3].split()]
-                    dielectric_tensor[energy] = {'xx':complex(_xrow[0],_xrow[1]),
-                                                 'xy':complex(_xrow[2],_xrow[3]),
-                                                 'xz':complex(_xrow[4],_xrow[5]),
-                                                 'yy':complex(_yrow[2],_yrow[3]),
-                                                 'yz':complex(_yrow[4],_yrow[5]),
-                                                 'zz':complex(_zrow[4],_zrow[5])}
+                    energy = float(line.split()[1])
+                    _xrow = [float(i) for i in self.file_content[line_no + 1].split()]
+                    _yrow = [float(i) for i in self.file_content[line_no + 2].split()]
+                    _zrow = [float(i) for i in self.file_content[line_no + 3].split()]
+                    dielectric_tensor[energy] = {'xx': complex(_xrow[0], _xrow[1]),
+                                                 'xy': complex(_xrow[2], _xrow[3]),
+                                                 'xz': complex(_xrow[4], _xrow[5]),
+                                                 'yy': complex(_yrow[2], _yrow[3]),
+                                                 'yz': complex(_yrow[4], _yrow[5]),
+                                                 'zz': complex(_zrow[4], _zrow[5])}
                 if 'cpu time' in line:
                     start_read = None
         return dielectric_tensor
@@ -185,7 +188,7 @@ class VaspReader(FileReader):
                     phonon_frequencies.append(float(line.split()[3]))
                 else:
                     freq = float(line.split()[2])
-                    phonon_frequencies.append(complex(0,freq))  # imaginary frequencies, instabilities!
+                    phonon_frequencies.append(complex(0, freq))  # imaginary frequencies, instabilities!
         return phonon_frequencies
 
     def read_XDATCAR(self):
@@ -245,8 +248,12 @@ class VaspReader(FileReader):
         _atoms = []
         for line in self.file_content:
 
+            if _counter == 1:
+                scaling_factor = float(line.split()[0])
+
             if _counter in [2, 3, 4]:  # read in values of the lattice vectors from the second to forth line of the file
-                _lvs.append(cVector3D(float(line.split()[0]), float(line.split()[1]), float(line.split()[2])))
+                _lh = [float(l) * scaling_factor for l in line.split()]
+                _lvs.append(cVector3D(_lh[0], _lh[1], _lh[2]))
 
             if _counter == 4:
                 lattice_vectors = cMatrix3D(_lvs[0], _lvs[1], _lvs[2])
@@ -286,6 +293,37 @@ class VaspReader(FileReader):
                           space_group=CrystallographicSpaceGroups.get(1))  # all vasp input assumes P1
 
         return crystal
+
+    def read_CHGCAR(self):
+        # this routine is adapted from MacroDensity Package with modifications
+        crystal = self.read_POSCAR()
+        _counter = 0
+        _chg_start = len(crystal.all_atoms()) + 9
+
+        # read all the values of the densities into a plane list
+        potential = []
+        for line in self.file_content:
+            if _counter > len(crystal.all_atoms()) + 7:
+                if _counter == _chg_start:
+                    NGX, NGY, NGZ = [int(x) for x in line.split()]
+                elif (_counter > _chg_start) and (_counter <= _chg_start + int(math.ceil(NGX * NGY * NGZ / 5))):
+                    for _l in line.split():
+                        potential.append(float(_l))
+            _counter += 1
+        print(len(potential))
+        # put this into a matrix form
+        l = 0
+        potential_grid = np.zeros(shape=(NGX, NGY, NGZ))
+        #if charge:
+        #    point_volume = 1.0 / (NGX * NGY * NGZ)
+        #else:
+        #    point_volume = 1
+        for k in range(NGZ):
+            for j in range(NGY):
+                for i in range(NGX):
+                    potential_grid[i, j, k] = potential[l]  #* point_volume
+                    l += 1
+        return potential_grid, crystal
 
 
 class VaspWriter(object):
@@ -341,14 +379,14 @@ class VaspWriter(object):
 
         if not use_GW:
             potcars = [settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '/POTCAR' for e in
-                   all_atom_label]
+                       all_atom_label]
         else:
             logger.info("Using GW version of the pseudopotential requested!")
             potcars = []
             import os
             for e in all_atom_label:
-                if os.path.exists(settings.vasp_pp_directory+'/' + pbe_pp_choices[e]+'_GW/'):
-                    potcars.append(settings.vasp_pp_directory+'/' + pbe_pp_choices[e]+'_GW/POTCAR')
+                if os.path.exists(settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '_GW/'):
+                    potcars.append(settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '_GW/POTCAR')
                 else:
                     potcars.append(settings.vasp_pp_directory + '/' + pbe_pp_choices[e] + '/POTCAR')
 
@@ -453,7 +491,8 @@ class VaspWriter(object):
         if type(filename) == str:
             f.close()
 
-    def write_KPOINTS(self, crystal, filename='KPOINTS', K_points=None, grid=0.025, molecular=False, gamma_centered=False, kpoint_str=None):
+    def write_KPOINTS(self, crystal, filename='KPOINTS', K_points=None, grid=0.025, molecular=False,
+                      gamma_centered=False, kpoint_str=None):
         kpoint_file = open(filename, 'w')
 
         if kpoint_str is None:

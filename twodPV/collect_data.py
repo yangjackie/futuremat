@@ -14,6 +14,12 @@ import numpy as np
 
 from core.calculators.vasp import Vasp
 from core.dao.vasp import VaspReader
+from twodPV.analysis.electronic_permitivity import get_geometry_corrected_electronic_polarizability
+from pymatgen.io.vasp.outputs import Vasprun
+from pymatgen.electronic_structure.core import Spin
+from scipy.interpolate import interp1d
+import numpy as np
+
 from ase.io.vasp import *
 from ase.db import connect
 
@@ -120,30 +126,36 @@ def __two_d_100_AO_phonon_frequencies(db):
         system = '100_AO_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
 
+
 def __two_d_100_BO2_phonon_frequencies(db):
     for thickness in [3, 5, 7, 9]:
         system = '100_BO2_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
+
 
 def __two_d_110_ABO_phonon_frequencies(db):
     for thickness in [3, 5, 7, 9]:
         system = '110_ABO_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
 
+
 def __two_d_110_O2_phonon_frequencies(db):
     for thickness in [3, 5, 7, 9]:
         system = '110_O2_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
+
 
 def __two_d_111_AO3_phonon_frequencies(db):
     for thickness in [3, 5, 7, 9]:
         system = '111_AO3_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
 
+
 def __two_d_111_B_phonon_frequencies(db):
     for thickness in [3, 5, 7, 9]:
         system = '111_B_' + str(thickness)
         property_populator(system=system, property='phonon', db=db)
+
 
 def property_populator(property='phonon', db=None, system=None):
     cwd = os.getcwd()
@@ -151,9 +163,9 @@ def property_populator(property='phonon', db=None, system=None):
     if system is 'pm3m':
         base_dir = cwd + '/relax_Pm3m/'
     else:
-        base_dir = cwd + '/slab_'+system.replace(system.split("_")[-1],'small')
+        base_dir = cwd + '/slab_' + system.replace(system.split("_")[-1], 'small')
         if 'AO3_3' in system:
-            base_dir = cwd + '/slab_'+system.replace("_3","_small")
+            base_dir = cwd + '/slab_' + system.replace("_3", "_small")
 
     kvp = {}
     data = {}
@@ -295,15 +307,147 @@ def __two_d_110_ABO_energies(db):
     two_d_formation_energies(db, orientation='110', termination='ABO')
 
 
+# ==========================================================
+# Data collections for electronic structure calculations
+# ==========================================================
+def two_d_electronic_structures(db, orientation='100', termination='AO'):
+    cwd = os.getcwd()
+    base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_small/'
+    thicknesess = [3, 5, 7, 9]
+
+    kvp = {}
+    data = {}
+    for i in range(len(A_site_list)):
+        for a in A_site_list[i]:
+            for b in B_site_list[i]:
+                for c in C_site_list[i]:
+                    system_name = a + b + c
+                    for thick in thicknesess:
+                        work_dir = base_dir + system_name + "_" + str(thick) + '/electronic_workflow/'
+                        uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(thick)
+                        print(uid)
+                        os.chdir(work_dir)
+
+                        # get the two-dimensional electronic permitivity
+                        try:
+                            kvp['e_polarizability_freq'] = get_geometry_corrected_electronic_polarizability()
+                        except:
+                            print("Cannot get electronic polarizability")
+
+                        kvp = get_dos_related_properties(kvp)
+                        kvp = get_out_of_plane_charge_polarisations(kvp)
+
+                        populate_db(db, None, kvp, data)
+                        os.chdir(cwd)
+
+
+def get_dos_related_properties(kvp):
+    dos_run = None
+
+    #calculator = Vasp()
+    #calculator.check_convergence(outcar='./OUTCAR_SPIN')
+    #if not calculator.completed:
+    #    print("Spin polarized calculation not completed properly, skip this step")
+    #    return kvp
+
+    try:
+        dos_run = Vasprun("./vasprun_SPIN_CHG.xml")
+    except:
+        print("Loading results from spin-polarised charge density runs unsuccessful ")
+    if dos_run is not None:
+        kvp['ef_dos'] = dos_run.efermi
+        dos = dos_run.complete_dos
+        sdos = dos.get_smeared_densities(sigma=0.125)
+        en = dos.as_dict()['energies']
+
+        spin_up_dos = sdos[Spin.up]
+        spin_up_dos = interp1d(en, spin_up_dos, kind='cubic')
+        kvp['spin_up_dos_at_ef'] = spin_up_dos(dos_run.efermi)
+
+        spin_down_dos = sdos[Spin.down]
+        spin_down_dos = interp1d(en, spin_down_dos, kind='cubic')
+        kvp['spin_down_dos_at_ef'] = spin_down_dos(dos_run.efermi)
+    return kvp
+
+
+def get_out_of_plane_charge_polarisations(kvp):
+    from core.models.vector3d import cVector3D
+    from core.models.element import atomic_numbers
+
+    #calculator = Vasp()
+    #calculator.check_convergence(outcar='./OUTCAR_SPIN')
+    #if not calculator.completed:
+    #    print("Spin polarized calculation not completed properly, skip this step")
+    #    return kvp
+
+    try:
+        vasp_reader = VaspReader(input_location='./CHGCAR_SPIN')
+        charge_grid, crystal = vasp_reader.read_CHGCAR()
+    except:
+        print("Error in parsing CHGCAR from spin-polarized calculation, skip this step")
+        return kvp
+
+    a = cVector3D(crystal.lattice.lattice_vectors[0][0], crystal.lattice.lattice_vectors[0][1],
+                  crystal.lattice.lattice_vectors[0][2])
+    b = cVector3D(crystal.lattice.lattice_vectors[1][0], crystal.lattice.lattice_vectors[1][1],
+                  crystal.lattice.lattice_vectors[1][2])
+    area = a.cross(b).l2_norm()
+
+    NGX = charge_grid.shape[0]
+    NGY = charge_grid.shape[1]
+    NGZ = charge_grid.shape[2]
+    resolution_x = crystal.lattice.a / NGX
+    resolution_y = crystal.lattice.b / NGY
+    resolution_z = crystal.lattice.c / NGZ
+
+    electron_densities = 0
+    for z_value in range(NGZ):
+        z_plane = charge_grid[:, :, z_value] / crystal.lattice.volume
+        z_plane_total = np.sum(z_plane) * (resolution_x * resolution_y)
+        electron_densities -= z_plane_total * (0 + resolution_z * z_value) * resolution_z
+
+    nuclear_densities = 0
+    for a in crystal.asymmetric_unit[0].atoms:
+        nuclear_densities += atomic_numbers[a.label] * a.position.z
+
+    kvp['e_pol'] = electron_densities / area
+    kvp['nu_pol'] = nuclear_densities / area
+    print(kvp['e_pol'], kvp['nu_pol'])
+    return kvp
+
+
+def __two_d_100_AO_electronic_structures(db):
+    two_d_electronic_structures(db, orientation='100', termination='AO')
+
+
+def __two_d_100_BO2_electronic_structures(db):
+    two_d_electronic_structures(db, orientation='100', termination='BO2')
+
+
+def __two_d_111_B_electronic_structures(db):
+    two_d_electronic_structures(db, orientation='111', termination='B')
+
+
+def __two_d_111_AO3_electronic_structures(db):
+    two_d_electronic_structures(db, orientation='111', termination='AO3')
+
+
+def __two_d_110_O2_electronic_structures(db):
+    two_d_electronic_structures(db, orientation='110', termination='O2')
+
+
+def __two_d_110_ABO_electronic_structures(db):
+    two_d_electronic_structures(db, orientation='110', termination='ABO')
+
 
 def collect(db):
     errors = []
     steps = [__two_d_111_AO3_phonon_frequencies]
-            #element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
-             # pm3m_formation_energy,
-             # randomised_structure_formation_energy,
-             #__two_d_100_BO2_energies_large_cell,
-             #__two_d_100_AO_energies_large_cell
+    # element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
+    # pm3m_formation_energy,
+    # randomised_structure_formation_energy,
+    # __two_d_100_BO2_energies_large_cell,
+    # __two_d_100_AO_energies_large_cell
     # __two_d_111_B_energies,
     # __two_d_111_AO3_energies,
     # __two_d_110_O2_energies,

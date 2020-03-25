@@ -327,14 +327,16 @@ class Vasp(Calculator):
         if exitcode != 0:
             raise RuntimeError('Vasp exited with exit code: %d.  ' % exitcode)
 
-    def check_convergence(self):
+    def check_convergence(self,outcar=None):
         """Method that checks whether a calculation has converged. Adapted from ASE."""
         ibrion = None
         nsw = None
         opt_iterations = None
         ediff = None
         # First check electronic convergence
-        outcar = open('./OUTCAR', 'r')
+        if outcar is None:
+            outcar = './OUTCAR'
+        outcar = open(outcar, 'r')
         for line in outcar.readlines():
             if line.rfind('Call to ZHEGV failed') > -1:
                 self.self_consistency_error = True
