@@ -178,7 +178,7 @@ def execute():
     if not vasp.completed:
         logger.info("Unsuccessful termination, try to rerun with a different IALGO")
         single_point_pbe.update(
-            {'IALGO': 48, 'ISPIN': 1, 'MP_points': [4, 4, 1], 'ENCUT': 250, 'clean_after_success': False,
+            {'IALGO': 48, 'ISPIN': 2, 'MP_points': [4, 4, 1], 'ENCUT': 250, 'clean_after_success': False,
              'LCHARG': True, 'LWAVE': False})
         vasp = Vasp(**single_point_pbe)
         vasp.set_crystal(structure)
@@ -205,7 +205,7 @@ def execute():
     # ==================================================================
     single_point_pbe.update(
         {'IALGO': 38, 'KPOINT_string': KPOINTS_string_dict[orient], 'clean_after_success': True, 'LWAVE': False,
-         'ICHARG': 1, "LCHARG": False, 'LORBIT': 11})
+         'ICHARG': 1, "LCHARG": False, 'LORBIT': 11, 'ISPIN': 2})
     logger.info("STAGE 3 Spin-polarized band structure calculations")
     logger.info("Customized K-Point Path ")
     logger.info(KPOINTS_string_dict[orient])
@@ -246,3 +246,4 @@ def execute():
     band_gap_data = bands.get_band_gap()
 
     logger.info("PBE band gap energy is " + str(band_gap_data['energy']) + ' eV')
+

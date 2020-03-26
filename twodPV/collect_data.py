@@ -7,10 +7,10 @@ also be used rather than our internal ones. This also allows our data to be
 more easily accessible by other users using the existing ase functionalities.
 """
 
-import argparse
 import os
 import glob
 import numpy as np
+import math
 
 from core.calculators.vasp import Vasp
 from core.dao.vasp import VaspReader
@@ -18,7 +18,6 @@ from twodPV.analysis.electronic_permitivity import get_geometry_corrected_electr
 from pymatgen.io.vasp.outputs import Vasprun
 from pymatgen.electronic_structure.core import Spin
 from scipy.interpolate import interp1d
-import numpy as np
 
 from ase.io.vasp import *
 from ase.db import connect
@@ -336,6 +335,7 @@ def two_d_electronic_structures(db, orientation='100', termination='AO'):
 
                         kvp = get_dos_related_properties(kvp)
                         kvp = get_out_of_plane_charge_polarisations(kvp)
+                        kvp = get_band_structures_properties(kvp)
 
                         populate_db(db, None, kvp, data)
                         os.chdir(cwd)
@@ -343,13 +343,6 @@ def two_d_electronic_structures(db, orientation='100', termination='AO'):
 
 def get_dos_related_properties(kvp):
     dos_run = None
-
-    #calculator = Vasp()
-    #calculator.check_convergence(outcar='./OUTCAR_SPIN')
-    #if not calculator.completed:
-    #    print("Spin polarized calculation not completed properly, skip this step")
-    #    return kvp
-
     try:
         dos_run = Vasprun("./vasprun_SPIN_CHG.xml")
     except:
@@ -374,9 +367,9 @@ def get_out_of_plane_charge_polarisations(kvp):
     from core.models.vector3d import cVector3D
     from core.models.element import atomic_numbers
 
-    #calculator = Vasp()
-    #calculator.check_convergence(outcar='./OUTCAR_SPIN')
-    #if not calculator.completed:
+    # calculator = Vasp()
+    # calculator.check_convergence(outcar='./OUTCAR_SPIN')
+    # if not calculator.completed:
     #    print("Spin polarized calculation not completed properly, skip this step")
     #    return kvp
 
@@ -413,6 +406,160 @@ def get_out_of_plane_charge_polarisations(kvp):
     kvp['e_pol'] = electron_densities / area
     kvp['nu_pol'] = nuclear_densities / area
     print(kvp['e_pol'], kvp['nu_pol'])
+    return kvp
+
+
+def get_band_structures_properties(kvp):
+    """
+    Retrieve the information about the band structure from vasp calculations. This basically resembles the sumo-bandstats
+    code with snipplets borrowed from Pymatgen. The major difference here is we get the band extrema and effective masses
+    along different reciprocal space directions for each spin channel. So it provides additional flexibilities for users to
+    extract quantitites such as spin-up/spin-down electronic gaps separately.
+
+    :param kvp:
+    :return: kvp
+    """
+    #TODO - A bit tedious, contains repetitive codes that can be further tidied up! (26/03/2020)
+
+    from pymatgen.io.vasp.outputs import BSVasprun
+    from pymatgen.electronic_structure.core import Spin
+    from sumo.electronic_structure.bandstructure import get_reconstructed_band_structure
+    from sumo.electronic_structure.effective_mass import (get_fitting_data, fit_effective_mass)
+    import sys
+    import numpy as np
+
+    try:
+        vr = BSVasprun('vasprun_spin_BAND.xml')
+    except:
+        print("No spin polarised band structure calculation results found! RETURN")
+        return kvp
+
+    try:
+        bs = vr.get_band_structure(line_mode=True)
+        bs = get_reconstructed_band_structure([bs])
+    except:
+        print("Failed to retrieve the band structure from the vasprun.xml, RETURN")
+        return kvp
+
+    if not bs.is_spin_polarized:
+        print("Not a spin polarised band structure. Don't want this now! RETURN")
+        return kvp
+
+    kvp['is_metal'] = bs.is_metal()
+    if bs.is_metal():
+        return kvp
+
+    # ======================================
+    # get direct and indirect  band gap data
+    # ======================================
+    kpt_str = '[{k[0]:.2f}, {k[1]:.2f}, {k[2]:.2f}]'
+    bg_data = bs.get_band_gap()
+
+    kvp['band_spin_polarized'] = bs.is_spin_polarized
+
+    if not bg_data['direct']:
+        kvp['direct_band_gap'] = False
+        kvp['indirect_band_gap_energy'] = bg_data['energy']
+    else:
+        kvp['direct_band_gap'] = True
+
+    direct_data = bs.get_direct_band_gap_dict()
+    if bs.is_spin_polarized:
+        kvp['direct_band_gap_energy'] = min((spin_data['value'] for spin_data in
+                                             direct_data.values()))  # band gap defined as the smaller value between the spin-up and spin-down gaps
+        kvp['direct_kindex'] = direct_data[Spin.up]['kpoint_index']
+        kvp['direct_kpoint'] = kpt_str.format(k=bs.kpoints[kvp['direct_kindex']].frac_coords)
+    else:
+        kvp['direct_band_gap_energy'] = direct_data[Spin.up]['value']
+        kvp['direct_kindex'] = direct_data[Spin.up]['kpoint_index']
+        kvp['direct_kpoint'] = kpt_str.format(k=bs.kpoints[kvp['direct_kindex']].frac_coords)
+
+    spin_label = {'1': 'up', '-1': 'down'}
+    # =====valence band=====#
+    list_index_band = {}
+    list_index_kpoints = {}
+    for spin, v in bs.bands.items():
+        max_tmp = -float("inf")
+        for i, j in zip(*np.where(v < bs.efermi)):
+            if v[i, j] > max_tmp:
+                max_tmp = float(v[i, j])
+                index = j
+                kpoint_vbm = bs.kpoints[j]
+        kvp[spin_label[str(spin)] + "_vbm_energy"] = max_tmp
+        kvp[spin_label[str(spin)] + "_vbm_kpoint"] = kpoint_vbm.frac_coords
+        kvp[spin_label[str(spin)] + "_vbm_kindex"] = index
+
+        # for this vbm at this spin, figure out equivalent kpoints
+        list_index_kpoints[spin] = []
+        if kpoint_vbm.label is not None:
+            for i in range(len(bs.kpoints)):
+                if bs.kpoints[i].label == kpoint_vbm.label:
+                    list_index_kpoints[spin].append(i)
+        else:
+            list_index_kpoints.append(index)
+
+        # for this vbm at this spin, figure out other bands that will also cross this energy
+        list_index_band[spin] = []
+        for i in range(bs.nb_bands):
+            if math.fabs(bs.bands[spin][i][index] - max_tmp) < 0.001:
+                list_index_band[spin].append(i)
+
+    hole_extrema = []
+    kvp['hole_eff_mass'] = []
+    for spin, bands in list_index_band.items():
+        hole_extrema.extend([(spin, band, kpoint) for band in bands for kpoint in list_index_kpoints[spin]])
+    hole_data = []
+    for extrema in hole_extrema:
+        hole_data.extend(get_fitting_data(bs, *extrema, num_sample_points=3))
+    for data in hole_data:
+        eff_mass = fit_effective_mass(data['distances'], data['energies'], parabolic=True)
+        kvp['hole_eff_mass'].extend({'spin': str(data['spin']),
+                                     'eff_mass': eff_mass,
+                                     'kpt_start': kpt_str.format(k=data['start_kpoint'].frac_coords),
+                                     'kpt_end': kpt_str.format(k=data['end_kpoint'].frac_coords)})
+
+    # ===conduction band=======#
+    list_index_band = {}
+    list_index_kpoints = {}
+    for spin, v in bs.bands.items():
+        max_tmp = float("inf")
+        for i, j in zip(*np.where(v >= bs.efermi)):
+            if v[i, j] < max_tmp:
+                max_tmp = float(v[i, j])
+                index = j
+                kpoint_cbm = bs.kpoints[j]
+        kvp[spin_label[str(spin)] + "_cbm_energy"] = max_tmp
+        kvp[spin_label[str(spin)] + "_cbm_kpoint"] = kpoint_cbm.frac_coords
+        kvp[spin_label[str(spin)] + "_cbm_kindex"] = index
+
+        # for this cbm at this spin, figure out equivalent kpoints
+        list_index_kpoints[spin] = []
+        if kpoint_cbm.label is not None:
+            for i in range(len(bs.kpoints)):
+                if bs.kpoints[i].label == kpoint_cbm.label:
+                    list_index_kpoints[spin].append(i)
+        else:
+            list_index_kpoints.append(index)
+
+        # for this vbm at this spin, figure out other bands that will also cross this energy
+        list_index_band[spin] = []
+        for i in range(bs.nb_bands):
+            if math.fabs(bs.bands[spin][i][index] - max_tmp) < 0.001:
+                list_index_band[spin].append(i)
+
+    electron_extrema = []
+    kvp['electron_eff_mass'] = []
+    for spin, bands in list_index_band.items():
+        electron_extrema.extend([(spin, band, kpoint) for band in bands for kpoint in list_index_kpoints[spin]])
+    electron_data = []
+    for extrema in electron_extrema:
+        electron_data.extend(get_fitting_data(bs, *extrema, num_sample_points=3))
+    for data in electron_data:
+        eff_mass = fit_effective_mass(data['distances'], data['energies'], parabolic=True)
+        kvp['electron_eff_mass'].extend({'spin': str(data['spin']),
+                                         'eff_mass': eff_mass,
+                                         'kpt_start': kpt_str.format(k=data['start_kpoint'].frac_coords),
+                                         'kpt_end': kpt_str.format(k=data['end_kpoint'].frac_coords)})
     return kvp
 
 
