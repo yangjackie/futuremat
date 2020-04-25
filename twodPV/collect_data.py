@@ -453,14 +453,14 @@ def get_out_of_plane_charge_polarisations(kvp):
         try:
             with zipfile.ZipFile('./electronic_workflow.zip') as z:
                 with open("./CHGCAR_temp", 'wb') as f:
-                    f.write(z.read("./CHGCAR_SPIN"))
+                    f.write(z.read("CHGCAR_SPIN"))
             print("Spin--polarized charge density loaded")
         except:
             print("Error in parsing CHGCAR from spin-polarized calculation, try with spin non polarised charge densities")
             try:
                 with zipfile.ZipFile('./electronic_workflow.zip') as z:
                     with open("./CHGCAR_temp", 'wb') as f:
-                        f.write(z.read("./CHGCAR_NOSPIN"))
+                        f.write(z.read("CHGCAR_NOSPIN"))
                 print("Spin--non-polarized charge density loaded")
             except:
                 print("Error in parsing CHGCAR from spin-non-polarized calculation, skip")
