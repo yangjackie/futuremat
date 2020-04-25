@@ -76,7 +76,6 @@ def get_geometry_corrected_electronic_polarizability(directory=None):
                        "outplane":(vacuum_thickness/(4.0*math.pi))*(1.0-1.0/epsilon_outplane)}
 
     os.remove(directory+'/POSCAR_temp')
-
     return alpha_2d
 
 def plot_frequency_dependent_electronic_polarizability(directory=None,output='dielectric.pdf'):
