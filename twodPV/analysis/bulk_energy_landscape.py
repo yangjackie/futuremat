@@ -26,6 +26,7 @@ charge_state_A_site = {0: 1, 1: 1, 2: 2, 3: 1}
 charge_state_B_site = {0: 2, 1: 2, 2: 4, 3: 5}
 charge_state_C_site = {0: -1, 1: -1, 2: -2, 3: -2}
 
+color_dict = {0: '#A3586D', 1: '#5C4A72', 2: '#F3B05A', 3: '#F4874B'}
 
 def bulk_energy_landscape():
     cwd = os.getcwd()
@@ -67,28 +68,25 @@ def bulk_energy_landscape():
                         en_diff = pm3m_formation_e - randomised_formation_e
                         energy_differences.append(en_diff)
 
+                        colors.append(color_dict[i])
                         if i == 0:
-                            colors.append('#7AC7A9')
                             if en_diff > -1:
                                 en_diff_1.append(en_diff)
                         if i == 1:
-                            colors.append('#90CA57')
                             if en_diff > -1:
                                 en_diff_2.append(en_diff)
                         if i == 2:
-                            colors.append('#F1D628')
                             if en_diff > -1:
                                 en_diff_3.append(en_diff)
                         if i == 3:
-                            colors.append('#2B8283')
                             if en_diff > -1:
                                 en_diff_4.append(en_diff)
 
     from matplotlib.patches import Patch
-    legend_elements = [Patch(facecolor='#7AC7A9', edgecolor='k', label='$A^{I}B^{II}_{M}X_{3}$'),
-                       Patch(facecolor='#90CA57', edgecolor='k', label='$A^{I}B^{II}_{TM}X_{3}$'),
-                       Patch(facecolor='#F1D628', edgecolor='k', label='$A^{II}B^{IV}C_{3}$'),
-                       Patch(facecolor='#2B8283', edgecolor='k', label='$A^{I}B^{X}C_{3}$')]
+    legend_elements = [Patch(facecolor=color_dict[0], edgecolor='k', label='$A^{I}B^{II}_{M}X_{3}$'),
+                       Patch(facecolor=color_dict[1], edgecolor='k', label='$A^{I}B^{II}_{TM}X_{3}$'),
+                       Patch(facecolor=color_dict[2], edgecolor='k', label='$A^{II}B^{IV}C_{3}$'),
+                       Patch(facecolor=color_dict[3], edgecolor='k', label='$A^{I}B^{X}C_{3}$')]
 
     gs = gridspec.GridSpec(1, 5, width_ratios=[3.5, 1, 1, 1, 1])
     gs.update(wspace=0.025, hspace=0.05)
@@ -112,7 +110,7 @@ def bulk_energy_landscape():
 
     ax.legend(handles=legend_elements, loc=3, fontsize=12, ncol=1)
     ax1 = plt.subplot(gs[1])
-    ax1.hist(en_diff_1, bins=50, orientation="horizontal", color='#7AC7A9', lw=0, alpha=0.7, density=1);
+    ax1.hist(en_diff_1, bins=50, orientation="horizontal", color=color_dict[0], lw=0, alpha=0.7, density=1);
 
     x_grid = np.linspace(-0.8, 0.8, 1000)
     pdf = kde_scipy(np.array(en_diff_1), x_grid, bandwidth=0.05)
@@ -124,7 +122,7 @@ def bulk_energy_landscape():
 
     ax1.set_ylim([-0.8, 0.8])
     ax2 = plt.subplot(gs[2])
-    ax2.hist(en_diff_2, bins=50, orientation="horizontal", color='#90CA57', lw=0, alpha=0.7, density=1);
+    ax2.hist(en_diff_2, bins=50, orientation="horizontal", color=color_dict[1], lw=0, alpha=0.7, density=1);
     ax2.set_ylim([-0.8, 0.8])
 
     x_grid = np.linspace(-0.8, 0.8, 1000)
@@ -136,7 +134,7 @@ def bulk_energy_landscape():
     ax2.set_yticklabels(empty_string_labels)
 
     ax3 = plt.subplot(gs[3])
-    ax3.hist(en_diff_3, bins=50, orientation="horizontal", color='#F1D628', lw=0, alpha=0.7, density=1);
+    ax3.hist(en_diff_3, bins=50, orientation="horizontal", color=color_dict[2], lw=0, alpha=0.7, density=1);
     ax3.set_ylim([-0.8, 0.8])
 
     x_grid = np.linspace(-0.8, 0.8, 1000)
@@ -148,7 +146,7 @@ def bulk_energy_landscape():
     ax3.set_yticklabels(empty_string_labels)
 
     ax4 = plt.subplot(gs[4])
-    ax4.hist(en_diff_4, bins=50, orientation="horizontal", color='#2B8283', lw=0, alpha=0.5, density=1);
+    ax4.hist(en_diff_4, bins=50, orientation="horizontal", color=color_dict[3], lw=0, alpha=0.5, density=1);
     ax4.set_ylim([-0.8, 0.8])
 
     x_grid = np.linspace(-0.8, 0.8, 1000)
@@ -160,7 +158,7 @@ def bulk_energy_landscape():
     ax4.set_yticklabels(empty_string_labels)
 
     plt.tight_layout()
-    plt.savefig('Pm3m_energy_landscape_2.png')
+    plt.savefig('Pm3m_energy_landscape_2.pdf')
     plt.show()
 
 

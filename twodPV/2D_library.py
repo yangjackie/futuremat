@@ -20,7 +20,7 @@ thicknesses = [3]
 orientation_dict = {#'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
                     #        'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
                     '100': {'a': (1, 1, 0), 'b': (-1, 1, 0),
-                            'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
+                            'origio': {'AO': (0.25, 0.25, 0), 'BO2': (0, 0, 0.25)}},
                     '111': {'a': (1, 1, 0), 'b': (-1, 0, 1),
                             'origio': {'AO3': (0, 0, 0), 'B': (0, 0, 0.25)}},
                     '110': {'a': (1, 1, 0), 'b': (0, 0, 1),
@@ -49,7 +49,7 @@ def setup_two_d_structure_folders(orientation=None, termination=None, db=None):
                         add_vacuum(slab, 40)
 
                         slab_wd = cwd + '/slab_' + str(orientation) + '_' + str(
-                            termination) + '_r2_r2_cell/' + a + b + c + "_" + str(thick) + '/'
+                            termination) + '_full_B_octa/' + a + b + c + "_" + str(thick) + '/'
 
                         if not os.path.exists(slab_wd):
                             os.makedirs(slab_wd)

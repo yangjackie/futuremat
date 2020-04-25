@@ -83,7 +83,10 @@ class Crystal(object):
 
         return all_atoms
 
-    def all_atoms_count_dictionaries(self):
+    def total_num_atoms(self) -> int:
+        return len(self.all_atoms(unique=False))
+
+    def all_atoms_count_dictionaries(self) -> dict:
         """
         Method to retrieve all atoms in the asymmetric unit of the crystal and returns
         a dictionary for the number of each element in the asymmetric unit.
@@ -93,3 +96,15 @@ class Crystal(object):
         labels = [x.label for x in self.all_atoms()]
         return dict((x,labels.count(x)) for x in set(labels))
 
+    @property
+    def mag_group(self):
+        keyfunc = lambda a: (a.label, a.magmom)
+        from itertools import groupby
+        all_atoms = []
+
+        for mol in self.asymmetric_unit:
+            for atom in mol.atoms:
+                all_atoms.append(atom)
+        all_atoms = sorted(all_atoms, key=keyfunc)
+        self.__mag_group = groupby(all_atoms, keyfunc)
+        return self.__mag_group

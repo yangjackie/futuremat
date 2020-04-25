@@ -31,6 +31,7 @@ A_site_list = [['Li', 'Na', 'K', 'Rb', 'Cs'], ['Li', 'Na', 'K', 'Rb', 'Cs'], ['M
 B_site_list = [['Pb', 'Sn', 'Ge'], ['V', 'Ta', 'Nb'], ['Ti', 'Zr'], ['V', 'Ta', 'Nb']]
 C_site_list = [['F', 'Cl', 'Br', 'I'], ['F', 'Cl', 'Br', 'I'], ['O', 'S', 'Se', 'Te'], ['O', 'S', 'Se', 'Te']]
 
+
 # give a random initial unit cell length
 a = 5.0
 
@@ -71,28 +72,7 @@ def make_distorted_structures_from_optimised():
                             input_location=cwd + '/' + A_site_list[i][j] + B_site_list[i][k] + C_site_list[i][
                                 l] + '_Pm3m/CONTCAR').read_POSCAR()
 
-                        for _i in range(len(crystal.asymmetric_unit)):
-                            for _j in range(len(crystal.asymmetric_unit[_i].atoms)):
-                                crystal.asymmetric_unit[_i].atoms[_j].scaled_position.x = crystal.asymmetric_unit[_i].atoms[
-                                                                                              _j].scaled_position.x * (
-                                                                                                      1 + random.randrange(
-                                                                                                  -100, 100) / 500)
-                                crystal.asymmetric_unit[_i].atoms[_j].scaled_position.y = crystal.asymmetric_unit[_i].atoms[
-                                                                                              _j].scaled_position.y * (
-                                                                                                      1 + random.randrange(
-                                                                                                  -100, 100) / 500)
-                                crystal.asymmetric_unit[_i].atoms[_j].scaled_position.z = crystal.asymmetric_unit[_i].atoms[
-                                                                                              _j].scaled_position.z * (
-                                                                                                      1 + random.randrange(
-                                                                                                  -100, 100) / 500)
-
-                        crystal.lattice.a = crystal.lattice.a * (1 + random.randrange(-100, 100) / 500)
-                        crystal.lattice.b = crystal.lattice.b * (1 + random.randrange(-100, 100) / 500)
-                        crystal.lattice.c = crystal.lattice.c * (1 + random.randrange(-100, 100) / 500)
-
-                        crystal.lattice.alpha = crystal.lattice.alpha * (1 + random.randrange(-100, 100) / 500)
-                        crystal.lattice.beta = crystal.lattice.beta * (1 + random.randrange(-100, 100) / 500)
-                        crystal.lattice.gamma = crystal.lattice.gamma * (1 + random.randrange(-100, 100) / 500)
+                        crystal = randomise_crystal(crystal)
 
                         wd = cwd + '/relax_randomized/' + A_site_list[i][j] + B_site_list[i][k] + C_site_list[i][
                             l] + '_full_relax_rand_' + str(c) + '/'
@@ -103,6 +83,31 @@ def make_distorted_structures_from_optimised():
                         vasp_writer = VaspWriter()
                         vasp_writer.write_structure(crystal)
                         os.chdir(cwd)
+
+
+def randomise_crystal(crystal):
+    for _i in range(len(crystal.asymmetric_unit)):
+        for _j in range(len(crystal.asymmetric_unit[_i].atoms)):
+            crystal.asymmetric_unit[_i].atoms[_j].scaled_position.x = crystal.asymmetric_unit[_i].atoms[
+                                                                          _j].scaled_position.x * (
+                                                                              1 + random.randrange(
+                                                                          -100, 100) / 900)
+            crystal.asymmetric_unit[_i].atoms[_j].scaled_position.y = crystal.asymmetric_unit[_i].atoms[
+                                                                          _j].scaled_position.y * (
+                                                                              1 + random.randrange(
+                                                                          -100, 100) / 900)
+            crystal.asymmetric_unit[_i].atoms[_j].scaled_position.z = crystal.asymmetric_unit[_i].atoms[
+                                                                          _j].scaled_position.z * (
+                                                                              1 + random.randrange(
+                                                                          -100, 100) / 900)
+    crystal.lattice.a = crystal.lattice.a * (1 + random.randrange(-100, 100) / 900)
+    crystal.lattice.b = crystal.lattice.b * (1 + random.randrange(-100, 100) / 900)
+    crystal.lattice.c = crystal.lattice.c * (1 + random.randrange(-100, 100) / 900)
+    crystal.lattice.alpha = crystal.lattice.alpha * (1 + random.randrange(-100, 100) / 900)
+    crystal.lattice.beta = crystal.lattice.beta * (1 + random.randrange(-100, 100) / 900)
+    crystal.lattice.gamma = crystal.lattice.gamma * (1 + random.randrange(-100, 100) / 900)
+    return crystal
+
 
 def prepare_property_calculation_folder(db=None,property='phonon',supercell=[1,1,1]):
     cwd = os.getcwd()
@@ -137,6 +142,8 @@ if __name__=="__main__":
                         help="Name of the database that contains the results of the screenings.")
     parser.add_argument("--setup_gamma_phonon", action='store_true',
                         help="Setup calculation folders for Gamma point phonon")
+    parser.add_argument("--randomize", action='store_true',
+                        help="Setup a randomized crystal")
     args = parser.parse_args()
 
     if args.perovskite:
@@ -145,3 +152,10 @@ if __name__=="__main__":
         make_distorted_structures_from_optimised()
     if args.setup_gamma_phonon:
         prepare_property_calculation_folder(db=args.db,property='phonon')
+    if args.randomize:
+        reader = VaspReader(input_location='./CONTCAR_opt')
+        crystal = reader.read_POSCAR()
+        crystal = randomise_crystal(crystal)
+        VaspWriter().write_structure(crystal,'POSCAR')
+
+
