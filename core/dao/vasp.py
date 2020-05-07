@@ -284,9 +284,9 @@ class VaspReader(FileReader):
         lattice = Lattice.from_lattice_vectors(lattice_vectors)
         lattice.lattice_vectors = lattice_vectors
 
-        #logger.warning("===                                WARNING                                           ===")
-        #logger.warning("=== Setting Lattice Vector as originally provided in the POSCAR to prevent rotation! ===")
-        #logger.warning("=== Check this is what you wanted and it gives back exactly the same thing as wanted!===")
+        # logger.warning("===                                WARNING                                           ===")
+        # logger.warning("=== Setting Lattice Vector as originally provided in the POSCAR to prevent rotation! ===")
+        # logger.warning("=== Check this is what you wanted and it gives back exactly the same thing as wanted!===")
 
         crystal = Crystal(lattice=lattice,
                           asymmetric_unit=[Molecule(atoms=_atoms)],
@@ -313,16 +313,18 @@ class VaspReader(FileReader):
         # put this into a matrix form
         l = 0
         potential_grid = np.zeros(shape=(NGX, NGY, NGZ))
-        #if charge:
+        # if charge:
         #    point_volume = 1.0 / (NGX * NGY * NGZ)
-        #else:
+        # else:
         #    point_volume = 1
         for k in range(NGZ):
             for j in range(NGY):
                 for i in range(NGX):
-                    potential_grid[i, j, k] = potential[l]  #* point_volume
+                    potential_grid[i, j, k] = potential[l]  # * point_volume
                     l += 1
         return potential_grid, crystal
+
+
 
 
 class VaspWriter(object):

@@ -39,7 +39,6 @@ def bulk_energy_landscape():
     en_diff_2 = []
     en_diff_3 = []
     en_diff_4 = []
-
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
             for b in B_site_list[i]:

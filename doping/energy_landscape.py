@@ -48,7 +48,7 @@ def plot_mixing_energy_for_single_system(db, a=None, b=None, c=None, output=None
     averaged_energies = [x for _, x in sorted(zip(av_compositions,averaged_energies))]
     x=list(sorted(av_compositions))
     popt, pcov = curve_fit(bowing_curve, x, averaged_energies)
-    plt.plot(x, bowing_curve(np.array(x), *popt), '#F22F08', label='$b=%5.3f$' % tuple(popt))
+    #plt.plot(x, bowing_curve(np.array(x), *popt), '#F22F08', label='$b=%5.3f$' % tuple(popt))
 
     x_label = '$x$ in '
     if len(a)==1:
@@ -94,6 +94,7 @@ def fix_string(s):
 
 def composition_dependent_mixing_energies(a, all_keys, b, c, db):
     end_members = [_a + _b + _c for _a in a for _b in b for _c in c]
+    print(end_members)
     assert (len(end_members) == 2)
     mixed_site = [site for site in [a, b, c] if len(site) == 2][-1]
     mixed_site = [''.join([_i for _i in k if not _i.isdigit()]) for k in mixed_site]
@@ -106,6 +107,7 @@ def composition_dependent_mixing_energies(a, all_keys, b, c, db):
                 row = db.get(selection=[('uid', '=', matched_key)])
                 total_energy = row.key_value_pairs['total_energy']
                 end_member_total_energies[m] = total_energy
+                print(m,total_energy)
     # figure out which site has been mixed with two chemical elements, then we can decide
     #   the chemical compositions should be measured against which element
 
@@ -117,13 +119,15 @@ def composition_dependent_mixing_energies(a, all_keys, b, c, db):
         if k_contains_all_elements:
             row = db.get(selection=[('uid', '=', k)])
             total_energy = row.key_value_pairs['total_energy']
+
             structure = map_ase_atoms_to_crystal(row.toatoms())
             element_1 = ''.join([_i for _i in mixed_site[0] if not _i.isdigit()])
             element_2 = ''.join([_i for _i in mixed_site[1] if not _i.isdigit()])
             composition = structure.all_atoms_count_dictionaries()[element_1] / (
                     structure.all_atoms_count_dictionaries()[element_1] + structure.all_atoms_count_dictionaries()[
                 element_2])
-            mixing_energy = total_energy - composition * end_member_total_energies[element_1] - (1 - composition) * \
+            print(composition, k, total_energy)
+            mixing_energy = total_energy - composition * end_member_total_energies[element_1] - (1.0 - composition) * \
                             end_member_total_energies[element_2]
             mixing_energy = mixing_energy / structure.total_num_atoms()
 

@@ -163,15 +163,14 @@ def spin_unpolarised_optimization():
 
     structure = load_structure(logger)
 
-    logger.info("Perform an initial spin-non-polarised calculations to help convergence")
-    default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 520, 'EDIFF': '1e-04'})
+    logger.info("Perform an"
+                " initial spin-non-polarised calculations to help convergence")
+    default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 350, 'EDIFF': '1e-04'})
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
     vasp.execute()
 
     logger.info("VASP terminated?: " + str(vasp.completed))
-
-
 
 
 def default_two_d_optimisation():
@@ -573,7 +572,7 @@ def GGA_U_structure_optimisation():
     structure = load_structure(logger)
     gga_u_options = __set_U_correction_dictionary(structure)
     default_bulk_optimisation_set.update(gga_u_options)
-
+    default_bulk_optimisation_set.update({'ENCUT':400,'ISPIN':2})
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
     vasp.execute()

@@ -7,12 +7,13 @@ from core.dao.vasp import VaspReader
 from core.internal.builders.crystal import map_to_ase_atoms
 from twodPV.collect_data import populate_db
 
+
 def get_total_energies(db, dir=None):
     all_zips = glob.glob(dir + "/*.zip")
     for zip in all_zips:
         kvp = {}
         data = {}
-        kvp['uid'] = zip.replace(".zip",'').replace('/','_')
+        kvp['uid'] = zip.replace(".zip", '').replace('/', '_')
         archive = zipfile.ZipFile(zip)
 
         atoms = None
@@ -33,6 +34,7 @@ def get_total_energies(db, dir=None):
             print(kvp['uid'], crystal.all_atoms_count_dictionaries(), total_energy)
             populate_db(db, atoms, kvp, data)
 
+
 def pure_total_energies(db):
     get_total_energies(db, dir='pure')
 
@@ -44,15 +46,35 @@ def CsPbSnCl3_energies(db):
 def CsPbSnBr3_energies(db):
     get_total_energies(db, dir='mixed_CsPbSnBr3')
 
+
 def CsPbSnI3_energies(db):
     get_total_energies(db, dir='mixed_CsPbSnI3')
 
+
+def Cs2PbSnCl6_energies(db):
+    get_total_energies(db, dir='mixed_Cs2PbSnCl6')
+
+
+def Cs2PbSnBr6_energies(db):
+    get_total_energies(db, dir='mixed_Cs2PbSnBr6')
+
+
+def Cs2PbSnI6_energies(db):
+    get_total_energies(db, dir='mixed_Cs2PbSnI6')
+
+def binaries(db):
+    get_total_energies(db, dir='binaries')
+
 def collect(db):
     errors = []
-    steps = [pure_total_energies,
-             CsPbSnCl3_energies,
-             CsPbSnBr3_energies,
-             CsPbSnI3_energies]
+    steps = [binaries]
+            #pure_total_energies,
+             #CsPbSnCl3_energies,
+             #CsPbSnBr3_energies,
+             #CsPbSnI3_energies,
+             #Cs2PbSnCl6_energies,
+             #Cs2PbSnBr6_energies,
+             #Cs2PbSnI6_energies]
 
     for step in steps:
         try:

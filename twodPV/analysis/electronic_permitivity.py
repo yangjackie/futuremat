@@ -42,7 +42,6 @@ def get_geometry_corrected_electronic_polarizability(directory=None):
         outcar_reader = VaspReader(input_location=directory+'/OUTCAR.RPA.DIAG.temp')
         dielectric_tensor = outcar_reader.get_rpa_frequency_dependent_dielectric_tensor_from_outcar()
     except:
-        print("Removing temporary outcar.rpa")
         os.remove(directory + '/OUTCAR.RPA.DIAG.temp')
         return {}
 

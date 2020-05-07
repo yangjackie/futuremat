@@ -16,6 +16,11 @@ import time
 
 from core.calculators.vasp import Vasp
 from core.dao.vasp import VaspReader, VaspWriter
+from core.utils.loggings import setup_logger
+
+logger = setup_logger(output_filename='data_collector.log')
+# logger = setup_logger()
+
 from twodPV.analysis.electronic_permitivity import get_geometry_corrected_electronic_polarizability
 from pymatgen.io.vasp.outputs import Vasprun
 from pymatgen.electronic_structure.core import Spin
@@ -44,11 +49,11 @@ def updater(existing_dict, new_dict):
 
 
 def populate_db(db, atoms, kvp, data):
-    print("populating database, uid=", kvp['uid'])
+    logger.info("populating database, uid=" + str(kvp['uid']))
     row = None
     try:
         row = db.get(selection=[('uid', '=', kvp['uid'])])
-        print("Updating an existing row.")
+        logger.info("Updating an existing row.")
 
         ##############################################################################################################
         # Always update an existing row with the data extracted from the latest calculations
@@ -59,20 +64,16 @@ def populate_db(db, atoms, kvp, data):
         ##############################################################################################################
         if row.key_value_pairs is not None:
             updater(row.key_value_pairs, kvp)
-
         if row.data is not None:
             updater(row.data, data)
-
         if atoms is None:
             atoms = row.toatoms()
-
         db.write(atoms, data=data, id=row.id, **kvp)
-
     except KeyError:
         try:
             db.write(atoms, data=data, **kvp)
         except Exception as e:
-            print(e)
+            logger.warning(e)
 
 
 def formation_energy(atoms):
@@ -334,45 +335,47 @@ def two_d_electronic_structures(db, orientation='100', termination='AO'):
     base_dir = cwd + '/slab_' + str(orientation) + '_' + str(termination) + '_small/'
     thicknesess = [3, 5, 7, 9]
 
-    kvp = {}
-    data = {}
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
                 for c in C_site_list[i]:
                     system_name = a + b + c
                     for thick in thicknesess:
+                        kvp = {}
+                        data = {}
                         uid = system_name + '3_' + str(orientation) + "_" + str(termination) + "_" + str(thick)
                         kvp['uid'] = uid
-                        print(uid)
+                        logger.info("Getting data for system  " + str(
+                            uid) + ' from directory ' + base_dir + '/' + system_name + '_' + str(thick))
                         os.chdir(base_dir + '/' + system_name + '_' + str(thick))
 
-                        # get the two-dimensional electronic permitivity
-                        try:
-                            data['e_polarizability_freq'] = get_geometry_corrected_electronic_polarizability()
-                        except:
-                            print("Cannot get frequency-dependent electronic polarizability")
+                        #                        # get the two-dimensional electronic permitivity
+                        #                        try:
+                        #                            data['e_polarizability_freq'] = get_geometry_corrected_electronic_polarizability()
+                        #                        except:
+                        #                            logger.info("Cannot get frequency-dependent electronic polarizability")
 
-                        print("============= out_of_plane_charge_polarisations ==============")
+                        logger.info("\n" + "============= out_of_plane_charge_polarisations ==============")
                         kvp = get_out_of_plane_charge_polarisations(kvp)
-                        print("============= dos_related_properties ==============")
+
+                        logger.info("\n" + "============= dos_related_properties ==============")
                         kvp = get_dos_related_properties(kvp)
-                        print("============= band_structures_properties =============")
+
+                        logger.info("\n" + "============= band_structures_properties =============")
                         data = get_band_structures_properties(data)
 
-                        print("\n")
-                        # print(data['e_polarizability_freq'])
-                        print("Summary of band structure information")
+                        logger.info("\n" + "====Summary of band structure information====")
 
                         for k in data['band_structure'].keys():
                             if isinstance(data['band_structure'][k], list):
                                 for kk in range(len(data['band_structure'][k])):
                                     for kkk in data['band_structure'][k][kk].keys():
-                                        print(k, kkk, data['band_structure'][k][kk][kkk])
+                                        logger.info(
+                                            str(k) + ' ' + str(kkk) + ' ' + str(data['band_structure'][k][kk][kkk]))
                             else:
-                                print(k, data['band_structure'][k])
+                                logger.info(str(k) + ' ' + str(data['band_structure'][k]))
 
-                        print("\n")
+                        logger.info("\n")
                         populate_db(db, None, kvp, data)
                         os.chdir(cwd)
 
@@ -383,43 +386,60 @@ def get_dos_related_properties(kvp):
         with zipfile.ZipFile('./electronic_workflow.zip') as z:
             with open("./vasprun_SPIN_CHG_temp.xml", 'wb') as f:
                 f.write(z.read("electronic_workflow/vasprun_SPIN_CHG.xml"))
+        f.close()
+        z.close()
     except:
         try:
             with zipfile.ZipFile('./electronic_workflow.zip') as z:
                 with open("./vasprun_SPIN_CHG_temp.xml", 'wb') as f:
                     f.write(z.read("vasprun_SPIN_CHG.xml"))
+            f.close()
+            z.close()
         except:
-            print("Loading results from spin-polarised charge density runs unsuccessful ")
+            logger.info("Loading results from spin-polarised charge density runs unsuccessful ")
             try:
-                os.remove('./vasprun_SPIN_CHG.xml')
+                os.remove('./vasprun_SPIN_CHG_temp.xml')
             except:
                 pass
             return kvp
 
     # need to write out the POTCAR so reading vasprun.xml will work
-    __xtal = VaspReader(input_location='./POSCAR').read_POSCAR()
-    VaspWriter().write_potcar(__xtal)
-    dos_run = Vasprun("./vasprun_SPIN_CHG_temp.xml")
+    try:
+        __xtal = VaspReader(input_location='./POSCAR').read_POSCAR()
+        VaspWriter().write_potcar(__xtal)
+    except:
+        logger.warning("Loading POSCAR failed ")
+
+    try:
+        dos_run = Vasprun("./vasprun_SPIN_CHG_temp.xml")
+    except:
+        logger.warning("Loading vasprun.xml failed ")
+        dos_run = None
 
     if dos_run is not None:
-        kvp['ef_dos'] = dos_run.efermi
-        dos = dos_run.complete_dos
-        sdos = dos.get_smeared_densities(sigma=0.125)
-        en = dos.as_dict()['energies']
+        try:
+            kvp['ef_dos'] = dos_run.efermi
+            dos = dos_run.complete_dos
+            sdos = dos.get_smeared_densities(sigma=0.125)
+            en = dos.as_dict()['energies']
 
-        spin_up_dos = sdos[Spin.up]
-        spin_up_dos = interp1d(en, spin_up_dos, kind='cubic')
-        kvp['spin_up_dos_at_ef'] = float(spin_up_dos(dos_run.efermi))
+            spin_up_dos = sdos[Spin.up]
+            spin_up_dos = interp1d(en, spin_up_dos, kind='cubic')
+            kvp['spin_up_dos_at_ef'] = float(spin_up_dos(dos_run.efermi))
 
-        spin_down_dos = sdos[Spin.down]
-        spin_down_dos = interp1d(en, spin_down_dos, kind='cubic')
-        kvp['spin_down_dos_at_ef'] = float(spin_down_dos(dos_run.efermi))
-        print("Spin up at Ef ", kvp['spin_up_dos_at_ef'], "Spin down at Ef ", kvp['spin_down_dos_at_ef'])
+            spin_down_dos = sdos[Spin.down]
+            spin_down_dos = interp1d(en, spin_down_dos, kind='cubic')
+            kvp['spin_down_dos_at_ef'] = float(spin_down_dos(dos_run.efermi))
+            logger.info("Spin up at Ef " + str(kvp['spin_up_dos_at_ef']) + " Spin down at Ef " + str(
+                kvp['spin_down_dos_at_ef']))
+        except:
+            pass
     try:
         os.remove("./vasprun_SPIN_CHG_temp.xml")
         os.remove("./POTCAR")
     except:
         pass
+    del dos_run
     return kvp
 
 
@@ -432,19 +452,23 @@ def get_out_of_plane_charge_polarisations(kvp):
         with zipfile.ZipFile('./electronic_workflow.zip') as z:
             with open("./CHGCAR_temp", 'wb') as f:
                 f.write(z.read("electronic_workflow/CHGCAR_SPIN"))
-        print("Spin--polarized charge density loaded")
+        logger.info("Spin--polarized charge density loaded")
         efolder_loaded = True
+        f.close()
+        z.close()
     except:
-        print(
+        logger.info(
             "Error in parsing CHGCAR from spin-polarized calculation in ./electronic_workflow, try with spin non polarised charge densities")
         try:
             with zipfile.ZipFile('./electronic_workflow.zip') as z:
                 with open("./CHGCAR_temp", 'wb') as f:
                     f.write(z.read("electronic_workflow/CHGCAR_NOSPIN"))
-            print("Spin--non-polarized charge density loaded")
+            logger.info("Spin--non-polarized charge density loaded")
+            f.close()
+            z.close()
             efolder_loaded = True
         except:
-            print(
+            logger.info(
                 "Error in parsing CHGCAR from spin-non-polarized calculation in ./electronic_workflow, try another folder")
 
     if not efolder_loaded:
@@ -452,69 +476,92 @@ def get_out_of_plane_charge_polarisations(kvp):
             with zipfile.ZipFile('./electronic_workflow.zip') as z:
                 with open("./CHGCAR_temp", 'wb') as f:
                     f.write(z.read("CHGCAR_SPIN"))
-            print("Spin--polarized charge density loaded")
+            f.close()
+            z.close()
+            logger.info("Spin--polarized charge density loaded")
         except:
-            print(
+            logger.info(
                 "Error in parsing CHGCAR from spin-polarized calculation, try with spin non polarised charge densities")
             try:
                 with zipfile.ZipFile('./electronic_workflow.zip') as z:
                     with open("./CHGCAR_temp", 'wb') as f:
                         f.write(z.read("CHGCAR_NOSPIN"))
-                print("Spin--non-polarized charge density loaded")
+                f.close()
+                z.close()
+                logger.info("Spin--non-polarized charge density loaded")
             except:
-                print("Error in parsing CHGCAR from spin-non-polarized calculation, skip")
+                logger.warning("Error in parsing CHGCAR from spin-non-polarized calculation, skip")
                 try:
                     os.remove('./CHGCAR_temp')
                 except:
                     pass
                 return kvp
 
-    print("")
-    print("VASRPRUN loading CHGAR " + str(time.time()))
+    logger.info("")
 
-    vasp_reader = VaspReader(input_location='./CHGCAR_temp')
-    #######################################
-    # TODO - THIS ROUNTINE IS VERY SLOW!!!!!
-    #######################################
-    charge_grid, crystal = vasp_reader.read_CHGCAR()
-    print("VASRPRUN loading CHGAR finished " + str(time.time()))
-    print("")
+    try:
+        vasp_reader = VaspReader(input_location='./CHGCAR_temp')
+        #######################################
+        # TODO - THIS ROUNTINE IS VERY SLOW!!!!!
+        #######################################
+        charge_grid, crystal = vasp_reader.read_CHGCAR()
 
-    a = cVector3D(crystal.lattice.lattice_vectors[0][0], crystal.lattice.lattice_vectors[0][1],
-                  crystal.lattice.lattice_vectors[0][2])
-    b = cVector3D(crystal.lattice.lattice_vectors[1][0], crystal.lattice.lattice_vectors[1][1],
-                  crystal.lattice.lattice_vectors[1][2])
-    area = a.cross(b).l2_norm()
+        a = cVector3D(crystal.lattice.lattice_vectors[0][0], crystal.lattice.lattice_vectors[0][1],
+                      crystal.lattice.lattice_vectors[0][2])
+        b = cVector3D(crystal.lattice.lattice_vectors[1][0], crystal.lattice.lattice_vectors[1][1],
+                      crystal.lattice.lattice_vectors[1][2])
+        area = a.cross(b).l2_norm()
 
-    NGX = charge_grid.shape[0]
-    NGY = charge_grid.shape[1]
-    NGZ = charge_grid.shape[2]
-    resolution_x = crystal.lattice.a / NGX
-    resolution_y = crystal.lattice.b / NGY
-    resolution_z = crystal.lattice.c / NGZ
+        NGX = charge_grid.shape[0]
+        NGY = charge_grid.shape[1]
+        NGZ = charge_grid.shape[2]
+        resolution_x = crystal.lattice.a / NGX
+        resolution_y = crystal.lattice.b / NGY
+        resolution_z = crystal.lattice.c / NGZ
 
-    electron_densities = 0
-    for z_value in range(NGZ):
-        z_plane = charge_grid[:, :, z_value] / crystal.lattice.volume
-        z_plane_total = np.sum(z_plane) * (resolution_x * resolution_y)
-        electron_densities -= z_plane_total * (0 + resolution_z * z_value) * resolution_z
+        electron_densities = 0
+        for z_value in range(NGZ):
+            z_plane = charge_grid[:, :, z_value] / crystal.lattice.volume
+            z_plane_total = np.sum(z_plane) * (resolution_x * resolution_y)
+            electron_densities -= z_plane_total * (0 + resolution_z * z_value) * resolution_z
 
-    nuclear_densities = 0
-    for a in crystal.asymmetric_unit[0].atoms:
-        nuclear_densities += atomic_numbers[a.label] * a.position.z
+        nuclear_densities = 0
+        for a in crystal.asymmetric_unit[0].atoms:
+            nuclear_densities += get_zval_from_potcar(a.label) * a.position.z
 
-    kvp['e_pol'] = electron_densities / area
-    kvp['nu_pol'] = nuclear_densities / area
-    print('electronic polarisation: ', kvp['e_pol'], 'nuclear polarisation: ', kvp['nu_pol'])
+        kvp['e_pol'] = electron_densities / area
+        kvp['nu_pol'] = nuclear_densities / area
+        logger.info('electronic polarisation: ' + str(kvp['e_pol']) + ' nuclear polarisation: ' + str(kvp['nu_pol']))
+    except:
+       pass
 
     for i in ['CHGCAR_temp', 'CHGCAR_SPIN_temp', 'CHGCAR_NOSPIN_temp']:
         try:
             os.remove('./' + str(i))
         except:
             pass
-    charge_grid = None
-    crystal = None
     return kvp
+
+
+def get_zval_from_potcar(label, use_GW=True):
+    import settings
+    from core.models.element import pbe_pp_choices
+    import os
+    z = 0
+    if not use_GW:
+        potcar = settings.vasp_pp_directory + '/' + pbe_pp_choices[label] + '/POTCAR'
+    else:
+        if os.path.exists(settings.vasp_pp_directory + '/' + pbe_pp_choices[label] + '_GW/'):
+            potcar = settings.vasp_pp_directory + '/' + pbe_pp_choices[label] + '_GW/POTCAR'
+        else:
+            potcar = settings.vasp_pp_directory + '/' + pbe_pp_choices[label] + '/POTCAR'
+
+    _potcar_file = open(potcar, 'r')
+    for line in _potcar_file.readlines():
+        if 'ZVAL' in line:
+            z = float(line.split()[5])
+    _potcar_file.close()
+    return z
 
 
 def get_band_structures_properties(data):
@@ -547,6 +594,7 @@ def get_band_structures_properties(data):
             with open("./vasprun_spin_BAND_temp.xml", 'wb') as f:
                 f.write(z.read("electronic_workflow/vasprun_spin_BAND.xml"))
         f.close()
+        z.close()
         __xtal = VaspReader(input_location='./POSCAR').read_POSCAR()
         VaspWriter().write_potcar(__xtal)
         VaspWriter().write_KPOINTS(crystal=__xtal, filename='KPOINTS', kpoint_str=KPOINTS_string_dict[orient])
@@ -557,56 +605,42 @@ def get_band_structures_properties(data):
                 with open("./vasprun_spin_BAND_temp.xml", 'wb') as f:
                     f.write(z.read("vasprun_spin_BAND.xml"))
             f.close()
+            z.close()
             __xtal = VaspReader(input_location='./POSCAR').read_POSCAR()
             VaspWriter().write_potcar(__xtal)
             VaspWriter().write_KPOINTS(crystal=__xtal, filename='KPOINTS', kpoint_str=KPOINTS_string_dict[orient])
             vr = BSVasprun('./vasprun_spin_BAND_temp.xml')
         except:
-            print("No spin polarised band structure calculation results found! RETURN")
-            try:
-                os.remove('./vasprun_spin_BAND_temp.xml')
-            except:
-                pass
-            try:
-                os.remove("./POTCAR")
-            except:
-                pass
-            try:
-                os.remove("./KPOINTS")
-            except:
-                pass
+            logger.info("No spin polarised band structure calculation results found! RETURN")
+            for file in ['./vasprun_spin_BAND_temp.xml', "./POTCAR", "./KPOINTS", './KPOINTS_temp']:
+                try:
+                    os.remove(file)
+                except:
+                    pass
             return data
     try:
         bs = vr.get_band_structure(line_mode=True, kpoints_filename='KPOINTS')
         bs = get_reconstructed_band_structure([bs])
-        try:
-            os.remove('./vasprun_spin_BAND_temp.xml')
-        except:
-            pass
-        try:
-            os.remove("./POTCAR")
-        except:
-            pass
-        try:
-            os.remove("./KPOINTS")
-        except:
-            pass
+        for file in ['./vasprun_spin_BAND_temp.xml', "./POTCAR", "./KPOINTS", './KPOINTS_temp']:
+            try:
+                os.remove(file)
+            except:
+                pass
     except:
-        print("Failed to retrieve the band structure from the vasprun.xml, RETURN")
+        logger.warning("Failed to retrieve the band structure from the vasprun.xml, RETURN")
         return data
     if not bs.is_spin_polarized:
-        print("Not a spin polarised band structure. Don't want this now! RETURN")
+        logger.warning("Not a spin polarised band structure. Don't want this now! RETURN")
         return data
 
     data['band_structure']['is_metal'] = bs.is_metal()
     if bs.is_metal():
-        print("=========================> METAL <=========================")
-        try:
-            os.remove('./vasprun_spin_BAND_temp.xml')
-            os.remove("./POTCAR")
-            os.remove("./KPOINTS_temp")
-        except:
-            pass
+        logger.info("=========================> METAL <=========================")
+        for file in ['./vasprun_spin_BAND_temp.xml', "./POTCAR", "./KPOINTS", './KPOINTS_temp']:
+            try:
+                os.remove(file)
+            except:
+                pass
         return data
 
     # ======================================
@@ -723,13 +757,16 @@ def get_band_structures_properties(data):
                                                             'kpt_start': kpt_str.format(
                                                                 k=d['start_kpoint'].frac_coords),
                                                             'kpt_end': kpt_str.format(k=d['end_kpoint'].frac_coords)})
-    try:
-        os.remove('./vasprun_spin_BAND_temp.xml')
-        os.remove("./POTCAR")
-        os.remove("./KPOINTS")
-    except:
-        pass
 
+    for file in ['./vasprun_spin_BAND_temp.xml', "./POTCAR", "./KPOINTS", './KPOINTS_temp']:
+        try:
+            os.remove(file)
+        except:
+            pass
+    if bs is not None:
+        del bs
+    if vr is not None:
+        del vr
     return data
 
 
@@ -759,9 +796,12 @@ def __two_d_110_ABO_electronic_structures(db):
 
 def collect(db):
     errors = []
-    steps = [  # __two_d_100_AO_electronic_structures,
-        # __two_d_100_BO2_electronic_structures
-        __two_d_111_AO3_electronic_structures]
+    steps = [__two_d_100_AO_electronic_structures,
+             __two_d_100_BO2_electronic_structures]
+    # __two_d_111_AO3_electronic_structures,
+    # __two_d_111_B_electronic_structures,
+    # __two_d_110_O2_electronic_structures,
+    # __two_d_110_ABO_electronic_structures]
     # element_energy,  # do not skip this step, always need this to calculate formation energy on-the-fly
     # pm3m_formation_energy,
     # randomised_structure_formation_energy,
@@ -787,5 +827,6 @@ if __name__ == "__main__":
     # We use absolute path because of chdir below!
     dbname = os.path.join(os.getcwd(), '2dpv.db')
     db = connect(dbname)
-    print('Established a sqlite3 database object ' + str(db))
+
+    logger.info('Established a sqlite3 database object ' + str(db))
     collect(db)
