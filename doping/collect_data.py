@@ -1,10 +1,10 @@
 import os, glob, zipfile
 
+import ase
 from ase.io.vasp import *
 from ase.db import connect
 
 from core.dao.vasp import VaspReader
-from core.internal.builders.crystal import map_to_ase_atoms
 from twodPV.collect_data import populate_db
 
 
@@ -19,23 +19,39 @@ def get_total_energies(db, dir=None):
         atoms = None
         total_energy = None
 
+        has_contcar = False
         for name in archive.namelist():
-            if 'CONTCAR' in name:
-                contcar = archive.read(name)
-                contcar_reader = VaspReader(file_content=str(contcar).split('\\n'))
-                crystal = contcar_reader.read_POSCAR()
-                atoms = map_to_ase_atoms(crystal)
             if 'OSZICAR' in name:
                 oszicar = archive.read(name)
                 oszicar_reader = VaspReader(file_content=str(oszicar).split('\\n'))
                 total_energy = oszicar_reader.get_free_energies_from_oszicar()[-1]
                 kvp['total_energy'] = total_energy
-        if (atoms is not None) and (total_energy is not None):
-            print(kvp['uid'], crystal.all_atoms_count_dictionaries(), total_energy)
-            populate_db(db, atoms, kvp, data)
+
+            if 'CONTCAR' in name:
+                with open('CONTCAR_temp', 'w') as f:
+                    for l in str(archive.read(name)).split('\\n'):
+                        f.write(l+'\n')
+                has_contcar=True
+
+        if not has_contcar:
+            for name in archive.namelist():
+                if 'POSCAR' in name:
+                    with open('CONTCAR_temp', 'w') as f:
+                        for l in str(archive.read(name)).split('\\n'):
+                            f.write(l + '\n')
+
+        crystal = ase.io.read('CONTCAR_temp',format='vasp')
+        f.close()
+        os.remove('CONTCAR_temp')
+
+        if (crystal is not None) and (total_energy is not None):
+            print(kvp['uid'], total_energy)
+            populate_db(db, crystal, kvp, data)
+
 
 
 def pure_total_energies(db):
+    get_total_energies(db, dir='pure_O')
     get_total_energies(db, dir='pure')
 
 
@@ -67,14 +83,14 @@ def binaries(db):
 
 def collect(db):
     errors = []
-    steps = [binaries]
-            #pure_total_energies,
-             #CsPbSnCl3_energies,
-             #CsPbSnBr3_energies,
-             #CsPbSnI3_energies,
-             #Cs2PbSnCl6_energies,
-             #Cs2PbSnBr6_energies,
-             #Cs2PbSnI6_energies]
+    steps =  [binaries,
+              pure_total_energies,
+              CsPbSnCl3_energies,
+              CsPbSnBr3_energies,
+              CsPbSnI3_energies,
+              Cs2PbSnCl6_energies,
+              Cs2PbSnBr6_energies,
+              Cs2PbSnI6_energies]
 
     for step in steps:
         try:

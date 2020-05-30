@@ -60,7 +60,7 @@ def bulk_energy_landscape():
                         except KeyError:
                             print(uid + '   failed')
                             continue
-                        randomised_formation_e = row.key_value_pairs['formation_energy']
+                            randomised_formation_e = row.key_value_pairs    [   'formation_energy']
 
                         tolerance_factors.append(tolerance_f)
 
