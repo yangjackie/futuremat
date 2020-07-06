@@ -197,7 +197,7 @@ def plot_all_reaction_energies_for_system(db, reaction='demixing', output=None, 
 
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
 
-    plt.xlabel('$x$ in Cs(Pb$_{x}$Sn$_{1-x})$X$_{3}$')
+    plt.xlabel('$x$ in Cs(Pb$_{x}$Sn$_{1-x}$)X$_{3}$')
     plt.ylabel(y_label_dict[reaction])
     plt.legend(loc=1)
     # plt.yscale('symlog')

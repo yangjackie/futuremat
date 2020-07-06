@@ -521,9 +521,9 @@ class VaspWriter(object):
         kpoint_file.close()
 
 
-def prepare_potcar(poscar_file):
+def prepare_potcar(poscar_file,gw=False):
     crystal = VaspReader(input_location=poscar_file).read_POSCAR()
-    VaspWriter().write_potcar(crystal)
+    VaspWriter().write_potcar(crystal, use_GW=gw)
     # write out the crystal again to get rid of the atom re-ordering problem?
     VaspWriter().write_structure(crystal)
 
@@ -551,10 +551,11 @@ if __name__ == "__main__":
                         help='string of comma separated integer denoting number of K-points along each reciprocal space direction.')
     parser.add_argument("--mp_grid", type=float, default=0.025, help='grid spacing for generating MP Kpoints')
     parser.add_argument('--convert_xml', action='store_true')
+    parser.add_argument('--gw', action='store_true')
     args = parser.parse_args()
 
     if args.genpot:
-        prepare_potcar("./POSCAR")
+        prepare_potcar("./POSCAR", gw=args.gw)
 
     if args.gen_mp_k:
         prepare_kpoints("./POSCAR", MP_points=args.mp_points, grid=args.mp_grid)

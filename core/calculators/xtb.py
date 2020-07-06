@@ -13,7 +13,7 @@ from ase.units import Hartree, mol, kcal
 
 run_types = ['scc', 'grad', 'vip', 'vea', 'vipea', 'vomega', 'vfukui', 'esp', 'stm', 'opt', 'metaopt', 'modef', 'ohess',
              'omd', 'metadyn', 'siman']
-run_type_implemented = ['opt']
+run_type_implemented = ['opt', 'vipea']
 
 optimization_levels = ['crude', 'sloppy', 'loose', 'lax', 'normal', 'tight', 'vtight', 'extreme']
 
@@ -31,7 +31,7 @@ class XTB(Calculator):
 
     def set_scratch_directory(self, scratch):
         if scratch is not None:
-            self.scratch_dir = scratch
+            self.scratch_dir = scratch + '/' + ''.join([random.choice(string.ascii_letters) for _ in range(10)])
         else:
             self.scratch_dir = os.getcwd() + '/' + ''.join([random.choice(string.ascii_letters) for _ in range(10)])
         pass
@@ -64,6 +64,10 @@ class XTB(Calculator):
 
     def run(self):
         cmd = ['/opt/intel/intelpython3/bin/xtb', 'input.xyz', '--' + self.run_type]
+        if self.run_type == 'vipea':
+            cmd += ['--vparam',
+                    '/Users/jack_yang/PycharmProjects/futuremat/core/calculators/xtb_data/param_ipea-xtb.txt']
+
         with open('xtb.log', "w") as self.outfile:
             subprocess.run(cmd, stdout=self.outfile, stderr=subprocess.PIPE)
 
@@ -71,10 +75,21 @@ class XTB(Calculator):
         if self.run_type == 'opt':
             optimized_str, total_energy = self.__get_optimised_molecule_and_energy_from_xyz(
                 open('xtbopt.xyz', 'r'))
-            homo_lumo_gap = self.__get_homo_lumo_gap(open('xtb.log','r'))
+            homo_lumo_gap = self.__get_homo_lumo_gap(open('xtb.log', 'r'))
             self.result['optimized_structure'] = optimized_str
             self.result['total_energy'] = total_energy
             self.result['homo_lumo_gap'] = homo_lumo_gap
+            self.result['success'] = True
+        if self.run_type == 'vipea':
+            ip, ea = self.__get_vipea(open('xtb.log', 'r'))
+            self.result['vip'] = ip
+            self.result['vea'] = ea
+            if (self.result['vip']  is not None) and (self.result['vea'] is not None):
+                self.result['vipea_success'] = True
+            else:
+                self.result['vipea_success'] = False
+                # except:
+            #    self.result['vipea_success'] = False
 
     def tear_down(self):
         os.chdir(self.cwd)
@@ -84,10 +99,29 @@ class XTB(Calculator):
         start_time = time.time()
         self.setup_inputs()
         self.run()
-        self.parse_output()
+
+        if self.run_type == 'opt':
+            try:
+                self.parse_output()
+                print("Final energy:\t" + str(self.result['total_energy']) + '\t kcal/mol, execution time: ' + str(
+                    time.time() - start_time) + ' secs')
+            except Exception as e:
+                self.result['success'] = False
+                print(e)
+                print("Output parsing failed, could be a failed xtb optimisation, pass and clean scratch")
+        elif self.run_type == 'vipea':
+            try:
+                self.parse_output()
+                print("VIP: " + str(self.result['vip']) + ' eV.  VEA: ' + str(
+                    self.result['vea']) + ' eV. execution time: ' + str(time.time() - start_time) + ' secs')
+            except Exception as e:
+                self.result['vipea_success'] = False
+                print(e)
+                print("Output parsing failed, could be a failed xtb run, pass and clean scratch")
+
         self.tear_down()
-        print("Final energy:\t"+str(self.result['total_energy'])+'\t kcal/mol, execution time: '+str(time.time()-start_time)+' secs')
         return self.result
+
 
     def __get_optimised_molecule_and_energy_from_xyz(self, fileobj):
         lines = fileobj.readlines()
@@ -102,12 +136,26 @@ class XTB(Calculator):
             positions.append([float(x), float(y), float(z)])
         return Atoms(symbols=symbols, positions=positions), total_energy_kcal_mol
 
-    def __get_homo_lumo_gap(self,fileobj):
+
+    def __get_vipea(self, fileobj):
+        lines = fileobj.readlines()
+        ip = None
+        ea = None
+        for l in lines:
+            if 'delta SCC IP (eV)' in l:
+                ip = float(l.split()[-1])
+            if 'delta SCC EA (eV)' in l:
+                ea = float(l.split()[-1])
+        return ip, ea
+
+
+    def __get_homo_lumo_gap(self, fileobj):
         _holder = []
         for line in fileobj.readlines():
             if 'HOMO-LUMO GAP ' in line:
                 _holder.append(float(line.split()[-3]))
         return _holder[-1]
+
 
 if __name__ == "__main__":
     xyzs = glob.glob('*xyz')
