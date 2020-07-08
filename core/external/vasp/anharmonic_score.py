@@ -150,19 +150,19 @@ class AnharmonicScore(object):
             return out.flatten()
         return out
 
-    def atom_normalized_dft_forces(self,atom,flat=False):
+    def atom_normalized_dft_forces(self, atom, flat=False):
         _mask = [id for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if a.label == atom]
-        dft_forces = self.dft_forces[:,_mask,:]
+        dft_forces = self.dft_forces[:, _mask, :]
         dft_forces_std = dft_forces.flatten().std()
         out = np.zeros(np.shape(dft_forces))
-        np.divide(dft_forces,dft_forces_std,out=out)
+        np.divide(dft_forces, dft_forces_std, out=out)
         if flat:
             return out.flatten()
         return out
 
-    def atom_normalized_anharmonic_forces(self,atom,flat=False):
+    def atom_normalized_anharmonic_forces(self, atom, flat=False):
         _mask = [id for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if a.label == atom]
-        anharmonic_forces = self.anharmonic_forces[:,_mask,:]
+        anharmonic_forces = self.anharmonic_forces[:, _mask, :]
         anharmonic_forces_std = anharmonic_forces.flatten().std()
         out = np.zeros(np.shape(anharmonic_forces))
         np.divide(anharmonic_forces, anharmonic_forces_std, out=out)
@@ -174,10 +174,11 @@ class AnharmonicScore(object):
         atoms = [a.label for a in self.ref_frame.asymmetric_unit[0].atoms]
         atoms = list(set(atoms))
         print(atoms)
-        plt.figure(figsize=(6*len(atoms),6))
-        for id,atom in enumerate(atoms):
-            plt.subplot(1,len(atoms),id+1)
-            plt.hist2d(self.atom_normalized_dft_forces(atom,flat=True), self.atom_normalized_anharmonic_forces(atom,flat=True), bins=200)
+        plt.figure(figsize=(6 * len(atoms), 6))
+        for id, atom in enumerate(atoms):
+            plt.subplot(1, len(atoms), id + 1)
+            plt.hist2d(self.atom_normalized_dft_forces(atom, flat=True),
+                       self.atom_normalized_anharmonic_forces(atom, flat=True), bins=100, density=True)
             plt.xlim([-2, 2])
             plt.ylim([-2, 2])
             plt.xlabel("$F/\\sigma(F)$")
@@ -186,40 +187,17 @@ class AnharmonicScore(object):
         plt.tight_layout()
         plt.savefig('atom_joint_PDF.png')
 
-    def atomic_sigma(self,atoms):
-        _mask = [id for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if
-                               atom.label in atoms]
-        atom_dft_forces = self.dft_forces[:,_mask,:]
-        atom_anharomic_forces = self.anharmonic_forces[:,_mask,:]
-        np.divide()
-
     def structure_averaged_sigma_trajectory(self):
-        self.sigma_frames = []
-        atom_direction_anh_std = self.anharmonic_forces.std(axis=0)
-        print(np.shape(atom_direction_anh_std))
-        for i in range(np.shape(self.all_displacements)[0]):
-            # self.anharmonic_forces[i] = self.anharmonic_forces[i]/atom_direction_anh_std
-            np.divide(self.anharmonic_forces[i], atom_direction_anh_std, out=self.anharmonic_forces[i])
+        atoms = [a.label for a in self.ref_frame.asymmetric_unit[0].atoms]
+        atoms = list(set(atoms))
+        self.sigma_frames=[]
+        for atom in atoms:
+            anh_f = self.atom_normalized_anharmonic_forces(atom)
+            dft_f = self.atom_normalized_dft_forces(atom)
 
-        atom_direction_all_std = self.dft_forces.std(axis=0)
-        for i in range(np.shape(self.all_displacements)[0]):
-            # self.all_forces[i] = self.all_forces[i]/atom_direction_all_std
-            np.divide(self.dft_forces[i], atom_direction_all_std, out=self.dft_forces[i])
-
-        for i in range(np.shape(self.all_displacements)[0]):
-            if self.atom_masks is None:
-                rmse = self.anharmonic_forces[i, :, :].std()
-                std = self.dft_forces[i, :, :].std()
-                #_sigma = np.zeros(np.shape(self.anharmonic_forces[i, :, :]))
-                #np.divide(np.abs(self.anharmonic_forces[i, :, :]), np.abs(self.dft_forces[i, :, :]), out=_sigma)
-                #sigma_frame = np.average(_sigma)
-                #print(sigma_frame)
-            else:
-                # print(self.atom_masks, print(np.shape(self.anharmonic_forces[i, self.atom_masks, :])))
-                rmse = self.anharmonic_forces[i, self.atom_masks, :].std()
-                std = self.dft_forces[i, self.atom_masks, :].std()
-            sigma_frame = rmse / std
-            self.sigma_frames.append(sigma_frame)
+            for i in range(np.shape(self.all_displacements)[0]):
+                _sigma_frame = anh_f[i,:,:].flatten().std()/dft_f[i,:,:].flatten().std()
+                self.sigma_frames.append(_sigma_frame)
 
     def structural_sigma(self):
         if self.atom_masks is None:
