@@ -4,6 +4,7 @@ import shutil
 from core.calculators.vasp import Vasp
 from core.dao.vasp import *
 from core.utils.loggings import setup_logger
+from pymatgen.io.vasp.outputs import Vasprun
 
 # we set the default calculation to be spin-polarized.
 _default_bulk_optimisation_set = {'ADDGRID': True,
@@ -20,10 +21,13 @@ _default_bulk_optimisation_set = {'ADDGRID': True,
                                   'LREAL': 'Auto',
                                   'LVTOT': False,
                                   'LWAVE': False,
+                                  # 'NPAR': 48,
                                   'PREC': 'Normal',
+                                  'SIGMA': 0.05,
                                   'SIGMA': 0.05,
                                   'ENCUT': 500,
                                   'EDIFF': '1e-04',
+                                  # 'NPAR': 7,
                                   'executable': 'vasp_std'}
 
 default_bulk_optimisation_set = {key.lower(): value for key, value in _default_bulk_optimisation_set.items()}
@@ -39,7 +43,7 @@ def update_core_info():
             elif 'normalsl' in l:
                 ncpus = 32
             else:
-                ncpus = 16
+                ncpus = 12
         default_bulk_optimisation_set.update({'NPAR': ncpus, 'NCORE': 3})
     except:
         pass
@@ -264,16 +268,16 @@ def __G_phonon():
 # constants
 # =================================================================
 single_point_pbe = {'PREC': 'HIGH',
-                      'ISMEAR': 0,
-                      'SIGMA': 0.01,
-                      'EDIFF': 1e-05,
-                      'IALGO': 48,
-                      'ISPIN': 1,
-                      'NELM': 500,
-                      'AMIN': 0.01,
-                      'ISYM': 0,
-                      'PREC': 'HIGH',
-                      'ENCUT': 500,
+                    'ISMEAR': 0,
+                    'SIGMA': 0.01,
+                    'EDIFF': 1e-05,
+                    'IALGO': 48,
+                    'ISPIN': 1,
+                    'NELM': 500,
+                    'AMIN': 0.01,
+                    'ISYM': 0,
+                    'PREC': 'HIGH',
+                    'ENCUT': 500,
                     'NSW': 0,
                     'LWAVE': True,
                     'clean_after_success': False,
@@ -282,47 +286,48 @@ single_point_pbe = {'PREC': 'HIGH',
                     'Gamma_centered': True}
 
 pbe_omega = {'PREC': 'HIGH',
-               'ISMEAR': 0,
-               'SIGMA': 0.01,
-               'EDIFF': 1e-05,
-               'AMIN': 0.01,
-               'ALGO': 'EXACT',
-               'LOPTICS': True,
-               'NELM': 1,
-               'OMEGAMAX': 40,
-               'ISPIN': 1,
-               'ISYM': 0,
+             'ISMEAR': 0,
+             'SIGMA': 0.01,
+             'EDIFF': 1e-05,
+             'AMIN': 0.01,
+             'ALGO': 'EXACT',
+             'LOPTICS': True,
+             'NELM': 1,
+             'OMEGAMAX': 40,
+             'ISPIN': 1,
+             'ISYM': 0,
              'LPEAD': True,
              'ENCUT': 500,
-              'NEDOS': 1000,
+             'NEDOS': 1000,
              'clean_after_success': False,
              'use_gw': True,
              'MP_points': [4, 4, 1],
              'Gamma_centered': True}
 
 pbe_rpa_omega = {'PREC': 'HIGH',
-                   'ISMEAR': 0,
-                   'SIGMA': 0.01,
-                   'EDIFF': 1e-05,
-                   'AMIN': 0.01,
-                   'ALGO': 'CHI',
-                   'LRPA': True, #this option turns off the exchange-correlation kernel
-                   'LOPTICS': True,
-                   'NELM': 1,
-                   'OMEGAMAX': 10,
-                   'ISPIN': 1,
+                 'ISMEAR': 0,
+                 'SIGMA': 0.01,
+                 'EDIFF': 1e-05,
+                 'AMIN': 0.01,
+                 'ALGO': 'CHI',
+                 'LRPA': True,  # this option turns off the exchange-correlation kernel
+                 'LOPTICS': True,
+                 'NELM': 1,
+                 'OMEGAMAX': 10,
+                 'ISPIN': 1,
                  'ISYM': 0,
                  'ENCUT': 500,
                  'ENCUTGW': 100,
-                'NEDOS': 1000,
+                 'NEDOS': 1000,
                  'clean_after_success': True,
                  'use_gw': True,
                  'MP_points': [4, 4, 1],
                  'Gamma_centered': True}
 
 hse06_set = {'LHFCALC': True,
-               'HFSCREEN': 0.2,
-               'PRECFOCK': 'FAST'}
+             'HFSCREEN': 0.2,
+             'PRECFOCK': 'FAST',
+             'ICHARG': 12}  # Non self-consistent HSE06
 
 
 def rpa_dielectric_constants_pbe():
@@ -334,8 +339,15 @@ def rpa_dielectric_constants_hse06():
 
 
 def rpa_dielectric_constants(hybrid_GGA=False):
+    directory = 'electronic_hybrid'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    os.chdir(directory)
+
+    shutil.copy('../CONTCAR', 'POSCAR')
+
     logger = setup_logger(output_filename="dielectrics.log")
-    single_pt_set = {'NPAR': 16}
+    single_pt_set = {'NCORE': 10, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal"}
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()
     logger.info("Starting from structure in POSCAR in " + os.getcwd())
 
@@ -365,17 +377,31 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     else:
         raise Exception("PBE self-consistent run failed to converge, will stop proceeding")
 
-    # get the number of bands from ground state calculations to properly
-    # set the number of orbitals required in subsequent calculations
-    f = open('./OUTCAR', 'r')
-    for l in f.readlines():
-        if 'NBANDS=' in l:
-            nbands = int(l.split()[-1]) * 3
+    # check if this is a semiconductor, if not quit
+    semiconductor = False
+    dos_run = Vasprun("./vasprun.xml")
+    dos = dos_run.complete_dos
+    for tol in range(2000):
+        t = 0.001 + tol * 0.01
+        gap = dos.get_gap(tol=tol)
+        if gap > 0.2:
+            semiconductor = True
+            break
 
-    # copy the files across for debugging or data grabbing
-    shutil.copy('OSZICAR', 'OSZICAR.PBE')
-    shutil.copy('OUTCAR', 'OUTCAR.PBE')
-    shutil.copy('vasprun.xml', 'vasprun.PBE.xml')
+    if not semiconductor:
+        logger.info("Band gap too small, most likely a metal, will not process further")
+        files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'LOCPOT', 'node_info', "WAVECAR",
+                 "WAVEDER", 'DOSCAR', 'PROCAR']
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+        os.chdir('../')
+        from core.utils.zipdir import ZipDir
+        ZipDir('electronic_hybrid', 'electronic_hybrid.zip')
+        shutil.rmtree('./electronic_hybrid')
+        return
 
     if hybrid_GGA:
         # ==================================================
@@ -383,7 +409,8 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         # ==================================================
         logger.info('Hybrid GGA (HSE06) self-consistent run')
         single_pt_set.update(hse06_set)
-        single_pt_set.update({'ALGO': 'ALL'})
+        single_pt_set.update(
+            {'ALGO': 'ALL', 'LVHAR': True, 'ENCUT': 300, 'ISPIN': 1, 'ICHRG': 1, 'NELM': 80, 'LCHARG': True})
         vasp = Vasp(**single_pt_set)
         vasp.set_crystal(structure)
         vasp.execute()
@@ -393,13 +420,31 @@ def rpa_dielectric_constants(hybrid_GGA=False):
 
         if vasp.completed:
             logger.info("HSE06 self-consistent run completed properly.")
+            # copy the files across for debugging or data grabbing
+            shutil.copy('OSZICAR', 'OSZICAR.HYBRID')
+            shutil.copy('OUTCAR', 'OUTCAR.HYBRID')
+            shutil.copy('vasprun.xml', 'vasprun.HYBRID.xml')
+            shutil.copy('CHGCAR', 'CHGCAR.HYBRID')
+            shutil.copy('LOCPOT', 'LOCPOT.HYBRID')
         else:
-            raise Exception("HSE06 self-consistent run failed to converge, will stop proceeding")
+            logger.info("HSE06 self-consistent run failed to converge, will not store results")
+            os.remove('OSZICAR')
+            os.remove('OUTCAR')
+            os.remove('vasprun.xml')
 
-        # copy the files across for debugging or data grabbing
-        shutil.copy('OSZICAR', 'OSZICAR.HYBRID')
-        shutil.copy('OUTCAR', 'OUTCAR.HYBRID')
-        shutil.copy('vasprun.xml', 'vasprun.HYBRID.xml')
+        logger.info("Clean Up calculations")
+        files = ['CHG', 'CHGCAR', 'LOCPOT', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'node_info', "WAVECAR",
+                 "WAVEDER", 'DOSCAR', 'PROCAR']
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+        os.chdir('../')
+        from core.utils.zipdir import ZipDir
+        ZipDir('electronic_hybrid', 'electronic_hybrid.zip')
+        shutil.rmtree('./electronic_hybrid', ignore_errors=True)
+        return
 
     # ====================================================================================
     # stage II - frequency dependent dielectric constant with independent-particle picture
@@ -572,7 +617,7 @@ def GGA_U_structure_optimisation():
     structure = load_structure(logger)
     gga_u_options = __set_U_correction_dictionary(structure)
     default_bulk_optimisation_set.update(gga_u_options)
-    default_bulk_optimisation_set.update({'ENCUT':400,'ISPIN':2})
+    default_bulk_optimisation_set.update({'ENCUT': 400, 'ISPIN': 2})
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
     vasp.execute()
@@ -670,3 +715,8 @@ def default_GGA_U_highspin_xy_strained_optimisation():
 def default_xy_strained_optimisation_with_existing_vasp_setup():
     default_bulk_optimisation_set.update({'executable': 'vasp_std-z'})
     default_run_with_existing_vasp_setup()
+
+
+if __name__ == "__main__":
+    default_symmetry_preserving_optimisation()
+    # rpa_dielectric_constants(hybrid_GGA=True)
