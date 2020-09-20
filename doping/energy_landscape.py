@@ -2,6 +2,8 @@ import argparse
 import os
 import sqlite3
 import json
+import math
+import pickle
 
 from ase.db import connect
 from itertools import permutations
@@ -16,12 +18,12 @@ rc('text', usetex=True)
 
 import matplotlib.pylab as pylab
 
-params = {'legend.fontsize': '16',
-          'figure.figsize': (7, 6),
-          'axes.labelsize': 28,
+params = {'legend.fontsize': '10',
+          'figure.figsize': (5, 4),
+          'axes.labelsize': 17,
           'axes.titlesize': 28,
-          'xtick.labelsize': 20,
-          'ytick.labelsize': 20}
+          'xtick.labelsize': 12,
+          'ytick.labelsize': 12}
 pylab.rcParams.update(params)
 
 from core.internal.builders.crystal import map_ase_atoms_to_crystal
@@ -48,7 +50,7 @@ def plot_all_reactions_for_one_system(db, output=None, all_keys=None, X='Cl3'):
              composition_dependent_binary_oxidation_energies,
              composition_dependent_sn_only_oxidation_energies,
              composition_dependent_sn_pb_rhm_oxidiation_energies]
-             #composition_dependent_snpb_rhm_solution_oxidation_energies]
+    # composition_dependent_snpb_rhm_solution_oxidation_energies]
 
     reaction_label_dict = {0: "$\\Delta H_{\\mbox{demix}}$ ",
                            1: "$\\Delta H_{\\mbox{binary-decomp}}$ ",
@@ -160,7 +162,7 @@ def plot_all_reaction_energies_for_system(db, reaction='demixing', output=None, 
         max_energies = [n for _, n in sorted(zip(av_compositions, max_energies))]
         min_energies = [n for _, n in sorted(zip(av_compositions, min_energies))]
         averaged_energies = [n for _, n in sorted(zip(av_compositions, averaged_energies))]
-        #if reaction == 'demixing':
+        # if reaction == 'demixing':
         #    popt, pcov = curve_fit(bowing_curve, x, max_energies)
         #    max_energies = bowing_curve(np.array(x), *popt)
         # else:
@@ -171,8 +173,8 @@ def plot_all_reaction_energies_for_system(db, reaction='demixing', output=None, 
         plt.plot(x, max_energies, '--', c=color_dictionary[counter])
 
         # if reaction == 'demixing':
-        #popt, pcov = curve_fit(bowing_curve, x, min_energies)
-        #min_energies = bowing_curve(np.array(x), *popt)
+        # popt, pcov = curve_fit(bowing_curve, x, min_energies)
+        # min_energies = bowing_curve(np.array(x), *popt)
         # else:
         #    _mine = min_energies
         #    slope, intercept, r_value, p_value, std_err = stats.linregress([x[0],x[-1]], [_mine[0], _mine[-1]])
@@ -183,8 +185,8 @@ def plot_all_reaction_energies_for_system(db, reaction='demixing', output=None, 
         plt.fill_between(x, min_energies, max_energies, color=color_dictionary[counter], alpha=.25)
 
         # if reaction == 'demixing':
-        #popt, pcov = curve_fit(bowing_curve, x, averaged_energies)
-        #averaged_energies = bowing_curve(np.array(x), *popt)
+        # popt, pcov = curve_fit(bowing_curve, x, averaged_energies)
+        # averaged_energies = bowing_curve(np.array(x), *popt)
         # else:
         #    _ave = averaged_energies
         #    slope, intercept, r_value, p_value, std_err = stats.linregress([x[0],x[-1]], [_ave[0],_ave[-1]])
@@ -193,7 +195,7 @@ def plot_all_reaction_energies_for_system(db, reaction='demixing', output=None, 
 
         plt.plot(x, averaged_energies, 'o-', c=color_dictionary[counter], lw=2.5,
                  label=label_dict[counter])
-        #plt.plot(x,[0 for _ in x],'k:')
+        # plt.plot(x,[0 for _ in x],'k:')
 
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
 
@@ -675,13 +677,16 @@ def composition_dependent_binary_halide_decomposition_energies(a, b, c, all_keys
     return reaction_energies
 
 
-def composition_dependent_demixing_energies(a, b, c, all_keys, db):
+def composition_dependent_demixing_energies(a, b, c, all_keys, db, demixing=True):
     end_members = [_a + _b + _c for _a in a for _b in b for _c in c]
     print(end_members)
     assert (len(end_members) == 2)
     mixed_site = [site for site in [a, b, c] if len(site) == 2][-1]
     mixed_site = [''.join([_i for _i in k if not _i.isdigit()]) for k in mixed_site]
     end_member_total_energies = {k: 0 for k in mixed_site}
+
+    mixing_energies = {}
+
     # get the total energies of the two end members
     for m in mixed_site:
         for em in end_members:
@@ -690,11 +695,20 @@ def composition_dependent_demixing_energies(a, b, c, all_keys, db):
                 row = db.get(selection=[('uid', '=', matched_key)])
                 total_energy = row.key_value_pairs['total_energy']
                 end_member_total_energies[m] = total_energy
+
+                structure = map_ase_atoms_to_crystal(row.toatoms())
+                element_1 = ''.join([_i for _i in mixed_site[0] if not _i.isdigit()])
+
+                if element_1 in structure.all_atoms_count_dictionaries().keys():
+                    composition = 1.0
+                else:
+                    composition = 0.0
+
                 print(m, total_energy)
+                if not demixing:
+                    mixing_energies[composition] = [total_energy / structure.total_num_atoms()]
     # figure out which site has been mixed with two chemical elements, then we can decide
     #   the chemical compositions should be measured against which element
-
-    mixing_energies = {}
 
     system_content = a + b + c
     for k in all_keys:
@@ -706,6 +720,7 @@ def composition_dependent_demixing_energies(a, b, c, all_keys, db):
             structure = map_ase_atoms_to_crystal(row.toatoms())
             element_1 = ''.join([_i for _i in mixed_site[0] if not _i.isdigit()])
             element_2 = ''.join([_i for _i in mixed_site[1] if not _i.isdigit()])
+            print(element_1)
             composition = structure.all_atoms_count_dictionaries()[element_1] / (
                     structure.all_atoms_count_dictionaries()[element_1] + structure.all_atoms_count_dictionaries()[
                 element_2])
@@ -719,9 +734,138 @@ def composition_dependent_demixing_energies(a, b, c, all_keys, db):
 
             if composition not in mixing_energies.keys():
                 mixing_energies[composition] = []
-
-            mixing_energies[composition].append(mixing_energy)
+            if demixing:
+                mixing_energies[composition].append(mixing_energy)
+            else:
+                mixing_energies[composition].append(total_energy / structure.total_num_atoms())
     return mixing_energies
+
+
+def demixing_free_energies_with_configurational_entropy(a, b, c, all_keys, db, temperature, total_energy_dict):
+    demixing_free_energy_dict = {}
+    kb = 8.617e-5  # eV/K
+
+    comp = 0.0
+    free_en_mix_0 = [math.exp(-1.0 * e / (kb * temperature)) for e in total_energy_dict[comp]]
+    free_en_mix_0 = -kb * temperature * math.log(sum(free_en_mix_0))
+
+    comp = 1.0
+    free_en_mix_1 = [math.exp(-1.0 * e / (kb * temperature)) for e in total_energy_dict[comp]]
+    free_en_mix_1 = -kb * temperature * math.log(sum(free_en_mix_1))
+
+    for comp in list(sorted(total_energy_dict.keys())):
+        free_en_mix = [math.exp(-1.0 * e / (kb * temperature)) for e in total_energy_dict[comp]]
+        l = len(free_en_mix)
+        free_en_mix = -kb * temperature * math.log(sum(free_en_mix))
+        free_en_mix = free_en_mix - ((1.0 - comp) * free_en_mix_0 + comp * free_en_mix_1)
+        demixing_free_energy_dict[comp] = free_en_mix
+        # print(comp, l, free_en_mix)
+    # print('/n')
+    return demixing_free_energy_dict
+
+
+def get_helmhotz_fe(c, comp):
+    # This is hard coded for the time-being
+    helmholtz_data = pickle.load(open('/scratch/dy3/jy8620/Sn_halide_perovskite/equ_MD/free_energies.bp', 'rb'))
+    for k in helmholtz_data.keys():
+        if (c[-1] == helmholtz_data[k]['X']):
+            if (comp == helmholtz_data[k]['composition']):
+                return helmholtz_data[k]['free_energy']
+
+
+def demixing_free_energies_with_configurational_entropy_from_helmholtz(a, b, c, all_keys, db, temperature,
+                                                                       total_energy_dict):
+    demixing_free_energy_dict = {}
+    kb = 8.617e-5  # eV/K
+
+    comp = 0.0
+    hel_fe = get_helmhotz_fe(c, comp)
+    energies = [e + hel_fe[temperature] * 1.0362E-2 for e in total_energy_dict[comp]]
+    free_en_mix_0 = [math.exp(-1.0 * e / (kb * temperature)) for e in energies]
+    free_en_mix_0 = -kb * temperature * math.log(sum(free_en_mix_0))
+
+    comp = 1.0
+    hel_fe = get_helmhotz_fe(c, comp)
+    energies = [e + hel_fe[temperature] * 1.0362E-2 for e in total_energy_dict[comp]]
+    free_en_mix_1 = [math.exp(-1.0 * e / (kb * temperature)) for e in energies]
+    free_en_mix_1 = -kb * temperature * math.log(sum(free_en_mix_1))
+
+    for comp in list(sorted(total_energy_dict.keys())):
+        hel_fe = get_helmhotz_fe(c, comp)
+        energies = [e + hel_fe[temperature] * 1.0362E-2 for e in total_energy_dict[comp]]
+        free_en_mix = [math.exp(-1.0 * e / (kb * temperature)) for e in energies]
+        free_en_mix = -kb * temperature * math.log(sum(free_en_mix))
+        free_en_mix = free_en_mix - ((1.0 - comp) * free_en_mix_0 + comp * free_en_mix_1)
+        demixing_free_energy_dict[comp] = free_en_mix
+    return demixing_free_energy_dict
+
+
+def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None, c=None, output=None, all_keys=None,
+                                                             phonon=False):
+    from cycler import cycler
+    from scipy.signal import savgol_filter
+    from scipy import interpolate
+
+    color = plt.cm.Blues(np.linspace(0, 1, 8))
+    pylab.rcParams['axes.prop_cycle'] = cycler('color', color)
+    total_energy_dict = composition_dependent_demixing_energies(a, b, c, all_keys, db, demixing=False)
+    for temp in [100, 200, 300, 400, 500, 600, 700, 800]:
+        demixing_free_energy_dict = demixing_free_energies_with_configurational_entropy_from_helmholtz(a, b, c,
+                                                                                                       all_keys, db,
+                                                                                                       temp,
+                                                                                                       total_energy_dict)
+        compositions = list(sorted(demixing_free_energy_dict.keys()))
+        plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], 'o-',
+                 label=str(temp) + ' K')
+
+    demixing_free_energy_dict = demixing_free_energies_with_configurational_entropy_from_helmholtz(a, b, c,
+                                                                                                   all_keys, db,
+                                                                                                   800,
+                                                                                                   total_energy_dict)
+    plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], 'o-',
+             label='With $F_{vib}$',c=color[-1])
+
+    new_color = plt.cm.Blues(np.linspace(0, 1, 8))
+    pylab.rcParams['axes.prop_cycle'] = cycler('color', new_color)
+    total_energy_dict = composition_dependent_demixing_energies(a, b, c, all_keys, db, demixing=False)
+    for temp in [100, 200, 300, 400, 500, 600, 700, 800]:
+        demixing_free_energy_dict = demixing_free_energies_with_configurational_entropy(a, b, c, all_keys, db,
+                                                                                        temp, total_energy_dict)
+
+        compositions = list(sorted(demixing_free_energy_dict.keys()))
+        plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], '--')
+
+    demixing_free_energy_dict = demixing_free_energies_with_configurational_entropy(a, b, c,
+                                                                                    all_keys, db,
+                                                                                    800,
+                                                                                    total_energy_dict)
+    plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], '--',
+             label='Without $F_{vib}$',c=new_color[-1])
+
+    x_label = '$x$ in '
+    if len(a) == 1:
+        x_label += fix_string(a[0])
+    else:
+        raise NotImplementedError()
+    if len(b) == 1:
+        x_label += fix_string(b[0])
+    else:
+        mixed_site = [''.join([_i for _i in k if not _i.isdigit()]) for k in b]
+        x_label += '('
+        x_label += str(mixed_site[0]) + '$_{x}$'
+        x_label += str(mixed_site[1]) + '$_{1-x}$'
+        x_label += ')'
+    if len(c) == 1:
+        x_label += fix_string(c[0])+'$_{3}$'
+    else:
+        raise NotImplementedError()
+
+    plt.xlabel(x_label)
+    plt.ylabel('$\Delta G_{mix}(x)$ (eV/atom)')
+    plt.ylim([-0.3,0.025])
+    plt.legend(loc=4)
+    plt.tight_layout()
+    plt.savefig(output)
 
 
 if __name__ == "__main__":
@@ -748,6 +892,10 @@ if __name__ == "__main__":
     parser.add_argument("--reaction", type=str, default=None,
                         help='Plot reaction energy landscape across all compositions')
     parser.add_argument("--summary", action='store_true', help="Plot a summary for multiple systems")
+
+    parser.add_argument("--free_energies", action='store_true', help="Plot demixing free energies")
+    parser.add_argument("--phonon", action='store_true',
+                        help='whether vibrational contribution to free energies should be included.')
     args = parser.parse_args()
 
     if os.path.exists(args.db):
@@ -778,3 +926,9 @@ if __name__ == "__main__":
                                                  all_keys=all_uids)
     if args.reaction:
         plot_all_reaction_energies_for_system(db, args.reaction, args.output, all_keys=all_uids)
+
+    if args.free_energies:
+        plot_demixing_free_energies_with_configurational_entropy(db, a=args.a_site, b=args.b_site, c=args.c_site,
+                                                                 output=args.output,
+                                                                 all_keys=all_uids,
+                                                                 phonon=args.phonon)

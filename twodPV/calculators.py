@@ -271,13 +271,13 @@ single_point_pbe = {'PREC': 'HIGH',
                     'ISMEAR': 0,
                     'SIGMA': 0.01,
                     'EDIFF': 1e-05,
-                    'IALGO': 48,
+                    'IALGO': 38,
                     'ISPIN': 1,
                     'NELM': 500,
                     'AMIN': 0.01,
                     'ISYM': 0,
                     'PREC': 'HIGH',
-                    'ENCUT': 500,
+                    'ENCUT': 300,
                     'NSW': 0,
                     'LWAVE': True,
                     'clean_after_success': False,
@@ -347,7 +347,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     shutil.copy('../CONTCAR', 'POSCAR')
 
     logger = setup_logger(output_filename="dielectrics.log")
-    single_pt_set = {'NCORE': 10, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal"}
+    single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()
     logger.info("Starting from structure in POSCAR in " + os.getcwd())
 
@@ -446,70 +446,70 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         shutil.rmtree('./electronic_hybrid', ignore_errors=True)
         return
 
-    # ====================================================================================
-    # stage II - frequency dependent dielectric constant with independent-particle picture
-    # ====================================================================================
-    logger.info("Frequency dependent dielectric constant with PBE (independent particle approximation) run")
-    pbe_omega.update({'NBANDS': nbands})
-    # parallisation wont work properly
-    try:
-        del pbe_omega['NPAR']
-    except KeyError:
-        pass
-
-    if hybrid_GGA:
-        logger.info("Update INCAR configuration for hybrid GGA")
-        pbe_omega.update(hse06_set)
-
-    logger.info("INCAR settings: ")
-    for k in pbe_omega.keys():
-        logger.info("       " + str(k) + '=' + str(pbe_omega[k]))
-
-    vasp = Vasp(**pbe_omega)
-    vasp.set_crystal(structure)
-    vasp.execute()
-
-    if vasp.completed:
-        logger.info("PBE frequency-dependent dielectric constant run completed properly")
-    else:
-        raise Exception("PBE frequency-dependent dielectric constant run failed, will stop proceeding")
-
-    # copy the files across for debugging or data grabbing
-    shutil.copy('OSZICAR', 'OSZICAR.PBE.DIAG')
-    shutil.copy('OUTCAR', 'OUTCAR.PBE.DIAG')
-    shutil.copy('vasprun.xml', 'vasprun.PBE.DIAG.xml')
-
-    # ====================================================================================
-    # stage III - frequency dependent dielectric constant with RPA
-    # ====================================================================================
-    logger.info("Frequency dependent dielectric constant under PBE-RPA")
-    pbe_rpa_omega.update({'NBANDS': nbands})
-    try:
-        del pbe_rpa_omega['NPAR']
-    except KeyError:
-        pass
-
-    if hybrid_GGA:
-        logger.info("Update INCAR configuration for hybrid GGA")
-        pbe_rpa_omega.update(hse06_set)
-
-    logger.info("INCAR settings: ")
-    for k in pbe_rpa_omega.keys():
-        logger.info("       " + str(k) + '=' + str(pbe_rpa_omega[k]))
-
-    vasp = Vasp(**pbe_rpa_omega)
-    vasp.set_crystal(structure)
-    vasp.execute()
-
-    if vasp.completed:
-        logger.info("PBE-RPA calculation terminated")
-    else:
-        raise Exception("PBE-RPA run failed, please check what's going on...")
-
-    # copy the files across for debugging or data grabbing
-    shutil.copy('OSZICAR', 'OSZICAR.RPA.DIAG')
-    shutil.copy('OUTCAR', 'OUTCAR.RPA.DIAG')
-    shutil.copy('vasprun.xml', 'vasprun.RPA.DIAG.xml')
+    # # ====================================================================================
+    # # stage II - frequency dependent dielectric constant with independent-particle picture
+    # # ====================================================================================
+    # logger.info("Frequency dependent dielectric constant with PBE (independent particle approximation) run")
+    # pbe_omega.update({'NBANDS': nbands})
+    # # parallisation wont work properly
+    # try:
+    #     del pbe_omega['NPAR']
+    # except KeyError:
+    #     pass
+    #
+    # if hybrid_GGA:
+    #     logger.info("Update INCAR configuration for hybrid GGA")
+    #     pbe_omega.update(hse06_set)
+    #
+    # logger.info("INCAR settings: ")
+    # for k in pbe_omega.keys():
+    #     logger.info("       " + str(k) + '=' + str(pbe_omega[k]))
+    #
+    # vasp = Vasp(**pbe_omega)
+    # vasp.set_crystal(structure)
+    # vasp.execute()
+    #
+    # if vasp.completed:
+    #     logger.info("PBE frequency-dependent dielectric constant run completed properly")
+    # else:
+    #     raise Exception("PBE frequency-dependent dielectric constant run failed, will stop proceeding")
+    #
+    # # copy the files across for debugging or data grabbing
+    # shutil.copy('OSZICAR', 'OSZICAR.PBE.DIAG')
+    # shutil.copy('OUTCAR', 'OUTCAR.PBE.DIAG')
+    # shutil.copy('vasprun.xml', 'vasprun.PBE.DIAG.xml')
+    #
+    # # ====================================================================================
+    # # stage III - frequency dependent dielectric constant with RPA
+    # # ====================================================================================
+    # logger.info("Frequency dependent dielectric constant under PBE-RPA")
+    # pbe_rpa_omega.update({'NBANDS': nbands})
+    # try:
+    #     del pbe_rpa_omega['NPAR']
+    # except KeyError:
+    #     pass
+    #
+    # if hybrid_GGA:
+    #     logger.info("Update INCAR configuration for hybrid GGA")
+    #     pbe_rpa_omega.update(hse06_set)
+    #
+    # logger.info("INCAR settings: ")
+    # for k in pbe_rpa_omega.keys():
+    #     logger.info("       " + str(k) + '=' + str(pbe_rpa_omega[k]))
+    #
+    # vasp = Vasp(**pbe_rpa_omega)
+    # vasp.set_crystal(structure)
+    # vasp.execute()
+    #
+    # if vasp.completed:
+    #     logger.info("PBE-RPA calculation terminated")
+    # else:
+    #     raise Exception("PBE-RPA run failed, please check what's going on...")
+    #
+    # # copy the files across for debugging or data grabbing
+    # shutil.copy('OSZICAR', 'OSZICAR.RPA.DIAG')
+    # shutil.copy('OUTCAR', 'OUTCAR.RPA.DIAG')
+    # shutil.copy('vasprun.xml', 'vasprun.RPA.DIAG.xml')
 
 
 # =================================================================
@@ -718,5 +718,5 @@ def default_xy_strained_optimisation_with_existing_vasp_setup():
 
 
 if __name__ == "__main__":
-    default_symmetry_preserving_optimisation()
-    # rpa_dielectric_constants(hybrid_GGA=True)
+    #default_symmetry_preserving_optimisation()
+    rpa_dielectric_constants(hybrid_GGA=True)

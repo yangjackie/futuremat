@@ -10,7 +10,7 @@ from pymatgen.electronic_structure.plotter import BSPlotter
 import numpy as np
 import math
 import scipy
-from scipy.interpolate import spline
+from scipy.interpolate import interp1d
 from scipy.fftpack import fft, ifft, fftfreq, fftshift
 import glob
 
@@ -119,7 +119,6 @@ def plot_simple_smoothed_band_structure(ylim=[-1.5, 3.5], filename=None):
     else:
         BSPlotter(bs).save_plot(filename)
 
-
 def plot_total_density_of_states(xlim=None, ylim=None, filename=None):
     vasprun = Vasprun('./vasprun.xml')
     if not vasprun.is_spin:
@@ -129,19 +128,24 @@ def plot_total_density_of_states(xlim=None, ylim=None, filename=None):
 
     xnew = np.linspace(min(vasprun.tdos.energies - vasprun.tdos.efermi),
                        max(vasprun.tdos.energies - vasprun.tdos.efermi), 10 * len(vasprun.tdos.energies))
-    power_smooth = spline(vasprun.tdos.energies - vasprun.tdos.efermi, dos, xnew)
+    power_smooth = interp1d(vasprun.tdos.energies - vasprun.tdos.efermi, dos)
 
-    plt.plot(power_smooth, xnew, 'b')
+    #plt.plot(xnew, power_smooth(xnew), 'b')
+    plt.plot(vasprun.tdos.energies - vasprun.tdos.efermi, dos, 'b')
 
     if xlim is not None:
         plt.xlim(xlim)
 
     if ylim is not None:
         plt.ylim(ylim)
+    #xelse:
+        #plt.ylim([0,max(dos)+0.05*max(dos)])
 
-    plt.xlabel("Density-of-states (states/eV/cell)", fontsize=12)
-    plt.ylabel("$E-E_{F}$ (eV)", fontsize=12)
+    plt.ylabel("Density-of-states (states/eV/cell)", fontsize=12)
+    plt.xlabel("$E-E_{F}$ (eV)", fontsize=12)
     plt.tight_layout()
+
+    plt.xlim([-5,5])
 
     if filename is None:
         plt.show()
@@ -472,7 +476,7 @@ if __name__ == "__main__":
     if args.simple_band:
         plot_simple_smoothed_band_structure(ylim=[args.Emin, args.Emax], filename=args.output)
     if args.total_dos:
-        plot_total_density_of_states(ylim=[args.Emin, args.Emax], filename=args.output)
+        plot_total_density_of_states(filename=args.output)
     if args.md:
         plot_MD_energies_and_temperature_evolution(time_step=args.time_step)
     if args.displacement_traj or args.displacement_histograms:

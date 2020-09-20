@@ -101,6 +101,7 @@ int_keys = [
     'ngzf',  # FFT mesh for charges z
     'nbands',  # Number of bands
     'nblk',  # blocking for some BLAS calls (Sec. 6.5)
+    'ncore',
     'nbmod',  # specifies mode for partial charge calculation
     'nelm',  # nr. of electronic steps (default 60)
     'nelmdl',  # nr. of initial electronic steps
@@ -312,8 +313,8 @@ class Vasp(Calculator):
         Clean up the calculation folder after VASP finishes execution
         """
         logger.info("Clean up directory after VASP executed successfully.")
-        files = ['CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'PROCAR', 'LOCPOT',
-                 'node_info', "WAVECAR", "WAVEDER"]
+        files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR',  'LOCPOT',
+                 'node_info', "WAVECAR", "WAVEDER", 'DOSCAR', 'PROCAR']
         for f in files:
             try:
                 os.remove(f)
@@ -382,19 +383,26 @@ class Vasp(Calculator):
         # Then if ibrion in [1,2,3] check whether ionic relaxation
         # condition been fulfilled
 
-        if (ibrion in [1, 2, 3]) and (nsw not in [0]):
+        if (ibrion in [1, 2, 3, 7]) and (nsw not in [0]) and (self.completed):
             if opt_iterations < nsw:
                 self.completed = True
             else:
                 self.completed = False
 
-        if (ibrion == -1) and (nsw == 0):
-            if nelm == 1:
-                outcar = open('./OUTCAR', 'r')
-                for line in outcar.readlines():
-                    if line.rfind('General timing and accounting informations for this job:') > -1:
-                        self.completed = True
+#        if (ibrion == -1) and (nsw == 0):
+#            if nelm == 1:
+#                outcar = open('./OUTCAR', 'r')
+#                for line in outcar.readlines():
+#                    if line.rfind('General timing and accounting informations for this job:') > -1:
+#                        self.completed = True
 
+        if self.completed:
+            self.completed = False
+
+            outcar = open('./OUTCAR', 'r')
+            for line in outcar.readlines():
+                if line.rfind('General timing and accounting informations for this job:') > -1:
+                    self.completed = True
 
         logger.info("VASP calculation completed successfully?     " + str(self.completed))
         logger.info("VASP crashed out due to error in SCF cycles? " + str(self.self_consistency_error))

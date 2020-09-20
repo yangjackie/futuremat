@@ -20,6 +20,10 @@ import random
 from ase.spacegroup import crystal as ase_crystal
 from ase import Atom
 from ase.db import connect
+from core.models.lattice import Lattice
+from core.resources.crystallographic_space_groups import CrystallographicSpaceGroups
+
+from core.models.crystal import Crystal
 
 from core.internal.builders.crystal import map_ase_atoms_to_crystal, build_supercell
 from core.dao.vasp import VaspWriter, VaspReader
@@ -86,27 +90,30 @@ def make_distorted_structures_from_optimised():
 
 
 def randomise_crystal(crystal):
+    a = crystal.lattice.a * (1 + random.randrange(-100, 100) / 900)
+    b = crystal.lattice.b * (1 + random.randrange(-100, 100) / 900)
+    c = crystal.lattice.c * (1 + random.randrange(-100, 100) / 900)
+    alpha = crystal.lattice.alpha * (1 + random.randrange(-100, 100) / 900)
+    beta = crystal.lattice.beta * (1 + random.randrange(-100, 100) / 900)
+    gamma = crystal.lattice.gamma * (1 + random.randrange(-100, 100) / 900)
+    lattice = Lattice(a,b,c,alpha,beta,gamma)
+    asymmetric_unit = crystal.asymmetric_unit
     for _i in range(len(crystal.asymmetric_unit)):
         for _j in range(len(crystal.asymmetric_unit[_i].atoms)):
-            crystal.asymmetric_unit[_i].atoms[_j].scaled_position.x = crystal.asymmetric_unit[_i].atoms[
+            asymmetric_unit[_i].atoms[_j].scaled_position.x = crystal.asymmetric_unit[_i].atoms[
                                                                           _j].scaled_position.x * (
                                                                               1 + random.randrange(
                                                                           -100, 100) / 900)
-            crystal.asymmetric_unit[_i].atoms[_j].scaled_position.y = crystal.asymmetric_unit[_i].atoms[
+            asymmetric_unit[_i].atoms[_j].scaled_position.y = crystal.asymmetric_unit[_i].atoms[
                                                                           _j].scaled_position.y * (
                                                                               1 + random.randrange(
                                                                           -100, 100) / 900)
-            crystal.asymmetric_unit[_i].atoms[_j].scaled_position.z = crystal.asymmetric_unit[_i].atoms[
+            asymmetric_unit[_i].atoms[_j].scaled_position.z = crystal.asymmetric_unit[_i].atoms[
                                                                           _j].scaled_position.z * (
                                                                               1 + random.randrange(
                                                                           -100, 100) / 900)
-    crystal.lattice.a = crystal.lattice.a * (1 + random.randrange(-100, 100) / 900)
-    crystal.lattice.b = crystal.lattice.b * (1 + random.randrange(-100, 100) / 900)
-    crystal.lattice.c = crystal.lattice.c * (1 + random.randrange(-100, 100) / 900)
-    crystal.lattice.alpha = crystal.lattice.alpha * (1 + random.randrange(-100, 100) / 900)
-    crystal.lattice.beta = crystal.lattice.beta * (1 + random.randrange(-100, 100) / 900)
-    crystal.lattice.gamma = crystal.lattice.gamma * (1 + random.randrange(-100, 100) / 900)
-    return crystal
+    new_crystal = Crystal(lattice,asymmetric_unit,space_group=CrystallographicSpaceGroups.get(1))
+    return new_crystal
 
 
 def prepare_property_calculation_folder(db=None,property='phonon',supercell=[1,1,1]):

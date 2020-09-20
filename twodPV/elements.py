@@ -12,10 +12,23 @@ import os
 from core.dao.vasp import VaspWriter
 from settings import MPRest_key
 
-A_site_list = [['Li', 'Na', 'K', 'Rb', 'Cs'], ['Li', 'Na', 'K', 'Rb', 'Cs'], ['Mg', 'Ca', 'Sr', 'Ba'],
-               ['Li', 'Na', 'K', 'Rb', 'Cs']]
-B_site_list = [['Pb', 'Sn', 'Ge'], ['V', 'Ta', 'Nb'], ['Ti', 'Zr'], ['V', 'Ta', 'Nb']]
-C_site_list = [['F', 'Cl', 'Br', 'I'], ['F', 'Cl', 'Br', 'I'], ['O', 'S', 'Se', 'Te'], ['O', 'S', 'Se', 'Te']]
+#A_site_list = [['Li', 'Na', 'K', 'Rb', 'Cs'], ['Li', 'Na', 'K', 'Rb', 'Cs'], ['Mg', 'Ca', 'Sr', 'Ba'],
+#               ['Li', 'Na', 'K', 'Rb', 'Cs']]
+#B_site_list = [['Pb', 'Sn', 'Ge'], ['V', 'Ta', 'Nb'], ['Ti', 'Zr'], ['V', 'Ta', 'Nb']]
+#C_site_list = [['F', 'Cl', 'Br', 'I'], ['F', 'Cl', 'Br', 'I'], ['O', 'S', 'Se', 'Te'], ['O', 'S', 'Se', 'Te']]
+
+halide_C=['F', 'Cl', 'Br', 'I']
+halide_A=['Li', 'Na', 'K', 'Rb', 'Cs','Cu','Ag','Au','Hg','Ga','In','Tl']
+halide_B=['Mg', 'Ca', 'Sr', 'Ba','Se','Te','As','Si','Ge','Sn','Pb','Ga','In','Sc','Y','Ti','Zr','Hf','V','Nb','Ta','Cr','Mo','W','Mn','Tc','Re','Fe','Ru','Os','Co','Rh','Ir','Ni','Pd','Pt','Cu','Ag','Au','Zn','Cd','Hg']
+
+chalco_C=['O','S','Se']
+chalco_A=['Be','Mg','Ca','Sr','Ba','Ra','Ti','V','Cr','Mn','Fe','Co','Ni','Pd','Pt','Cu','Ag','Zn','Cd','Hg','Ge','Sn','Pb']
+chalco_B=['Ti','Zr','Hf','V','Nb','Ta','Cr','Mo','W','Mn','Tc','Re','Fe','Ru','Os','Co','Rh','Ir','Ni','Pd','Pt','Sn','Ge','Pb','Si','Te','Po']
+
+A_site_list=[halide_A,chalco_A]
+B_site_list=[halide_B,chalco_B]
+C_site_list=[halide_C,chalco_C]
+
 
 all_elements_list = list(itertools.chain(*[A_site_list, B_site_list, C_site_list]))
 all_elements_list = list(itertools.chain(*all_elements_list))
