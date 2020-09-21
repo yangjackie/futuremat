@@ -24,20 +24,20 @@ from sklearn.neighbors import KernelDensity
 class AnharmonicScore(object):
 
     def __init__(self, ref_frame=None,
+                 unit_cell_frame=None,
                  md_frames=None,
                  potim=1,
                  force_constants="force_constants.hdf5",
                  supercell=[1, 1, 1],
                  primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                 atoms=['Pb', 'Sn']):
+                 atoms=None):
         if isinstance(ref_frame, Crystal):
             self.ref_frame = ref_frame
         elif ('POSCAR' in ref_frame) or ('CONTCAR' in ref_frame):
             print("initialising reference frame from POSCAR ")
             self.ref_frame = VaspReader(input_location=ref_frame).read_POSCAR()
-
-        self.ref_coords = np.array([[a.scaled_position.x, a.scaled_position.y, a.scaled_position.z] for a in
-                                    self.ref_frame.asymmetric_unit[0].atoms])
+            self.ref_coords = np.array([[a.scaled_position.x, a.scaled_position.y, a.scaled_position.z] for a in
+                                        self.ref_frame.asymmetric_unit[0].atoms])
 
         self.atom_masks = None
         if atoms is not None:
@@ -53,14 +53,23 @@ class AnharmonicScore(object):
             try:
                 phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
                                       primitive_matrix=primitive_matrix,
-                                      unitcell_filename=ref_frame,
+                                      unitcell_filename=unit_cell_frame,
                                       force_constants_filename=force_constants)
+                print("Use supercell "+str(supercell))
                 print("Use primitive matrix " + str(primitive_matrix) + " done")
             except:
                 phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
                                       primitive_matrix='auto',
-                                      unitcell_filename=ref_frame,
+                                      unitcell_filename=unit_cell_frame,
                                       force_constants_filename=force_constants)
+        elif force_constants is None:
+            """
+            Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
+            reconstructing the force constants for supercells from primitive cells
+            """
+            phonon = phonopy.load(supercell_filename="SPOSCAR", log_level=1)
+            phonon.produce_force_constants()
+
         print("INPUT PHONOPY force constant shape ", np.shape(phonon.force_constants))
         new_shape = np.shape(phonon.force_constants)[0] * np.shape(phonon.force_constants)[2]
 
@@ -80,6 +89,7 @@ class AnharmonicScore(object):
         print("force constant reshape ", np.shape(self.force_constant))
         print("Force constants ready")
         self.time_series = [t * potim for t in range(len(self.all_displacements))]
+
 
     def plot_fc(self):
         plt.matshow(self.force_constant)
