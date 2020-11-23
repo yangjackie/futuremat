@@ -30,7 +30,8 @@ class AnharmonicScore(object):
                  force_constants="force_constants.hdf5",
                  supercell=[1, 1, 1],
                  primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                 atoms=None):
+                 atoms=None,
+                 include_third_order=False):
         if isinstance(ref_frame, Crystal):
             self.ref_frame = ref_frame
         elif ('POSCAR' in ref_frame) or ('CONTCAR' in ref_frame):
@@ -67,7 +68,8 @@ class AnharmonicScore(object):
             Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
             reconstructing the force constants for supercells from primitive cells
             """
-            phonon = phonopy.load(supercell_filename="SPOSCAR", log_level=1)
+            print("Here try to use FORCESET")
+            phonon = phonopy.load(supercell_filename="./SPOSCAR", log_level=1,force_constants_filename=None)
             phonon.produce_force_constants()
 
         print("INPUT PHONOPY force constant shape ", np.shape(phonon.force_constants))
@@ -78,18 +80,31 @@ class AnharmonicScore(object):
 
         self.force_constant = np.zeros((new_shape, new_shape))
 
-        for i in range(np.shape(phonon.force_constants)[0]):
-            for j in range(np.shape(phonon.force_constants)[1]):
-                for k in range(np.shape(phonon.force_constants)[2]):
-                    for l in range(np.shape(phonon.force_constants)[3]):
-                        #print(i * 3 + k,j * 3 + l,i,j,k,l)
-                        self.force_constant[i * 3 + k][j * 3 + l] = phonon.force_constants[i][j][k][l]
+        #for i in range(np.shape(phonon.force_constants)[0]):
+        #    for j in range(np.shape(phonon.force_constants)[1]):
+        #        for k in range(np.shape(phonon.force_constants)[2]):
+        #            for l in range(np.shape(phonon.force_constants)[3]):
+        #                #print(i * 3 + k,j * 3 + l,i,j,k,l)
+        #                self.force_constant[i * 3 + k][j * 3 + l] = phonon.force_constants[i][j][k][l]
+
+        self.force_constant = phonon.force_constants.transpose(0,2,1,3).reshape(new_shape,new_shape)
 
         print("RESHAPED PHONOPY force constant shape ", np.shape(self.force_constant))
         print("force constant reshape ", np.shape(self.force_constant))
         print("Force constants ready")
         self.time_series = [t * potim for t in range(len(self.all_displacements))]
 
+        self.force_constant_3=None
+        self.include_third_oder=include_third_order
+        if self.include_third_oder:
+            if os.path.isfile('./phono3py/fc3.hdf5'):
+               print("Found third order force constants")
+               import h5py
+               f = h5py.File('./phono3py/fc3.hdf5')
+               raw_force_constant_3=np.array(f['fc3'])
+               s=np.shape(raw_force_constant_3)[0]*3
+               self.force_constant_3=raw_force_constant_3.transpose([0, 3, 1, 4, 2, 5]).reshape(s,s,s)
+               print("Reshaped 3rd order force constant is ",np.shape(self.force_constant_3))
 
     def plot_fc(self):
         plt.matshow(self.force_constant)
@@ -137,36 +152,47 @@ class AnharmonicScore(object):
             [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
 
         # periodic boundary conditions
-        __all_displacements = (__all_displacements + 0.5 + 1e-5) % 1 - 0.5 - 1e-5
-
+        #__all_displacements = (__all_displacements + 0.5 + 1e-5) % 1 - 0.5 - 1e-5
+        __all_displacements = __all_displacements - np.round(__all_displacements) #this is how it's done in Pymatgen
         # Convert to Cartesian
         self.all_displacements = np.zeros(np.shape(__all_displacements))
 
         for i in range(__all_displacements.shape[0]):
             np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self.all_displacements[i, :, :])
 
+
     @property
     def harmonic_forces(self):
         if (not hasattr(self, '_harmonic_forces')) or (
                 hasattr(self, '_harmonic_forces') and self._harmonic_force is None):
             self._harmonic_force = np.zeros(np.shape(self.dft_forces))
-            for i in range(np.shape(self.all_displacements)[0]):
+            for i in range(np.shape(self.all_displacements)[0]): #this loop over MD frames
                 self._harmonic_force[i, :, :] = -1.0 * (
                     np.dot(self.force_constant, self.all_displacements[i, :, :].flatten())).reshape(
                     self.all_displacements[0, :, :].shape)
         return self._harmonic_force
 
     @property
+    def third_order_forces(self):
+        print("Do we have third_order constant "+str(self.force_constant_3.__class__))
+        if self.force_constant_3 is not None:
+            if (not hasattr(self, '_third_order_forces')) or (hasattr(self, '_third_order_forces') and self._third_order_forces is None):
+                self._third_order_forces = np.zeros(np.shape(self.dft_forces))
+                _a=self.force_constant_3
+                for i in range(np.shape(self.all_displacements)[0]): #this loop over MD frames
+                    _b = self.all_displacements[i,:,:].flatten()
+                    _A = np.einsum('ijk,k->ij', _a, _b)
+                    self._third_order_forces[i, :, :]  = -1.0 * np.einsum('ij,j->i', _A, _b).reshape(self.all_displacements[0, :, :].shape)
+                return self._third_order_forces
+
+    @property
     def anharmonic_forces(self):
         if (not hasattr(self, '_anharmonic_forces')) or (
                 hasattr(self, '_anharmonic_forces') and self._anharmonic_forces is None):
-            self._anharmonic_forces = self.dft_forces - self.harmonic_forces
-            # plt.hist(self._anharmonic_forces.flatten(), bins=100, label='anharmonic', alpha=0.5, density=True)
-            # plt.hist(self.harmonic_forces.flatten(), bins=100, label='harmonic', alpha=0.5, density=True)
-            # plt.hist(self.dft_forces.flatten(), bins=100, label='DFT forces', alpha=0.5, density=True)
-            # plt.legend()
-            # plt.savefig("force_dist.pdf")
-            # raise Exception()
+            if not self.include_third_oder:
+                self._anharmonic_forces = self.dft_forces - self.harmonic_forces
+            else:
+                self._anharmonic_forces = self.dft_forces - self.harmonic_forces - self.third_order_forces
         return self._anharmonic_forces
 
     def trajectory_normalized_dft_forces(self, flat=False):
@@ -198,6 +224,7 @@ class AnharmonicScore(object):
 
     def atom_normalized_anharmonic_forces(self, atom, flat=False):
         _mask = [id for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if a.label == atom]
+        print(atom,_mask)
         anharmonic_forces = self.anharmonic_forces[:, _mask, :]
 
         dft_forces = self.dft_forces[:, _mask, :]
@@ -305,6 +332,7 @@ class AnharmonicScore(object):
             std = self.dft_forces[:, self.atom_masks, :]
 
         if not return_trajectory:
+            print(return_trajectory,'calculate sigma')
             sigma = rmse.std() / std.std()
             print("Sigma for entire structure over the MD trajectory is ", str(sigma))
             return sigma, self.time_series
@@ -341,9 +369,11 @@ if __name__ == "__main__":
     parser.add_argument("-Y", "--Y", type=str, default='anh',
                         help='data to plot along the Y-axis for the joint probability distribution, default: anharmonic forces')
 
+
+
     args = parser.parse_args()
 
-    scorer = AnharmonicScore(md_frames=args.md_xml, ref_frame=args.ref_frame, atoms=None, potim=args.md_time_step)
+    scorer = AnharmonicScore(md_frames=args.md_xml, unit_cell_frame='POSCAR_equ', ref_frame=args.ref_frame, atoms=None, potim=args.md_time_step)
 
     from matplotlib import rc
 

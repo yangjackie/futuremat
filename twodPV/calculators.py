@@ -347,7 +347,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     shutil.copy('../CONTCAR', 'POSCAR')
 
     logger = setup_logger(output_filename="dielectrics.log")
-    single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
+    single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 48}
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()
     logger.info("Starting from structure in POSCAR in " + os.getcwd())
 
@@ -368,6 +368,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         logger.info("      " + str(k) + "=" + str(single_pt_set[k]))
 
     single_pt_set.update(single_point_pbe)
+    single_pt_set['IALGO']=48
     vasp = Vasp(**single_pt_set)
     vasp.set_crystal(structure)
     vasp.execute()
@@ -375,7 +376,30 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     if vasp.completed:
         logger.info("PBE self-consistent run completed properly.")
     else:
-        raise Exception("PBE self-consistent run failed to converge, will stop proceeding")
+        single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
+        single_pt_set.update(single_point_pbe)
+        single_pt_set['IALGO'] = 38
+        structure = VaspReader(input_location='./POSCAR').read_POSCAR()
+        logger.info("try again with a different SCF optimisation routine")
+        vasp = Vasp(**single_pt_set)
+        vasp.set_crystal(structure)
+        vasp.execute()
+        if vasp.completed:
+            logger.info("PBE self-consistent run completed properly.")
+        else:
+            files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'LOCPOT', 'node_info', "WAVECAR", "WAVEDER", 'DOSCAR', 'PROCAR']
+            for f in files:
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
+
+            os.chdir('../')
+            from core.utils.zipdir import ZipDir
+            ZipDir('electronic_hybrid', 'electronic_hybrid.zip')
+            shutil.rmtree('./electronic_hybrid')
+
+            raise Exception("PBE self-consistent run failed to converge, will stop proceeding")
 
     # check if this is a semiconductor, if not quit
     semiconductor = False

@@ -20,10 +20,10 @@ import matplotlib.pylab as pylab
 
 params = {'legend.fontsize': '10',
           'figure.figsize': (5, 4),
-          'axes.labelsize': 17,
+          'axes.labelsize': 20,
           'axes.titlesize': 28,
-          'xtick.labelsize': 12,
-          'ytick.labelsize': 12}
+          'xtick.labelsize': 16,
+          'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
 from core.internal.builders.crystal import map_ase_atoms_to_crystal
@@ -806,7 +806,7 @@ def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None,
     from scipy.signal import savgol_filter
     from scipy import interpolate
 
-    color = plt.cm.Blues(np.linspace(0, 1, 8))
+    color = plt.cm.coolwarm(np.linspace(0, 1, 8))
     pylab.rcParams['axes.prop_cycle'] = cycler('color', color)
     total_energy_dict = composition_dependent_demixing_energies(a, b, c, all_keys, db, demixing=False)
     for temp in [100, 200, 300, 400, 500, 600, 700, 800]:
@@ -825,7 +825,7 @@ def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None,
     plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], 'o-',
              label='With $F_{vib}$',c=color[-1])
 
-    new_color = plt.cm.Blues(np.linspace(0, 1, 8))
+    new_color = plt.cm.coolwarm(np.linspace(0, 1, 8))
     pylab.rcParams['axes.prop_cycle'] = cycler('color', new_color)
     total_energy_dict = composition_dependent_demixing_energies(a, b, c, all_keys, db, demixing=False)
     for temp in [100, 200, 300, 400, 500, 600, 700, 800]:
@@ -863,7 +863,7 @@ def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None,
     plt.xlabel(x_label)
     plt.ylabel('$\Delta G_{mix}(x)$ (eV/atom)')
     plt.ylim([-0.3,0.025])
-    plt.legend(loc=4)
+    #plt.legend(loc=4)
     plt.tight_layout()
     plt.savefig(output)
 
