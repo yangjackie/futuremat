@@ -13,7 +13,12 @@ def get_total_energies(db, dir=None):
     for zip in all_zips:
         kvp = {}
         data = {}
+
         kvp['uid'] = zip.replace(".zip", '').replace('/', '_')
+
+        if 'element' in dir:
+            kvp['uid'] = 'element_'+kvp['uid']
+
         archive = zipfile.ZipFile(zip)
 
         atoms = None
@@ -49,12 +54,16 @@ def get_total_energies(db, dir=None):
             populate_db(db, crystal, kvp, data)
 
 
-
 def pure_total_energies(db):
-    get_total_energies(db, dir='pure_O')
     get_total_energies(db, dir='pure')
 
+def zero_d_CsCs3Sb2X9(db):
+    get_total_energies(db, dir='0D_samplings')
 
+def two_d_CsCs3Sb2X9(db):
+    get_total_energies(db, dir='2D_samplings')
+
+"""
 def CsPbSnCl3_energies(db):
     get_total_energies(db, dir='mixed_CsPbSnCl3')
 
@@ -80,17 +89,17 @@ def Cs2PbSnI6_energies(db):
 
 def binaries(db):
     get_total_energies(db, dir='binaries')
+"""
+
+def elements(db):
+    get_total_energies(db,dir='elements')
 
 def collect(db):
     errors = []
-    steps =  [binaries,
-              pure_total_energies,
-              CsPbSnCl3_energies,
-              CsPbSnBr3_energies,
-              CsPbSnI3_energies,
-              Cs2PbSnCl6_energies,
-              Cs2PbSnBr6_energies,
-              Cs2PbSnI6_energies]
+    steps = [elements,
+             pure_total_energies,
+             zero_d_CsCs3Sb2X9,
+             two_d_CsCs3Sb2X9]
 
     for step in steps:
         try:

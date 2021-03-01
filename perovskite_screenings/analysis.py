@@ -715,7 +715,7 @@ def sigma_tolerance_factor_landscapes(db, systems='halides'):
 
     sigmas = [[] for _ in C]
     tolerance_factors = [[] for _ in C]
-    band_gaps= [[] for _ in C]
+    band_gaps = [[] for _ in C]
 
     for c_counter, c in enumerate(C):
         for a in A:
@@ -762,27 +762,27 @@ def sigma_tolerance_factor_landscapes(db, systems='halides'):
                            Patch(facecolor=color_dict[1], edgecolor='k', label='X=' + str(C[1])),
                            Patch(facecolor=color_dict[2], edgecolor='k', label='X=' + str(C[2])),
                            Patch(facecolor=color_dict[3], edgecolor='k', label='X=' + str(C[3]))]
-        #plt.ylim([0, 4])
+        # plt.ylim([0, 4])
     if systems == 'chalcogenides':
         legend_elements = [Patch(facecolor=color_dict[0], edgecolor='k', label='X=' + str(C[0])),
                            Patch(facecolor=color_dict[1], edgecolor='k', label='X=' + str(C[1])),
                            Patch(facecolor=color_dict[2], edgecolor='k', label='X=' + str(C[2]))]
-        #plt.ylim([0, 12])
-    #plt.xlim([0.5, 1.25])
+        # plt.ylim([0, 12])
+    # plt.xlim([0.5, 1.25])
 
     plt.tick_params(
         axis='y',  # changes apply to the x-axis
         which='both',  # both major and minor ticks are affected
         bottom=False,  # ticks along the bottom edge are off
         top=False,  # ticks along the top edge are off
-        #left=False,
+        # left=False,
         right=False,
-        #labelleft=False,
+        # labelleft=False,
         labelbottom=False)  # labels along the bottom edge are off
 
     plt.legend(handles=legend_elements, loc=1, fontsize=12, ncol=1)
     plt.ylabel('$\\sigma$ (300 K)')
-    #plt.xlabel('tolerance factor')
+    # plt.xlabel('tolerance factor')
     plt.xlabel('$E_{g}^{PBE}$ (eV)')
     plt.tight_layout()
     plt.savefig(systems + "_landscape_sigma_bandgap.pdf")
@@ -886,7 +886,8 @@ def sigma_std_vs_mean(db, systems='chalcogenides'):
     plt.tight_layout()
     plt.savefig('sigma_average_std.pdf')
 
-def distributions_of_sigma_lattice_sites(db,C='F'):
+
+def distributions_of_sigma_lattice_sites(db, C='F'):
     from scipy.stats import gaussian_kde
     def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
         # Kernel Density Estimation with Scipy
@@ -895,6 +896,7 @@ def distributions_of_sigma_lattice_sites(db,C='F'):
         # we divide the bandwidth by the sample standard deviation here.
         kde = gaussian_kde(x, bw_method=bandwidth / x.std(ddof=1), **kwargs)
         return kde.evaluate(x_grid)
+
     if C in halide_C:
         A = halide_A
         B = halide_B
@@ -903,9 +905,9 @@ def distributions_of_sigma_lattice_sites(db,C='F'):
         B = chalco_B
 
     color_dict = {"A": "#CF3721", "B": "#F5BE41", "C": "#31A9B8"}
-    sigma_A=[]
-    sigma_B=[]
-    sigma_C=[]
+    sigma_A = []
+    sigma_B = []
+    sigma_C = []
     for b_count, b in enumerate(B):
         for a_count, a in enumerate(A):
             system_name = a + b + C
@@ -948,10 +950,11 @@ def distributions_of_sigma_lattice_sites(db,C='F'):
     plt.plot(xs, pdf / sum(pdf), '-', lw=2, c=color_dict['C'], label='C-site')
 
     plt.xlim([min_x, max_x])
-    #plt.legend()
+    # plt.legend()
     plt.tight_layout()
 
     plt.savefig(C + '_sigma_distributions.pdf')
+
 
 def distributions_of_lowest_vibrational_eigenfrequencies(db, C='F'):
     labels = ["G", "R", "M", "X"]
@@ -989,7 +992,7 @@ def distributions_of_lowest_vibrational_eigenfrequencies(db, C='F'):
                     try:
                         freqs[l].append(row.key_value_pairs[l + "_min_ph_freq"])
                         if system_name == 'BaTiO':
-                            print(l,row.key_value_pairs[l + "_min_ph_freq"])
+                            print(l, row.key_value_pairs[l + "_min_ph_freq"])
                     except:
                         pass
 
@@ -1000,22 +1003,23 @@ def distributions_of_lowest_vibrational_eigenfrequencies(db, C='F'):
 
     xs = np.linspace(min_x, max_x, 1000)
     bw = 1
-    color_dict = {"G":"#CF3721","R":"#F5BE41","M":"#31A9B8","X":"#258039"}
-    label_dict = {"G":"$\\Gamma$","R":"$R$","M":"$M$","X":"$X$"}
+    color_dict = {"G": "#CF3721", "R": "#F5BE41", "M": "#31A9B8", "X": "#258039"}
+    label_dict = {"G": "$\\Gamma$", "R": "$R$", "M": "$M$", "X": "$X$"}
 
     mpl.rcParams['axes.spines.left'] = False
     mpl.rcParams['ytick.major.left'] = False
     mpl.rcParams['axes.spines.right'] = False
     mpl.rcParams['axes.spines.top'] = False
-    plt.figure(figsize=(5,2.3))
+    plt.figure(figsize=(5, 2.3))
     for l in labels:
         pdf = kde_scipy(np.array(freqs[l]), xs, bandwidth=bw)
         plt.plot(xs, pdf / sum(pdf), '-', lw=2, c=color_dict[l], label=label_dict[l])
-    plt.xlim([min_x,max_x])
-    #plt.legend()
+    plt.xlim([min_x, max_x])
+    # plt.legend()
     plt.tight_layout()
 
-    plt.savefig(C+'_phonon_freq_distributions.pdf')
+    plt.savefig(C + '_phonon_freq_distributions.pdf')
+
 
 def sigma_kappa_plot(db, systems='chalcogenides'):
     color_dict = {0: '#A3586D', 1: '#5C4A72', 2: '#F3B05A', 3: '#F4874B'}
@@ -1031,7 +1035,6 @@ def sigma_kappa_plot(db, systems='chalcogenides'):
     sigmas = [[] for _ in range(len(C))]
     kappas = [[] for _ in range(len(C))]
     for c_counter, c in enumerate(C):
-
         for a in A:
             for b in B:
                 system_name = a + b + c
@@ -1043,10 +1046,11 @@ def sigma_kappa_plot(db, systems='chalcogenides'):
                     continue
 
                 if row is not None:
-                    sigma=None
-                    kappa=None
+                    sigma = None
+                    kappa = None
                     try:
-                        sigma = row.key_value_pairs['sigma_300K_single']
+                        #sigma = row.key_value_pairs['sigma_300K_single']
+                        sigma = row.key_value_pairs['sigma_300K_tdep']
                     except KeyError:
                         continue
                     try:
@@ -1065,11 +1069,11 @@ def sigma_kappa_plot(db, systems='chalcogenides'):
 
     if systems == 'halides':
         min_y = -0.1
-        max_y = 4
+        max_y = 1
     if systems == 'chalcogenides':
         min_y = -0.1
-        max_y = 12
-    plt.ylim([min_y,max_y])
+        max_y = 1
+    plt.ylim([min_y, max_y])
     plt.ylabel('$\\sigma$ (300 K)')
     plt.xlabel('$\\kappa$ (300 K)')
     plt.xscale('log')
@@ -1079,14 +1083,245 @@ def sigma_kappa_plot(db, systems='chalcogenides'):
                            Patch(facecolor=color_dict[1], edgecolor='k', label='X=' + str(C[1])),
                            Patch(facecolor=color_dict[2], edgecolor='k', label='X=' + str(C[2])),
                            Patch(facecolor=color_dict[3], edgecolor='k', label='X=' + str(C[3]))]
-        #plt.ylim([0, 4])
+        # plt.ylim([0, 4])
     if systems == 'chalcogenides':
         legend_elements = [Patch(facecolor=color_dict[0], edgecolor='k', label='X=' + str(C[0])),
                            Patch(facecolor=color_dict[1], edgecolor='k', label='X=' + str(C[1])),
                            Patch(facecolor=color_dict[2], edgecolor='k', label='X=' + str(C[2]))]
     plt.legend(handles=legend_elements, loc=1, fontsize=12, ncol=1)
     plt.tight_layout()
-    plt.savefig(systems+"_sigma_kappa_300K.pdf")
+    plt.savefig(systems + "_sigma_kappa_300K.pdf")
+
+
+def sigma_from_temperature_dependent_effective_potential(db, systems='halides'):
+    color_dict = {0: '#ff6e40', 1: '#ffc13b', 2: '#1e3d59'}
+    label_dict = {0: '$\\tilde{\\sigma}^{(2,4)}$', 1: '$\\tilde{\\sigma}^{(3,4)}$', 2: '$\\tilde{\\sigma}^{(4,4)}$'}
+    if systems == 'halides':
+        A = halide_A
+        B = halide_B
+        C = halide_C
+    elif systems == 'chalcogenides':  # including oxides
+        A = chalco_A
+        B = chalco_B
+        C = chalco_C
+
+    sigma_2 = []
+    sigma_temp_2 = []
+    sigma_temp_3 = []
+    sigma_temp_4 = []
+
+    for c in C:
+        for a in A:
+            for b in B:
+                system_name = a + b + c
+                uid = system_name + '_Pm3m'
+
+                try:
+                    row = db.get(selection=[('uid', '=', uid)])
+                except:
+                    continue
+
+                _sigma_2 = None
+                _sigma_temp_2 = None
+                _sigma_temp_3 = None
+                _sigma_temp_4 = None
+
+                try:
+                    _sigma_2 = row.key_value_pairs['sigma_300K_single']
+                    _sigma_temp_2 = row.key_value_pairs['sigma_300K_4th_tdep_2']
+                    _sigma_temp_3 = row.key_value_pairs['sigma_300K_4th_tdep_3']
+                    _sigma_temp_4 = row.key_value_pairs['sigma_300K_4th_tdep_4']
+                except:
+                    continue
+
+                if (_sigma_2 is not None) and (_sigma_temp_2 is not None) and (_sigma_temp_3 is not None) and (
+                        _sigma_temp_4 is not None):
+                    sigma_2.append(_sigma_2)
+                    sigma_temp_2.append(_sigma_temp_2)
+                    sigma_temp_3.append(_sigma_temp_3)
+                    sigma_temp_4.append(_sigma_temp_4)
+                    print(uid, _sigma_2, _sigma_temp_2, _sigma_temp_3, _sigma_temp_4)
+
+    for counter, sigma in enumerate([sigma_temp_2, sigma_temp_3, sigma_temp_4]):
+        plt.scatter(sigma_2, sigma, marker='o', c=color_dict[counter], edgecolor=None, alpha=0.35, s=25,
+                    label=label_dict[counter])
+
+    if systems == 'halides':
+        min_y = 0.2
+        max_y = 4
+    if systems == 'chalcogenides':
+        min_y = 0
+        max_y = 4
+
+    plt.plot([min_y, max_y], [min_y, max_y], 'k--', lw=3)
+    plt.ylim([0.2, 4])
+    plt.xlim([0.2, 50])
+    plt.ylabel('$\\tilde{\\sigma}$')
+    plt.xlabel('$\\sigma^{(2)}$')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(systems + "_temp_effective_sigma.pdf")
+
+
+def second_third_anharmonic_score_correlations(db, systems='halides'):
+    color_dict = {0: '#A3586D', 1: '#5C4A72', 2: '#F3B05A', 3: '#F4874B'}
+    if systems == 'halides':
+        A = halide_A
+        B = halide_B
+        C = halide_C
+    elif systems == 'chalcogenides':  # including oxides
+        A = chalco_A
+        B = chalco_B
+        C = chalco_C
+
+    sigmas_2 = [[] for _ in range(len(C))]
+    sigmas_3 = [[] for _ in range(len(C))]
+    for c_counter, c in enumerate(C):
+        for a in A:
+            for b in B:
+                system_name = a + b + c
+                uid = system_name + '_Pm3m'
+
+                _sigma_2 = None
+                _sigma_3 = None
+                try:
+                    row = db.get(selection=[('uid', '=', uid)])
+                except:
+                    continue
+
+                if row is not None:
+                    try:
+                        _sigma_2 = row.key_value_pairs['sigma_300K_single']
+                    except KeyError:
+                        continue
+                    try:
+                        # _sigma_3 = row.key_value_pairs['sigma_300K_third_order']
+                        _sigma_3 = row.key_value_pairs['sigma_300K_tdep']
+                    except KeyError:
+                        continue
+                    if (_sigma_2 is not None) and (_sigma_3 is not None):
+                        print(uid, _sigma_2, _sigma_3)
+                        sigmas_2[c_counter].append(_sigma_2)
+                        sigmas_3[c_counter].append(_sigma_3)
+
+    for c_counter in range(len(C)):
+        plt.scatter(sigmas_2[c_counter], sigmas_3[c_counter], marker='o', c=color_dict[c_counter],
+                    edgecolor=None, alpha=0.45, s=25)
+
+    if systems == 'halides':
+        min_y = -0.1
+        max_y = 4
+    if systems == 'chalcogenides':
+        min_y = -0.1
+        max_y = 12
+    # plt.ylim([min_y,10])
+    # plt.xlim([min_y, 10])
+
+    # plt.ylabel('$\\sigma^{(3)}$')
+    plt.ylabel('$\\tilde{\\sigma}^{(2)}$')
+    plt.xlabel('$\\sigma^{(2)}$')
+    plt.plot([0.01, 10], [0.01, 10], 'k--', lw=2)
+    plt.ylim([0.3, 1])
+    plt.xlim([0.2, 50])
+    plt.xscale('log')
+    plt.yscale('log')
+    # plt.xscale('log')
+    if systems == 'halides':
+        legend_elements = [Patch(facecolor=color_dict[0], edgecolor='k', label='X=' + str(C[0])),
+                           Patch(facecolor=color_dict[1], edgecolor='k', label='X=' + str(C[1])),
+                           Patch(facecolor=color_dict[2], edgecolor='k', label='X=' + str(C[2])),
+                           Patch(facecolor=color_dict[3], edgecolor='k', label='X=' + str(C[3]))]
+        # plt.ylim([0, 4])
+    if systems == 'chalcogenides':
+        legend_elements = [Patch(facecolor=color_dict[0], edgecolor='k', label='X=' + str(C[0])),
+                           Patch(facecolor=color_dict[1], edgecolor='k', label='X=' + str(C[1])),
+                           Patch(facecolor=color_dict[2], edgecolor='k', label='X=' + str(C[2]))]
+    plt.legend(handles=legend_elements, loc=4, fontsize=12, ncol=1)
+    plt.tight_layout()
+    plt.savefig(systems + "_sigma_2_tdep_correlation.pdf")
+
+
+def prepare_data_table_entries(db):
+    for c_count in range(len([halide_C, chalco_C])):
+        for c in [halide_C, chalco_C][c_count]:
+            for a in [halide_A, chalco_A][c_count]:
+                for b in [halide_B, chalco_B][c_count]:
+                    table_line = ''
+                    system_name = a + b + c
+                    uid = system_name + '_Pm3m'
+
+                    try:
+                        row = db.get(selection=[('uid', '=', uid)])
+                    except:
+                        continue
+
+                    system_name_print = a + b + c + "$_{3}$"
+                    table_line += system_name_print + "&"
+
+                    lattice_constant = None
+                    try:
+                        atoms = row.toatoms()
+                        lattice_constant = atoms.get_cell_lengths_and_angles()[0]
+                    except:
+                        pass
+
+                    if lattice_constant is not None:
+                        table_line += "{:.3f}".format(lattice_constant) + "&"
+                    else:
+                        table_line += "--" + "&"
+
+                    formation_energy = None
+                    try:
+                        formation_energy = row.key_value_pairs['formation_energy']
+                    except:
+                        pass
+
+                    if formation_energy is not None:
+                        table_line += "{:.3f}".format(formation_energy) + "&"
+                    else:
+                        table_line += "--" + "&"
+
+                    for l in ["G", "R", "M", "X"]:
+                        omega = None
+                        try:
+                            key = l + '_min_ph_freq'
+                            omega = row.key_value_pairs[key]
+                        except:
+                            pass
+                        if omega is not None:
+                            if omega >= 0:
+                                table_line += "{:.2f}".format(omega) + "&"
+                            else:
+                                _omega = str("{:.2f}".format(omega)).replace('-', '')
+                                if _omega != '0.000':
+                                    _omega = _omega + '$i$'
+                                table_line += _omega + "&"
+                        else:
+                            table_line += "--" + "&"
+
+                    for l_c, l in enumerate(
+                            ['sigma_300K_single', 'sigma_300K_third_order', 'sigma_300K_tdep', 'sigma_300K_4th_tdep_2',
+                             'sigma_300K_4th_tdep_3', 'sigma_300K_4th_tdep_4', 'sigma_300K_single_A', 'sigma_300K_single_B', 'sigma_300K_single_C']):
+                        sigma = None
+                        try:
+                            sigma = row.key_value_pairs[l]
+                        except:
+                            pass
+
+                        if sigma is not None:
+                            if l_c != 8:
+                                table_line += "{:.3f}".format(sigma) + "&"
+                            else:
+                                table_line += "{:.3f}".format(sigma) + "\\" + "\\"
+                        else:
+                            if l_c != 8:
+                                table_line += "--" + "&"
+                            else:
+                                table_line += "--" + "\\" + "\\"
+
+                    print(table_line)
 
 
 if __name__ == "__main__":
@@ -1104,10 +1339,13 @@ if __name__ == "__main__":
     else:
         raise Exception("Database " + args.db + " does not exists, cannot proceed!")
 
-    #for c in ['F']:
+    #prepare_data_table_entries(args.db)
+    # sigma_from_temperature_dependent_effective_potential(args.db , systems='chalcogenides')
+    # second_third_anharmonic_score_correlations(args.db, systems='chalcogenides')
+    # for c in ['F']:
     #    distributions_of_sigma_lattice_sites(args.db, C=c)
 
-    #for c in ['O','S','Se']:
+    # for c in ['O','S','Se']:
     #    distributions_of_lowest_vibrational_eigenfrequencies(args.db, C=c)
 
     sigma_kappa_plot(args.db, systems='chalcogenides')
