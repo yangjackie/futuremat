@@ -166,7 +166,7 @@ def sigma_grid(db, C='F'):
     plt.savefig(C + "_sigma_grid.pdf")
 
 
-def formation_energy_grid(db, C='O', random=False, full_relax=True):
+def formation_energy_grid(db, C='O', random=True, full_relax=False):
     if C in halide_C:
         A = halide_A
         B = halide_B
@@ -237,8 +237,8 @@ def formation_energy_grid(db, C='O', random=False, full_relax=True):
     rows, cols = grid.shape
     grid = np.ma.masked_where(grid == 100, grid)
 
-    # cmap = plt.cm.tab20c
-    cmap = plt.cm.coolwarm
+    cmap = plt.cm.tab20c
+    #cmap = plt.cm.coolwarm
     cmap.set_bad(color='white')
 
     plt.imshow(grid, cmap=cmap)
@@ -668,7 +668,7 @@ def formation_energy_landscapes(db, systems='chalcogenides', random=True, full_r
 
     for c_counter in range(len(C)):
         if x == 'tolerance_factor':
-            bw = 0.01
+            bw = 0.05
         if x == 'sigma':
             bw = 0.1  # for halides
             # bw=0.3 #for chalcogenides
@@ -1348,10 +1348,11 @@ if __name__ == "__main__":
     # for c in ['O','S','Se']:
     #    distributions_of_lowest_vibrational_eigenfrequencies(args.db, C=c)
 
-    sigma_kappa_plot(args.db, systems='chalcogenides')
+    #sigma_kappa_plot(args.db, systems='chalcogenides')
     # sigma_grid(args.db,C='Se')
-    # formation_energy_landscapes(args.db,systems='halides',x='sigma')
-    # formation_energy_grid(args.db, C=args.C,full_relax=True)
+    #formation_energy_landscapes(args.db,systems='chalcogenides',x='tolerance_factor')
+    formation_energy_grid(args.db, C=args.C,full_relax=False,random=True)
+
     # formation_energy_structural_deformation_analysis(args.db,systems='chalcogenides')
     # sigma_time_convergence_plots(args.db,systems='chalcogenides')
     # sigma_std_vs_mean(args.db, systems='chalcogenides')

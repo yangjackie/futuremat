@@ -8,6 +8,14 @@ from ase.db import connect
 import sqlite3
 import json
 
+import matplotlib.pylab as pylab
+
+params = {'legend.fontsize': '16',
+          'xtick.labelsize': 14,
+          'ytick.labelsize': 14}
+pylab.rcParams.update(params)
+
+
 from core.internal.builders.crystal import map_ase_atoms_to_crystal
 
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
@@ -108,8 +116,9 @@ ax.plot([_x for _x in zero_d_bromide_keys],[np.average(pb_i_pnma_sigma) for _ in
 
 ax.legend([bp2["boxes"][0], bp1["boxes"][0]], ['0D', '2D'], loc='upper right')
 ax.set_ylabel('$\\sigma(y,T)$', fontsize=20)
-ax.set_xlabel('$y$ in Cs$_{3}$Sb$_2$Br$_{y}$I$_{9-y}$', fontsize=16)
-ax.text(1.0,0.59, '$\sigma$(300 K) for $\gamma$-CsPbI$_3$', c='r',fontsize=12)
+ax.set_xlabel('$y$ in Cs$_{3}$Sb$_2$Br$_{y}$I$_{9-y}$', fontsize=20)
+ax.text(1.0,0.59, '$\sigma$(300 K) for $\gamma$-CsPbI$_3$', c='r',fontsize=16)
+
 xticklabels = ['%.1f' % i for i in [_x for _x in two_d_bromide_keys]]
 ax.set_ylim([0.18,0.65])
 ax.set_xticklabels(xticklabels, rotation=45)

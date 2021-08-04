@@ -503,6 +503,7 @@ def get_out_of_plane_charge_polarisations(kvp):
         vasp_reader = VaspReader(input_location='./CHGCAR_temp')
         #######################################
         # TODO - THIS ROUNTINE IS VERY SLOW!!!!!
+        # TODO - THIS ROUNTINE IS VERY SLOW!!!!!
         #######################################
         charge_grid, crystal = vasp_reader.read_CHGCAR()
 
@@ -577,6 +578,7 @@ def get_band_structures_properties(data):
     from pymatgen.electronic_structure.core import Spin
     from sumo.electronic_structure.bandstructure import get_reconstructed_band_structure
     from sumo.electronic_structure.effective_mass import (get_fitting_data, fit_effective_mass)
+    from twodPV.calculators import KPOINTS_string_dict
     from twodPV.calculators import KPOINTS_string_dict
     import numpy as np
 
@@ -821,7 +823,6 @@ def collect(db):
             error = '{}: {}'.format(x.__class__.__name__, x)
             errors.append(error)
     return errors
-
 
 if __name__ == "__main__":
     # We use absolute path because of chdir below!

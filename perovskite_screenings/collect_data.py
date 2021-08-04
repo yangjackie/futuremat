@@ -36,9 +36,9 @@ chalco_B = ['Ti', 'Zr', 'Hf', 'V', 'Nb', 'Ta', 'Cr', 'Mo', 'W', 'Mn', 'Tc', 'Re'
 
 # chalco_B=['Po']
 
-A_site_list = [chalco_A, halide_A]
-B_site_list = [chalco_B, halide_B]
-C_site_list = [chalco_C, halide_C]
+A_site_list = [chalco_A]#, halide_A]
+B_site_list = [chalco_B]#, halide_B]
+C_site_list = [chalco_C]#, halide_C]
 
 all_elements_list = list(itertools.chain(*[A_site_list, B_site_list, C_site_list]))
 all_elements_list = list(itertools.chain(*all_elements_list))
@@ -96,7 +96,13 @@ def full_relax_data(db):
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
+
                 for c in C_site_list[i]:
+                    kvp={}
+                    data={}
+                    if (a!='Ra'):
+                        if (b!='Po'):
+                            continue
 
                     system_counter += 1
                     logger.info("Working on system number: " + str(system_counter))
@@ -113,6 +119,23 @@ def full_relax_data(db):
                         logger.info(system_name + '_Pm3m' + ' tar ball not working')
                         continue
 
+
+                    try:
+                        calculator = Vasp()
+                        calculator.check_convergence()
+                        if calculator.completed:
+                            atoms = [a for a in read_vasp_xml(index=-1)][-1]
+                            kvp['uid'] = uid
+                            kvp['total_energy'] = atoms.get_calculator().get_potential_energy()
+                            kvp['formation_energy'] = formation_energy(atoms)
+                            populate_db(db, atoms, kvp, data)
+                            logger.info(system_name + '_Pm3m' + ' formation energy: ' + str(
+                                kvp['formation_energy']) + ' eV/atom')
+                        else:
+                            pass
+                    except:
+                        logger.info(system_name + '_Pm3m' + ' formation energy: ' + str('NaN'))
+
                     try:
                         tf = tarfile.open('full_relax.tar.gz')
                         tf.extractall()
@@ -121,8 +144,7 @@ def full_relax_data(db):
                         logger.info(system_name + '_Pm3m' + ' full_relax tar ball not working')
 
                     if os.path.isdir('./full_relax'):
-                        kvp = {}
-                        data = {}
+
                         os.chdir('./full_relax')
                         try:
                             calculator = Vasp()
@@ -141,6 +163,49 @@ def full_relax_data(db):
                             logger.info(system_name + '_Pm3m' + ' formation energy (fully relaxed): NaN ')
 
                         os.chdir('..')
+
+                    # get the formation energies for the randomised structures
+                    try:
+                        tf = tarfile.open('randomised.tar.gz')
+                        tf.extractall()
+                    except:
+                        pass
+                    #  print(os.getcwd())
+                    if os.path.isdir('./randomised'):
+                        os.chdir('randomised')
+                        # print(os.getcwd()+'\n')
+
+                        for counter in range(10):
+                            rkvp = {}
+                            if os.path.isdir('./str_' + str(counter)):
+                                os.chdir('./str_' + str(counter))
+                                try:
+                                   calculator = Vasp()
+                                   calculator.check_convergence()
+                                   atoms = None
+                                   if calculator.completed:
+                                        atoms = [a for a in read_vasp_xml(index=-1)][-1]
+                                        rkvp['uid'] = uid + '_rand_str_' + str(counter)
+                                        rkvp['total_energy'] = atoms.get_calculator().get_potential_energy()
+
+                                        rkvp['formation_energy'] = formation_energy(atoms)
+                                        populate_db(db, atoms, rkvp, data)
+                                        logger.info(system_name + '_Pm3m' + ' formation energy (rand ' + str(
+                                            counter) + '): ' + str(rkvp['formation_energy']) + ' eV/atom')
+                                except:
+                                    logger.info(
+                                        system_name + '_Pm3m' + ' formation energy (rand ' + str(counter) + '): ' + str(
+                                            'NaN'))
+                                os.chdir('..')
+                        os.chdir('..')
+                        try:
+                            shutil.rmtree('randomised')
+                        except:
+                            pass
+                        try:
+                            os.rmtree('randomised')
+                        except:
+                            pass
 
                     os.chdir("..")
                     try:
@@ -262,6 +327,7 @@ def all_data(db):
                     #                        os.rmtree(system_name + '_Pm3m')
                     #                    except:
                     #                        pass
+
 
                     print(system_name + '_Pm3m' + ' get_properties? ' + str(get_properties))
                     if not get_properties: continue
@@ -814,7 +880,8 @@ def get_temperature_dependent_second_order_fc():
 def collect(db):
     errors = []
     steps = [element_energy, full_relax_data]  # all_data]
-    steps = [high_order_anharmonicity]
+    #steps = [high_order_anharmonicity]
+
     for step in steps:
         try:
             step(db)

@@ -59,6 +59,8 @@ def get_geometry_corrected_electronic_polarizability(directory=None):
     c = structure.lattice.c
     z_coords = [a.position.z for a in structure.all_atoms()]
 
+    raise Exception("Periodic Boundary Conditions not correctle implemented!")
+
     for i in range(len(z_coords)):
         if abs(z_coords[i]-c)<=1:
             z_coords[i] = z_coords[i]-c # crude implementation of PBC

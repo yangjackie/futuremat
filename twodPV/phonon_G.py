@@ -26,10 +26,10 @@ def execute():
          'POTIM': 0.01,
          "NELM": 200,
          "LEPSILON": True,
-         'MP_points': [4, 4, 1],
+         'MP_points': [6, 6, 6],
          'Gamma_centered': True,
          'clean_after_success': True,
-         'NPAR':16})
+         'NPAR':14})
 
     logger.info("==========Gamma point phonon calculation with VASP==========")
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()

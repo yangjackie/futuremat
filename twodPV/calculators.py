@@ -398,7 +398,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
             from core.utils.zipdir import ZipDir
             ZipDir('electronic_hybrid', 'electronic_hybrid.zip')
             shutil.rmtree('./electronic_hybrid')
-
+            shutil.copy('vasprun.xml', 'vasprun.PBE.xml')
             raise Exception("PBE self-consistent run failed to converge, will stop proceeding")
 
     # check if this is a semiconductor, if not quit
