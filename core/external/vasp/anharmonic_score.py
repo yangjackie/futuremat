@@ -7,7 +7,8 @@
 # The author has an implementation to interface wtih FIH-aim code, and here it is adopted for the VASP code.
 
 # this is a demonstration
-
+import warnings
+warnings.filterwarnings("ignore")
 from core.dao.vasp import VaspReader
 from core.models.crystal import Crystal
 import xml.etree.cElementTree as etree
@@ -20,24 +21,27 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import gaussian_kde
 from sklearn.neighbors import KernelDensity
 
-
 class AnharmonicScore(object):
 
     def __init__(self, ref_frame=None,
                  unit_cell_frame=None,
                  md_frames=None,
                  potim=1,
-                 force_constants="force_constants.hdf5",
+                 force_constants=None,
                  supercell=[1, 1, 1],
                  primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
                  atoms=None,
                  include_third_order=False,
                  third_order_fc='./phono3py/fc3.hdf5',
                  include_fourth_order=False,
-                 fourth_order_fc=None):
+                 fourth_order_fc=None,
+                 mode_resolved=False):
+        self.mode_resolved = mode_resolved
+
         if isinstance(ref_frame, Crystal):
             self.ref_frame = ref_frame
         elif ('POSCAR' in ref_frame) or ('CONTCAR' in ref_frame):
+            print(ref_frame)
             print("initialising reference frame from POSCAR ")
             self.ref_frame = VaspReader(input_location=ref_frame).read_POSCAR()
             self.ref_coords = np.array([[a.scaled_position.x, a.scaled_position.y, a.scaled_position.z] for a in
@@ -55,37 +59,46 @@ class AnharmonicScore(object):
 
         if isinstance(force_constants, str):
             try:
-                phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
+                self.phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
                                       primitive_matrix=primitive_matrix,
                                       unitcell_filename=unit_cell_frame,
                                       force_constants_filename=force_constants)
                 print("Use supercell " + str(supercell))
                 print("Use primitive matrix " + str(primitive_matrix) + " done")
             except:
-                phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
+                self.phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
                                       primitive_matrix='auto',
                                       unitcell_filename=unit_cell_frame,
                                       force_constants_filename=force_constants)
-            print("INPUT PHONOPY force constant shape ", np.shape(phonon.force_constants))
+            print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
 
             #TODO - if the input supercell is not [1,1,1], then it will need to be expanded into the correct supercell shape here!
 
-            new_shape = np.shape(phonon.force_constants)[0] * np.shape(phonon.force_constants)[2]
+            new_shape = np.shape(self.phonon.force_constants)[0] * np.shape(self.phonon.force_constants)[2]
             self.force_constant = np.zeros((new_shape, new_shape))
-            self.force_constant = phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
+            self.force_constant = self.phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
+
         elif force_constants is None:
             """
             Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
             reconstructing the force constants for supercells from primitive cells
             """
             print("Here try to use FORCE_SETS")
-            phonon = phonopy.load(supercell_filename="./SPOSCAR", log_level=1,force_sets_filename='FORCE_SETS')
-            phonon.produce_force_constants()
 
-            print("INPUT PHONOPY force constant shape ", np.shape(phonon.force_constants))
-            new_shape = np.shape(phonon.force_constants)[0] * np.shape(phonon.force_constants)[2]
+            # if we want to get the eigenvector on all atoms in the supercell, we need to specify the primitive matrix
+            # as the identity matrix, making the phonopy to treat the supercell as the primitive, rather than generate them
+            # automatically
+            if not self.mode_resolved:
+                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS')
+            else:
+                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS'
+                                      ,primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            self.phonon.produce_force_constants()
+
+            print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
+            new_shape = np.shape(self.phonon.force_constants)[0] * np.shape(self.phonon.force_constants)[2]
             self.force_constant = np.zeros((new_shape, new_shape))
-            self.force_constant = phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
+            self.force_constant = self.phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
         elif isinstance(force_constants, np.ndarray):
             new_shape = np.shape(force_constants)[0] * np.shape(force_constants)[2]
             self.force_constant = np.zeros((new_shape, new_shape))
@@ -119,6 +132,52 @@ class AnharmonicScore(object):
             s = np.shape(raw_force_constant_4)[0] * 3
             self.force_constant_4 = raw_force_constant_4.transpose([0, 4, 1, 5, 2, 6, 3, 7]).reshape(s, s, s, s)
 
+        if self.mode_resolved:
+            self.prepare_phonon_eigs()
+
+    def prepare_phonon_eigs(self,nqpoints=10):
+        print("Need to calculate the mode resolved anharmonic scores, first get the phonon eigenvectors")
+        from core.models.element import atomic_mass_dict
+
+        self.atomic_masses = []
+        for a in self.ref_frame.all_atoms(sort=False, unique=False):
+            for _ in range(3):
+                self.atomic_masses.append(atomic_mass_dict[a.label.upper()])
+
+        from pymatgen.symmetry.bandstructure import HighSymmKpath
+        from core.internal.builders.crystal import map_to_pymatgen_Structure
+        pmg_path = HighSymmKpath(map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3)
+        self._kpath = pmg_path._kpath
+        self.prim = pmg_path.prim
+        self.conv = pmg_path.conventional
+        __qpoints = [[self._kpath['kpoints'][self._kpath['path'][j][i]] for i in range(len(self._kpath['path'][j]))] for
+                     j in range(len(self._kpath['path']))]
+        from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
+        qpoints, connections = get_band_qpoints_and_path_connections(__qpoints,
+                                                                     npoints=nqpoints)  # now this qpoints will contain points within two high-symmetry points along the Q-path
+        self.phonon.run_band_structure(qpoints, with_eigenvectors=True)
+        _eigvecs = self.phonon.band_structure.__dict__['_eigenvectors']
+        _eigvals = self.phonon.band_structure.__dict__['_eigenvalues']
+        self.eigvecs = []
+        self.eigvals = []
+
+        from phonopy.units import VaspToTHz
+
+        if _eigvecs is not None:
+            for i, eigvecs_on_path in enumerate(_eigvecs):
+                for j, eigvecs_at_q in enumerate(eigvecs_on_path):
+                    for k, vec in enumerate(eigvecs_at_q.T):
+                        #vec = np.array(vec).reshape(self.ref_frame.total_num_atoms(), 3)
+                        self.eigvecs.append(self.atomic_masses*vec)
+                        self.eigvals.append(_eigvals[i][j][k]*VaspToTHz)
+        print('eigenvector shape ', np.shape(vec))
+        print('Total number of eigenstates ' + str(len(self.eigvals)))
+
+    def mode_resolved_sigma(self):
+        if self.mode_resolved is not True: raise Exception("eigenmodes not prepared for running this function")
+        self.mode_sigmas = [np.dot(self.anharmonic_forces,eigvec).std()/np.dot(self.dft_forces,eigvec).std() for eigvec in self.eigvecs]
+        return self.eigvals,self.mode_sigmas
+
     def plot_fc(self):
         plt.matshow(self.force_constant)
         plt.colorbar()
@@ -139,12 +198,20 @@ class AnharmonicScore(object):
             if elem.tag == 'varray':
                 if elem.attrib['name'] == 'forces':
                     this_forces = []
-                    for v in elem:
-                        this_force = [float(_v) for _v in v.text.split()]
-                        this_forces.append(this_force)
+                    if not self.mode_resolved:
+                        for v in elem:
+                            this_force = [float(_v) for _v in v.text.split()]
+                            this_forces.append(this_force)
+                    else:
+                        for v in elem:
+                            for this_force in [float(_v) for _v in v.text.split()]:
+                                this_forces.append(this_force)
                     all_forces.append(this_forces)
+
+        print('MD force vector shape ', np.shape(this_forces))
         self.dft_forces = np.array(all_forces)
-        print("Atomic forces along the MD trajectory loaded")
+        print('All MD force vector shape ', np.shape(self.dft_forces))
+        print("Atomic forces along the MD trajectory loaded\n")
 
     def get_all_md_atomic_displacements(self):
         all_positions = []
@@ -165,7 +232,7 @@ class AnharmonicScore(object):
             [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
 
         # periodic boundary conditions
-        # __all_displacements = (__all_displacements + 0.5 + 1e-5) % 1 - 0.5 - 1e-5
+        #__all_displacements = (__all_displacements + 0.5 + 1e-5) % 1 - 0.5 - 1e-5
         __all_displacements = __all_displacements - np.round(__all_displacements)  # this is how it's done in Pymatgen
         # Convert to Cartesian
         self.all_displacements = np.zeros(np.shape(__all_displacements))
@@ -179,14 +246,19 @@ class AnharmonicScore(object):
                 hasattr(self, '_harmonic_forces') and self._harmonic_force is None):
             self._harmonic_force = np.zeros(np.shape(self.dft_forces))
             for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
-                self._harmonic_force[i, :, :] = -1.0 * (
-                    np.dot(self.force_constant, self.all_displacements[i, :, :].flatten())).reshape(
-                    self.all_displacements[0, :, :].shape)
+                if not self.mode_resolved:
+                    self._harmonic_force[i, :, :] = -1.0 * (
+                        np.dot(self.force_constant, self.all_displacements[i, :, :].flatten())).reshape(
+                        self.all_displacements[0, :, :].shape)
+                else:
+                    self._harmonic_force[i, :] = -1.0 * (np.dot(self.force_constant, self.all_displacements[i, :, :].flatten()))
+
         return self._harmonic_force
 
     @property
     def third_order_forces(self):
         print("Do we have third_order constant " + str(self.force_constant_3.__class__))
+        if self.mode_resolved: raise NotImplementedError
         if self.force_constant_3 is not None:
             if (not hasattr(self, '_third_order_forces')) or (
                     hasattr(self, '_third_order_forces') and self._third_order_forces is None):
@@ -201,6 +273,7 @@ class AnharmonicScore(object):
 
     @property
     def fourth_order_forces(self):
+        if self.mode_resolved: raise NotImplementedError
         print("Do we have fourth_order constant " + str(self.force_constant_4.__class__))
         if self.force_constant_4 is not None:
             if (not hasattr(self, '_fourth_order_forces')) or (
@@ -222,6 +295,7 @@ class AnharmonicScore(object):
         if (not hasattr(self, '_anharmonic_forces')) or (
                 hasattr(self, '_anharmonic_forces') and self._anharmonic_forces is None):
             self._anharmonic_forces = self.dft_forces - self.harmonic_forces
+
             if self.include_third_oder:
                 self._anharmonic_forces = self._anharmonic_forces - self.third_order_forces
             if self.include_fourth_order:
@@ -423,6 +497,7 @@ if __name__ == "__main__":
     if args.sigma:
         sigma, time_stps = scorer.structural_sigma(return_trajectory=args.trajectory)
         if args.plot_trajectory:
+            print(len(sigma))
             plt.plot(time_stps, sigma, 'b-')
             plt.xlabel("Time (fs)", fontsize=16)
             plt.ylabel("$\\sigma(t)$", fontsize=16)
