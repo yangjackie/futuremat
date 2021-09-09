@@ -324,13 +324,17 @@ class VaspReader(FileReader):
                     l += 1
         return potential_grid, crystal
 
-
 class VaspWriter(object):
 
     def write_INCAR(self, filename='INCAR',
                     default_options=default_ionic_optimisation_set,
                     **kwargs):
         default_options.update(kwargs)
+
+        #do not overwrite existing INCAR option
+        #import os
+        #if os.path.isfile('./INCAR') and (os.path.getsize("./INCAR") != 0):
+        #-    return
 
         incar = open(filename, 'w')
         try:

@@ -29,6 +29,12 @@ orientation_dict = {#'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
 
 def setup_two_d_structure_folders(orientation=None, termination=None, db=None):
     cwd = os.getcwd()
+    print(cwd)
+    A_site_list=[['Sr']]
+    B_site_list=[['Ti']]
+    C_site_list=[['O']]
+    thicknesses = [11,13,15,17,19,21]
+
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
@@ -46,10 +52,10 @@ def setup_two_d_structure_folders(orientation=None, termination=None, db=None):
                                    b=orientation_dict[orientation]['b'],
                                    nlayers=thick,
                                    origo=orientation_dict[orientation]['origio'][termination])
-                        add_vacuum(slab, 40)
+                        add_vacuum(slab, 80)
 
                         slab_wd = cwd + '/slab_' + str(orientation) + '_' + str(
-                            termination) + '_full_B_octa/' + a + b + c + "_" + str(thick) + '/'
+                            termination) + '_small/' + a + b + c + "_" + str(thick) + '/'
 
                         if not os.path.exists(slab_wd):
                             os.makedirs(slab_wd)

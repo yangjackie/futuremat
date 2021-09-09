@@ -1,6 +1,8 @@
 import os
 import shutil
 
+from pymatgen.analysis.magnetism import CollinearMagneticStructureAnalyzer
+
 from core.calculators.vasp import Vasp
 from core.dao.vasp import *
 from core.utils.loggings import setup_logger
@@ -109,16 +111,17 @@ def __default_spin_polarised_vasp_optimisation_procedure(logger, structure):
     except:
         pass
 
-    vasp = Vasp(**default_bulk_optimisation_set)
-    vasp.set_crystal(structure)
-    vasp.execute()
-    if vasp.self_consistency_error:
+    #vasp = Vasp(**default_bulk_optimisation_set)
+    #vasp.set_crystal(structure)
+    #vasp.execute()
+    if True:
+    #if vasp.self_consistency_error:
         # Spin polarisation calculations might be very difficult to converge.
         # For this case, we converge a non-spin polarisation calculation first and
         # then use the converged wavefunction to carry out spin-polarised optimisation
         logger.info(
             "Spin-polarised SCF convergence failed, try generate a non-spin-polarised wavefunction as starting guess")
-        default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 3, 'LWAVE': True, 'clean_after_success': False})
+        default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 500, 'LWAVE': True, 'clean_after_success': False})
         vasp = Vasp(**default_bulk_optimisation_set)
         vasp.set_crystal(structure)
         vasp.execute()
@@ -154,6 +157,7 @@ def spin_unpolarised_optimization():
     This makes the SCF converge faster and less prone to cause the structural from collapsing due to problematic
     forces from unconverged SCF.
     """
+
     logger = setup_logger(output_filename='relax.log')
 
     update_core_info()
@@ -169,10 +173,17 @@ def spin_unpolarised_optimization():
 
     logger.info("Perform an"
                 " initial spin-non-polarised calculations to help convergence")
-    default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 350, 'EDIFF': '1e-04'})
-    vasp = Vasp(**default_bulk_optimisation_set)
-    vasp.set_crystal(structure)
-    vasp.execute()
+    #default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04','MP_points':[4,4,1],'Gamma_centered': True, 'NCORE':28, 'KPAR':28, })#'executable':'vasp_gam'})
+
+    logger.info("incar options" + str(default_bulk_optimisation_set))
+
+    try:
+        vasp = Vasp(**default_bulk_optimisation_set)
+        vasp.set_crystal(structure)
+        vasp.execute()
+    except:
+        vasp.completed=False
+        pass
 
     logger.info("VASP terminated?: " + str(vasp.completed))
 
@@ -188,7 +199,7 @@ def default_two_d_optimisation():
 
 def spin_unploarised_two_d_optimisation():
     default_bulk_optimisation_set.update(
-        {'executable': 'vasp_std-xy', 'MP_points': [4, 4, 1], 'idipol': 3})
+        {'executable': 'vasp_std-xy', 'MP_points': [4, 4, 1], 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04', 'idipol': 3, 'ispin': 1, 'NCORE':28, 'KPAR':28})
     spin_unpolarised_optimization()
 
 
@@ -280,6 +291,7 @@ single_point_pbe = {'PREC': 'HIGH',
                     'ENCUT': 300,
                     'NSW': 0,
                     'LWAVE': True,
+                    'LVTOT': True,
                     'clean_after_success': False,
                     'use_gw': True,
                     'MP_points': [4, 4, 1],
@@ -326,7 +338,7 @@ pbe_rpa_omega = {'PREC': 'HIGH',
 
 hse06_set = {'LHFCALC': True,
              'HFSCREEN': 0.2,
-             'PRECFOCK': 'FAST',
+             'PRECFOCK': 'Normal',
              'ICHARG': 12}  # Non self-consistent HSE06
 
 
@@ -347,7 +359,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     shutil.copy('../CONTCAR', 'POSCAR')
 
     logger = setup_logger(output_filename="dielectrics.log")
-    single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 48}
+    single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 350, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()
     logger.info("Starting from structure in POSCAR in " + os.getcwd())
 
@@ -368,7 +380,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         logger.info("      " + str(k) + "=" + str(single_pt_set[k]))
 
     single_pt_set.update(single_point_pbe)
-    single_pt_set['IALGO']=48
+    #single_pt_set['IALGO']=48
     vasp = Vasp(**single_pt_set)
     vasp.set_crystal(structure)
     vasp.execute()
@@ -376,7 +388,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     if vasp.completed:
         logger.info("PBE self-consistent run completed properly.")
     else:
-        single_pt_set = {'NCORE': 28, 'NPAR': 4, 'ENCUT': 300, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
+        single_pt_set = {'NCORE': 28, 'NPAR': 4, "ENCUT":350, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
         single_pt_set.update(single_point_pbe)
         single_pt_set['IALGO'] = 38
         structure = VaspReader(input_location='./POSCAR').read_POSCAR()
@@ -414,7 +426,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
 
     if not semiconductor:
         logger.info("Band gap too small, most likely a metal, will not process further")
-        files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'LOCPOT', 'node_info', "WAVECAR",
+        files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'node_info', "WAVECAR",
                  "WAVEDER", 'DOSCAR', 'PROCAR']
         for f in files:
             try:
@@ -434,7 +446,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         logger.info('Hybrid GGA (HSE06) self-consistent run')
         single_pt_set.update(hse06_set)
         single_pt_set.update(
-            {'ALGO': 'ALL', 'LVHAR': True, 'ENCUT': 300, 'ISPIN': 1, 'ICHRG': 1, 'NELM': 80, 'LCHARG': True})
+            {'ALGO': 'ALL', 'LVHAR': True,  'ISPIN': 1, 'ICHRG': 1, 'NELM': 80, 'LCHARG': True, "ENCUT":350})
         vasp = Vasp(**single_pt_set)
         vasp.set_crystal(structure)
         vasp.execute()

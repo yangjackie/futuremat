@@ -20,6 +20,23 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import gaussian_kde
 from sklearn.neighbors import KernelDensity
+from phonopy.phonon.band_structure import *
+
+import matplotlib.pyplot as plt
+from matplotlib import rc
+rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
+rc('text', usetex=True)
+
+import matplotlib.pylab as pylab
+
+params = {'legend.fontsize': '14',
+          'figure.figsize': (6, 5),
+          'axes.labelsize': 18,
+          'axes.titlesize': 18,
+          'xtick.labelsize': 16,
+          'ytick.labelsize': 16}
+pylab.rcParams.update(params)
+
 
 class AnharmonicScore(object):
 
@@ -91,8 +108,7 @@ class AnharmonicScore(object):
             if not self.mode_resolved:
                 self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS')
             else:
-                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS'
-                                      ,primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS',primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
             self.phonon.produce_force_constants()
 
             print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
@@ -139,10 +155,6 @@ class AnharmonicScore(object):
         print("Need to calculate the mode resolved anharmonic scores, first get the phonon eigenvectors")
         from core.models.element import atomic_mass_dict
 
-        self.atomic_masses = []
-        for a in self.ref_frame.all_atoms(sort=False, unique=False):
-            for _ in range(3):
-                self.atomic_masses.append(atomic_mass_dict[a.label.upper()])
 
         from pymatgen.symmetry.bandstructure import HighSymmKpath
         from core.internal.builders.crystal import map_to_pymatgen_Structure
@@ -161,6 +173,12 @@ class AnharmonicScore(object):
         self.eigvecs = []
         self.eigvals = []
 
+        import math
+        self.atomic_masses = []
+        for a in self.ref_frame.all_atoms(sort=False, unique=False):
+            for _ in range(3):
+                self.atomic_masses.append(1.0 / math.sqrt(atomic_mass_dict[a.label.upper()]))
+
         from phonopy.units import VaspToTHz
 
         if _eigvecs is not None:
@@ -169,14 +187,94 @@ class AnharmonicScore(object):
                     for k, vec in enumerate(eigvecs_at_q.T):
                         #vec = np.array(vec).reshape(self.ref_frame.total_num_atoms(), 3)
                         self.eigvecs.append(self.atomic_masses*vec)
-                        self.eigvals.append(_eigvals[i][j][k]*VaspToTHz)
+                        eigv=_eigvals[i][j][k]
+                        self.eigvals.append(np.sqrt(abs(eigv))*np.sign(eigv)*VaspToTHz)
         print('eigenvector shape ', np.shape(vec))
         print('Total number of eigenstates ' + str(len(self.eigvals)))
 
     def mode_resolved_sigma(self):
         if self.mode_resolved is not True: raise Exception("eigenmodes not prepared for running this function")
-        self.mode_sigmas = [np.dot(self.anharmonic_forces,eigvec).std()/np.dot(self.dft_forces,eigvec).std() for eigvec in self.eigvecs]
+        print("do dot")
+        dft_dot = np.dot(self.dft_forces, np.array(self.eigvecs).T).std(axis=0)
+        anh_dot = np.dot(self.anharmonic_forces, np.array(self.eigvecs).T).std(axis=0)
+        print(np.shape(dft_dot), np.shape(anh_dot))
+        print("finished dot")
+        #self.mode_sigmas = [np.dot(self.anharmonic_forces,eigvec).std()/np.dot(self.dft_forces,eigvec).std() for eigvec in self.eigvecs]
+        self.mode_sigmas = np.divide(anh_dot,dft_dot)
         return self.eigvals,self.mode_sigmas
+
+    def mode_resolved_sigma_band(self):
+        from pymatgen.symmetry.bandstructure import HighSymmKpath
+        from core.internal.builders.crystal import map_to_pymatgen_Structure
+        pmg_path = HighSymmKpath(map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3)
+        self._kpath = pmg_path._kpath
+
+
+        distances = self.phonon.band_structure.__dict__['_distances']
+        print(np.shape(distances[0]))
+        eigvals = self.phonon.band_structure.__dict__['_frequencies']
+        print(np.shape(eigvals[0]))
+        eigvecs = self.phonon.band_structure.__dict__['_eigenvectors']
+
+        sp_pts = self.phonon.band_structure.__dict__['_special_points']
+        print(sp_pts)
+        sp_pt_labels = self._kpath['path']
+        print(sp_pt_labels)
+
+        f, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]})
+        from phonopy.units import VaspToTHz
+        freqs=[]
+        sigmas=[]
+        for j in range(len(distances)):
+
+            for i in range(len(eigvals[j].T)):
+                #now need something to calculate the sigma here along each point
+                print(str(j) + '/' + str(len(distances)-1), str(i)+'/'+str(len(eigvals[j].T)-1))
+                _sigmas=[]
+                for k in range(len(distances[j])):
+                    e=eigvecs[j][k][i]
+                    _s=np.dot(self.anharmonic_forces,e).std()/np.dot(self.dft_forces,e).std()
+                    _sigmas.append(np.exp(1.5*_s))
+                    #sigmas.append(_s)
+                    #eigv=eigvals[j][k][i]
+                    #eigv=np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz
+                    #freqs.append(eigv)
+                #print(max(sigmas),min(sigmas))
+                #sigmas=[np.dot(self.anharmonic_forces,e).std()/np.dot(self.dft_forces,e).std() for e in eigvecs[j][:][i]]
+                #print(sigmas)
+                a0.plot(distances[j],eigvals[j].T[i],'-',c='#FFBB00',alpha=0.75,linewidth=0.85)
+                a0.scatter(distances[j],eigvals[j].T[i],marker='o',s=_sigmas,fc='#3F681C',alpha=0.45)
+
+        a0.set_xlim(min(distances[0]),max(distances[-1]))
+
+        unique_labels = []
+        for i in range(len(sp_pt_labels)):
+            for j in range(len(sp_pt_labels[i])):
+                if sp_pt_labels[i][j]=='\\Gamma': _l = "$\\Gamma$"
+                elif "_1" in sp_pt_labels[i][j]: _l = sp_pt_labels[i][j].replace("_1","")
+                else: _l = sp_pt_labels[i][j]
+                if (j==len(sp_pt_labels[i])-1) and (i!=len(sp_pt_labels)-1):
+                    unique_labels.append(_l+'$\\vert$')
+                elif (i>0) and (j==0):
+                    unique_labels[-1] = unique_labels[-1]+_l
+                else:
+                    unique_labels.append(_l)
+
+        a0.set_xticks(sp_pts)
+        a0.set_xticklabels(unique_labels)
+        for i in sp_pts:
+            a0.axvline(x=i,ls=':',c='k')
+
+        a0.set_ylabel("Frequency (THz)")
+
+        freqs,sigmas=self.mode_resolved_sigma()
+        a1.scatter(sigmas,freqs,marker='o',fc='#3F681C',alpha=0.6, s=1)
+        a1.set_ylim(a0.get_ylim())
+        a1.set_xlabel('$\\sigma$ (300 K)')
+        a1.axvline(x=1, ls=':', c='k')
+        a1.set_yticks([])
+        plt.tight_layout()
+        plt.savefig('phonon_band_sigma.pdf')
 
     def plot_fc(self):
         plt.matshow(self.force_constant)
@@ -447,6 +545,7 @@ class AnharmonicScore(object):
             print(np.shape(rmse.std(axis=(1, 2), dtype=np.float64)))
             sigma = rmse.std(axis=(1, 2), dtype=np.float64) / std.std(axis=(1, 2), dtype=np.float64)
             return sigma, self.time_series
+
 
 
 if __name__ == "__main__":

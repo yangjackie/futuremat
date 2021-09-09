@@ -265,7 +265,8 @@ class Vasp(Calculator):
         # update the vasp executable depending on the k-Point settings
         if (self.crystal.gamma_only is True) and ('tst' not in self.executable):
             logger.info("Using gamma only version VASP for calculations @ Gamma point only.")
-            self.executable = 'vasp_gam'
+            if self.executable != 'vasp_gam-xy':
+                self.executable = 'vasp_gam'
         else:
             if self.executable == 'vasp_gam':
                 self.executable = 'vasp_std'
