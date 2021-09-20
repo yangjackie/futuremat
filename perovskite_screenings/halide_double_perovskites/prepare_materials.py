@@ -11,7 +11,7 @@ mpr = MPRester(MPRest_key)
 response = mpr.session.get("https://materialsproject.org/materials/10.17188/1476059")
 text = response.text
 for t in text.split():
-    if 'mp-' in t: #and ('mp-1113364' in t):
+    if ('mp-' in t) and ('mp-1111031' in t):
         mp_id=t.split('"')[1].split("/")[-1]
         data=mpr.get_data(mp_id)
 

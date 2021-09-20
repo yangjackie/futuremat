@@ -93,6 +93,7 @@ int_keys = [
     'lmaxmix',  #
     'lorbit',  # create PROOUT
     'maxmix',  #
+    'mdalgo',
     'ngx',  # FFT mesh for wavefunctions, x
     'ngxf',  # FFT mesh for charges x
     'ngy',  # FFT mesh for wavefunctions, y
@@ -237,6 +238,11 @@ class Vasp(Calculator):
         except KeyError:
             self.kpoint_str = None
 
+        try:
+            self.write_poscar = kwargs['write_poscar']
+        except KeyError:
+            self.write_poscar = True
+
     def set_mp_grid_density(self, **kwargs):
         self.mp_grid_density = None
         self.MP_points = None
@@ -279,8 +285,11 @@ class Vasp(Calculator):
         """
         logger.info('Setting up VASP calculation, write input file ...')
 
-        self.writer.write_structure(self.crystal, filename='POSCAR', magnetic=self.magnetic)
-        logger.info('POSCAR written')
+        if self.write_poscar:
+            self.writer.write_structure(self.crystal, filename='POSCAR', magnetic=self.magnetic)
+            logger.info('POSCAR written')
+        else:
+            logger.info("Skip writing POSCAR, use existing POSCAR (temp hack for MD runs")
 
         self.writer.write_potcar(self.crystal, sort=False, unique=True, magnetic=self.magnetic, use_GW=self.use_gw)
         logger.info('POTCAR written')
@@ -315,7 +324,7 @@ class Vasp(Calculator):
         """
         logger.info("Clean up directory after VASP executed successfully.")
         files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR',  'LOCPOT',
-                 'node_info', "WAVECAR", "WAVEDER", 'DOSCAR', 'PROCAR']
+                 'node_info', "WAVECAR", "WAVEDER", 'DOSCAR', 'PROCAR', 'REPORT']
         for f in files:
             try:
                 os.remove(f)
