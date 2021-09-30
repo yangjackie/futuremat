@@ -563,6 +563,8 @@ if __name__ == "__main__":
                         help="plot the joint distributions of normalized total and anharmonic forces for each atom in the structure")
     parser.add_argument("--md_time_step", type=float, default=1,
                         help="Time step for the molecular dynamic trajectory (in fs), default: 1fs")
+    parser.add_argument("--fc", type=str,  default=None,
+                        help='Name of the force constant file')
 
     parser.add_argument('--sigma', action='store_true',
                         help="Return the structural sigma value from this MD trajectory")
@@ -580,7 +582,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     scorer = AnharmonicScore(md_frames=args.md_xml, unit_cell_frame=args.unit_cell_frame, ref_frame=args.ref_frame, atoms=None,
-                             potim=args.md_time_step)
+                             potim=args.md_time_step, force_constants=args.fc)
 
     from matplotlib import rc
 
@@ -596,7 +598,7 @@ if __name__ == "__main__":
     if args.sigma:
         sigma, time_stps = scorer.structural_sigma(return_trajectory=args.trajectory)
         if args.plot_trajectory:
-            print(len(sigma))
+            #print(len(sigma))
             plt.plot(time_stps, sigma, 'b-')
             plt.xlabel("Time (fs)", fontsize=16)
             plt.ylabel("$\\sigma(t)$", fontsize=16)

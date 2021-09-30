@@ -273,7 +273,7 @@ def molecular_dynamics_workflow(force_rerun=False):
         logger.info("previous phonopy calculations did not complete properly, will not proceed...")
         raise Exception("No phonopy data! QUIT")
     else:
-        spin_polarized = __check_phonon_run_settings()
+        spin_polarized = check_phonon_run_settings()
         structure = __load_supercell_structure()
         structure.gamma_only = True
         logger.info("Will run MD with spin polarization: " + str(spin_polarized))
@@ -281,14 +281,17 @@ def molecular_dynamics_workflow(force_rerun=False):
     equilibrium_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
                        'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
-                       'iwavpr': 11, 'encut': 520, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': False,
+                       'iwavpr': 11, 'encut': 520, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
                        'write_poscar': True}
 
     production_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
-                      'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 800, 'isif': 1, 'tebeg': 300,
+                      'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 400, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
                       'encut': 520, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
-                      'use_gw': False, 'write_poscar': False}
+                      'use_gw': True, 'write_poscar': False}
+
+    if spin_polarized:
+        raise Exception("Skip running spin polarized MD first ...")
 
     if spin_polarized:
         equilibrium_set['ispin'] = 2
@@ -375,6 +378,16 @@ def molecular_dynamics_workflow(force_rerun=False):
     if run_equilibration:
         run_production = True
     else:
+        has_andersen = False
+        if os.path.exists('./OUTCAR_prod'):
+            logger.info("Check if previous production run has applied andersen thermostat")
+            outcar = open('./OUTCAR_prod', 'r')
+            for l in outcar.readlines():
+                if 'ANDERSEN_PROB =' in l:
+                    prob = float(l.split()[-1])
+                    if prob == 0.5:
+                        has_andersen = True
+
         if os.path.exists('./CONTCAR_prod') and os.path.exists('./OSZICAR_prod'):
             logger.info("Previous production run output exists, check how many cylces have been run...")
             oszicar = open('./OSZICAR_prod', 'r')
@@ -382,13 +395,18 @@ def molecular_dynamics_workflow(force_rerun=False):
             for l in oszicar.readlines():
                 if 'T=' in l:
                     cycles_ran += 1
-            if cycles_ran == production_set['nsw']:
+            if cycles_ran >= production_set['nsw']:
                 logger.info('Previous production run completed, will skip running production MD')
                 run_production = False
             else:
                 logger.info('Previous production run not completed, will rerun production MD')
                 shutil.copy('CONTCAR_equ', 'POSCAR')
                 run_production = True
+
+        if not run_production:
+            if not has_andersen:
+                run_production = True
+                logger.info("Previous run has not applied thermal stats, rerun production MD")
 
     if run_production:
         try:
@@ -400,6 +418,7 @@ def molecular_dynamics_workflow(force_rerun=False):
             pass
 
         if not vasp.completed:
+            dav_error = False
             logfile = open('vasp.log', 'r')
             for f in logfile.readlines():
                 if 'Error EDDDAV' in f:
@@ -424,7 +443,7 @@ def molecular_dynamics_workflow(force_rerun=False):
     os.chdir(cwd)
 
 
-def __check_phonon_run_settings():
+def check_phonon_run_settings():
     spin_polarized = False
     if os.path.exists('./phonon'):
         os.chdir('./phonon')

@@ -17,6 +17,7 @@ float_keys = [
     'amin',  #
     'amix',  #
     'amix_mag',  #
+    'andersen_prob', #probability for colliding with the thermal bath to maintain constant temperatrue in thermostat.
     'bmix',  # tags for mixing
     'bmix_mag',  #
     'deper',  # relative stopping criterion for optimization of eigenvalue
