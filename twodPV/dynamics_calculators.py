@@ -7,71 +7,6 @@ from core.internal.builders.crystal import build_supercell
 from twodPV.calculators import default_bulk_optimisation_set, setup_logger, update_core_info, load_structure
 import argparse, os, tarfile, shutil
 
-
-def default_symmetry_preserving_optimisation():
-    # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
-    # structure.
-    default_bulk_optimisation_set.update(
-        {'ISIF': 7, 'Gamma_centered': True, 'NCORE': 28, 'ENCUT': 520, 'PREC': "ACCURATE", 'ispin': 2, 'IALGO': 38,
-         'use_gw': True})
-    structural_optimization_with_initial_magmom()
-
-
-def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
-    """
-    Perform geometry optimization without spin polarisation. It is always helpful to converge an initial
-    structure without spin polarization before further refined with a spin polarization calculations.
-    This makes the SCF converge faster and less prone to cause the structural from collapsing due to problematic
-    forces from unconverged SCF.
-    """
-    MAX_RETRY = 3
-    if retried is None:
-        retried = 0
-
-    logger = setup_logger(output_filename='relax.log')
-
-    update_core_info()
-    try:
-        os.remove("./WAVECAR")
-        logger.info("Previous WAVECAR found, remove before start new optimisation.")
-    except:
-        pass
-
-    structure = load_structure(logger)
-    structure.gamma_only = gamma_only
-
-    default_bulk_optimisation_set['magmom'] = magmom_string_builder(structure)
-
-    logger.info("incar options" + str(default_bulk_optimisation_set))
-
-    try:
-        vasp = Vasp(**default_bulk_optimisation_set)
-        vasp.set_crystal(structure)
-        vasp.execute()
-    except:
-        vasp.completed = False
-        pass
-
-    logger.info("VASP terminated?: " + str(vasp.completed))
-
-    # if (vasp.completed is not True) and (retried<MAX_RETRY):
-    #    retried+=1
-    #    structural_optimization_with_initial_magmom(retried=retried)
-
-
-def magmom_string_builder(structure):
-    from core.internal.builders.crystal import map_to_pymatgen_Structure
-    analyzer = CollinearMagneticStructureAnalyzer(structure=map_to_pymatgen_Structure(structure), make_primitive=False,
-                                                  overwrite_magmom_mode='replace_all')
-    magmom_string = ""
-    all_zeros = True
-    for i in analyzer.magmoms:
-        magmom_string += '1*' + str(i) + ' '
-        if i != 0:
-            all_zeros = False
-    return magmom_string, all_zeros
-
-
 def phonopy_workflow(force_rerun=False):
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy.interface.vasp import parse_set_of_forces
@@ -82,9 +17,9 @@ def phonopy_workflow(force_rerun=False):
     gamma_centered = True
     force_no_spin = False
     use_default_encut = False
-    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
+    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 1]]
     ialgo = 38
-    use_gw = False
+    use_gw = True
     ncore = 32
 
     if mp_points != [1, 1, 1]:
@@ -92,19 +27,19 @@ def phonopy_workflow(force_rerun=False):
     else:
         gamma_only = True
 
-    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'encut': 520, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
+    phonopy_set = {'prec': 'Normal', 'ibrion': -1, 'encut': 350, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
-                   'ismear': 0, 'MP_points': mp_points, 'nelm': 150, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6}
+                   'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'amin':0.01}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
 
     logger = setup_logger(output_filename='phonopy.log')
     cwd = os.getcwd()
     vasp = Vasp()
-    vasp.check_convergence()
-    if not vasp.completed:
-        logger.exception("Initial structure optimimization failed, will not proceed!")
-        raise Exception("Initial structure optimimization failed, will not proceed!")
+    #vasp.check_convergence(outcar='./OUTCAR_nospin')
+    #if not vasp.completed:
+    #    logger.exception("Initial structure optimimization failed, will not proceed!")
+    #    raise Exception("Initial structure optimimization failed, will not proceed!")
 
     if os.path.isfile('./force_constants.hdf5'):
         logger.info("previous phonopy calculations completed, will not rerun it again")
@@ -128,33 +63,36 @@ def phonopy_workflow(force_rerun=False):
                     print("try to rerun all VASP calculations with RMM for ialgo")
 
     try:
-        unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
+        if os.path.isfile('./CONTCAR_nospin'):
+            unitcell, _ = read_crystal_structure('./CONTCAR_nospin', interface_mode='vasp')
+        elif os.path.isfile('./CONTCAR'):
+            unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
     except:
         raise Exception("No CONTCAR!")
 
     if not force_rerun:
-        if not os.path.exists('./phonon'):
-            os.mkdir('./phonon')
-        elif os.path.isfile("./phonon.tar.gz"):
-            tf = tarfile.open("./phonon.tar.gz")
+        if not os.path.exists('./phonopy'):
+            os.mkdir('./phonopy')
+        elif os.path.isfile("./phonopy.tar.gz"):
+            tf = tarfile.open("./phonopy.tar.gz")
             tf.extractall()
     else:
         try:
-            shutil.rmtree('./phonon')
+            shutil.rmtree('./phonopy')
         except:
             pass
         try:
-            os.rmtree('./phonon')
+            os.rmtree('./phonopy')
         except:
             pass
-        os.mkdir('./phonon')
+        os.mkdir('./phonopy')
 
         try:
-            os.remove("./phonon.tar.gz")
+            os.remove("./phonopy.tar.gz")
         except:
             pass
 
-    os.chdir('./phonon')
+    os.chdir('./phonopy')
 
     phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
     if not force_rerun:
@@ -189,8 +127,8 @@ def phonopy_workflow(force_rerun=False):
                     logger.info("Configuration " + str(i + 1) + '/' + str(
                         len(supercells)) + " previous calculation converged.")
                 else:
-                    calculate_next = False
-                    proceed = False
+                    calculate_next = True
+                    proceed = True
                     logger.info('At least one finite displaced configuration cannot converge, quit the rest')
 
             if proceed:
@@ -198,8 +136,8 @@ def phonopy_workflow(force_rerun=False):
                 write_crystal_structure('POSCAR', sc, interface_mode='vasp')
                 structure = load_structure(logger)
                 structure.gamma_only = gamma_only
-                phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
-                phonopy_set['ispin'] = 2
+                #phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
+                phonopy_set['ispin'] = 1
 
                 if force_rerun:
                     phonopy_set['ispin'] = 1
@@ -247,15 +185,15 @@ def phonopy_workflow(force_rerun=False):
         if os.path.isfile('force_constants.hdf5'):
             shutil.copy('./force_constants.hdf5', '../force_constants.hdf5')
 
-    with tarfile.open('phonon.tar.gz', mode='w:gz') as archive:
-        archive.add('phonon.tar.gz', recursive=True)
+    with tarfile.open('phonopy.tar.gz', mode='w:gz') as archive:
+        archive.add('phonopy.tar.gz', recursive=True)
 
     try:
-        shutil.rmtree('./phonon')
+        shutil.rmtree('./phonopy')
     except:
         pass
     try:
-        os.rmtree('./phonon')
+        os.rmtree('./phonopy')
     except:
         pass
 
@@ -272,27 +210,29 @@ def molecular_dynamics_workflow(force_rerun=False):
     if not os.path.isfile('./force_constants.hdf5'):
         logger.info("previous phonopy calculations did not complete properly, will not proceed...")
         raise Exception("No phonopy data! QUIT")
-    else:
-        spin_polarized = check_phonon_run_settings()
-        structure = __load_supercell_structure()
-        structure.gamma_only = True
-        logger.info("Will run MD with spin polarization: " + str(spin_polarized))
+    #else:
+    #    spin_polarized = check_phonon_run_settings()
+    structure = __load_supercell_structure()
+    structure.gamma_only = True
 
-    equilibrium_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
-                       'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
+    #logger.info("Will run MD with spin polarization: " + str(spin_polarized))
+
+    equilibrium_set = {'prec': 'normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40, 'amin':0.01,
+                       'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
-                       'iwavpr': 11, 'encut': 520, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
+                       'iwavpr': 11, 'encut': 350, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
                        'write_poscar': True}
 
-    production_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
-                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 400, 'isif': 1, 'tebeg': 300,
+    production_set = {'prec': 'normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40, 'amin':0.01,
+                      'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 400, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
-                      'encut': 520, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
+                      'encut': 350, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
                       'use_gw': True, 'write_poscar': False}
 
-    if spin_polarized:
-        raise Exception("Skip running spin polarized MD first ...")
+    #if spin_polarized:
+    #    raise Exception("Skip running spin polarized MD first ...")
 
+    spin_polarized = False
     if spin_polarized:
         equilibrium_set['ispin'] = 2
         equilibrium_set['magmom'], _ = magmom_string_builder(structure)
@@ -442,31 +382,11 @@ def molecular_dynamics_workflow(force_rerun=False):
 
     os.chdir(cwd)
 
-
-def check_phonon_run_settings():
-    spin_polarized = False
-    if os.path.exists('./phonon'):
-        os.chdir('./phonon')
-        f = open('./ph-POSCAR-0/vasp.log', 'r')
-        for line in f.readlines():
-            if 'F=' in line:
-                if 'mag' not in line:
-                    spin_polarized = False
-                if 'mag' in line:
-                    magnetization = abs(float(line.split()[-1]))
-                    if magnetization >= 0.05:
-                        spin_polarized = True
-                    else:
-                        spin_polarized = False
-        os.chdir('..')
-    return spin_polarized
-
-
 def __load_supercell_structure():
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy import Phonopy
-    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
-    unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
+    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 1]]
+    unitcell, _ = read_crystal_structure('./CONTCAR_nospin', interface_mode='vasp')
     phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
     write_crystal_structure('POSCAR_super', phonon.supercell, interface_mode='vasp')
     supercell = VaspReader(input_location='./POSCAR_super').read_POSCAR()
@@ -474,17 +394,14 @@ def __load_supercell_structure():
     return supercell
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='workflow control for double perovskite ',
+
+    parser = argparse.ArgumentParser(description='workflow control for calculating the dynamics of 2D perovskites',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--opt", action='store_true', help='perform initial structural optimization')
     parser.add_argument("--phonopy", action='store_true', help='run phonopy calculations')
     parser.add_argument("--force_rerun", action='store_true', help='force rerun  calculations')
     parser.add_argument("--MD", action='store_true', help='run MD calculations')
 
     args = parser.parse_args()
-
-    if args.opt:
-        default_symmetry_preserving_optimisation()
 
     if args.phonopy:
         phonopy_workflow(force_rerun=args.force_rerun)

@@ -69,7 +69,10 @@ class AnharmonicScore(object):
             self.atom_masks = [id for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if
                                atom.label in atoms]
 
-        self.md_frames = md_frames  # require the vasprun.xml containing the MD data
+        if isinstance(md_frames,list):
+            self.md_frames = md_frames # require the vasprun.xml containing the MD data
+        elif isinstance(md_frames,str):
+            self.md_frames = [md_frames]
 
         self.get_dft_md_forces()
         self.get_all_md_atomic_displacements()
@@ -292,19 +295,20 @@ class AnharmonicScore(object):
 
     def get_dft_md_forces(self):
         all_forces = []
-        for event, elem in etree.iterparse(self.md_frames):
-            if elem.tag == 'varray':
-                if elem.attrib['name'] == 'forces':
-                    this_forces = []
-                    if not self.mode_resolved:
-                        for v in elem:
-                            this_force = [float(_v) for _v in v.text.split()]
-                            this_forces.append(this_force)
-                    else:
-                        for v in elem:
-                            for this_force in [float(_v) for _v in v.text.split()]:
+        for frame in self.md_frames:
+            for event, elem in etree.iterparse(frame):
+                if elem.tag == 'varray':
+                    if elem.attrib['name'] == 'forces':
+                        this_forces = []
+                        if not self.mode_resolved:
+                            for v in elem:
+                                this_force = [float(_v) for _v in v.text.split()]
                                 this_forces.append(this_force)
-                    all_forces.append(this_forces)
+                        else:
+                            for v in elem:
+                                for this_force in [float(_v) for _v in v.text.split()]:
+                                    this_forces.append(this_force)
+                        all_forces.append(np.array(this_forces))
 
         print('MD force vector shape ', np.shape(this_forces))
         self.dft_forces = np.array(all_forces)
@@ -312,15 +316,25 @@ class AnharmonicScore(object):
         print("Atomic forces along the MD trajectory loaded\n")
 
     def get_all_md_atomic_displacements(self):
+
         all_positions = []
-        for event, elem in etree.iterparse(self.md_frames):
-            if elem.tag == 'varray':
-                if elem.attrib['name'] == 'positions':
-                    this_positions = []
-                    for v in elem:
-                        this_position = [float(_v) for _v in v.text.split()]
-                        this_positions.append(this_position)
-                    all_positions.append(np.array(this_positions))
+        for frame in self.md_frames:
+            if len(self.md_frames)!=1:
+                this = []
+            for event, elem in etree.iterparse(frame):
+                if elem.tag == 'varray':
+                    if elem.attrib['name'] == 'positions':
+                        this_positions = []
+                        for v in elem:
+                            this_position = [float(_v) for _v in v.text.split()]
+                            this_positions.append(this_position)
+                        if len(self.md_frames) != 1:
+                            this.append(this_positions)
+                        else:
+                            all_positions.append(np.array(this_positions))
+            if len(self.md_frames) != 1:
+                all_positions.append(this[-1])
+
         # only need those with forces
         all_positions = all_positions[-len(self.dft_forces):]
         all_positions = np.array(all_positions)
@@ -538,12 +552,13 @@ class AnharmonicScore(object):
 
         if not return_trajectory:
             print(return_trajectory, 'calculate sigma')
-            sigma = rmse.std() / std.std()
+            sigma = rmse.std(dtype=np.float64) / std.std(dtype=np.float64)
             print("Sigma for entire structure over the MD trajectory is ", str(sigma))
             return sigma, self.time_series
         else:
-            print(np.shape(rmse.std(axis=(1, 2), dtype=np.float64)))
-            sigma = rmse.std(axis=(1, 2), dtype=np.float64) / std.std(axis=(1, 2), dtype=np.float64)
+            sigma = rmse.std(axis=(1,2), dtype=np.float64) / std.std(axis=(1,2), dtype=np.float64)
+            print('sigma is ', sigma)
+            print('averaged sigma is ',sigma.mean())
             return sigma, self.time_series
 
 
@@ -551,7 +566,7 @@ class AnharmonicScore(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Options for analyzing anharmonic scores from MD trajectory',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--md_xml", type=str,
+    parser.add_argument("--md_xml", type=str, nargs='+',
                         help="vasprun.xml file containing the molecular dynamic trajectory")
     parser.add_argument("--ref_frame", type=str,
                         help="POSCAR for the reference frame containing the static atomic positions at 0K")
@@ -597,6 +612,7 @@ if __name__ == "__main__":
 
     if args.sigma:
         sigma, time_stps = scorer.structural_sigma(return_trajectory=args.trajectory)
+        print('sigma is ',sigma)
         if args.plot_trajectory:
             #print(len(sigma))
             plt.plot(time_stps, sigma, 'b-')

@@ -137,16 +137,16 @@ def sigma_grid(db, C='F'):
 
             if row is not None:
                 try:
-                    if row.key_value_pairs['sigma_300K_single'] > 5:
+                    if row.key_value_pairs['sigma_300K_single'] > 50:
                         continue
-                    grid[b_count][a_count] = row.key_value_pairs['sigma_300K_single']
+                    grid[b_count][a_count] = math.log(row.key_value_pairs['sigma_300K_single'])
                 except KeyError:
                     continue
 
     rows, cols = grid.shape
     grid = np.ma.masked_where(grid == 100, grid)
 
-    # cmap = plt.cm.tab20c
+    #cmap = plt.cm.tab20c
     cmap = plt.cm.coolwarm
     cmap.set_bad(color='white')
 
@@ -158,7 +158,7 @@ def sigma_grid(db, C='F'):
     plt.tick_params(labelsize=6)
 
     cb = plt.colorbar(shrink=0.7)
-    cb.set_label(label='$\\sigma$ (300 K)', size=14)
+    cb.set_label(label='log($\\sigma$) (300 K)', size=14)
     cb.ax.tick_params(labelsize=10)
 
     plt.tight_layout()
@@ -1349,9 +1349,9 @@ if __name__ == "__main__":
     #    distributions_of_lowest_vibrational_eigenfrequencies(args.db, C=c)
 
     #sigma_kappa_plot(args.db, systems='chalcogenides')
-    # sigma_grid(args.db,C='Se')
+    sigma_grid(args.db,C='O')
     #formation_energy_landscapes(args.db,systems='chalcogenides',x='tolerance_factor')
-    formation_energy_grid(args.db, C=args.C,full_relax=False,random=True)
+    #formation_energy_grid(args.db, C=args.C,full_relax=False,random=True)
 
     # formation_energy_structural_deformation_analysis(args.db,systems='chalcogenides')
     # sigma_time_convergence_plots(args.db,systems='chalcogenides')
