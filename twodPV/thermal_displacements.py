@@ -30,6 +30,9 @@ if not os.path.exists('thermal_displacements'):
 os.chdir('thermal_displacements')
 
 for i,frame in enumerate(supercells):
-    write_crystal_structure('POSCAR-'+str(i),frame)
+    os.mkdir('config-'+str(i))
+    os.chdir('config-'+str(i))
+    write_crystal_structure('POSCAR',frame)
+    os.chdir("..")
 
 os.chdir('..')

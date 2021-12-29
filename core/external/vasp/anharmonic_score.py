@@ -32,7 +32,7 @@ import matplotlib.pylab as pylab
 params = {'legend.fontsize': '14',
           'figure.figsize': (6, 5),
           'axes.labelsize': 18,
-          'axes.titlesize': 18,
+          'axes.titlesize': 14,
           'xtick.labelsize': 16,
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
@@ -52,6 +52,7 @@ class AnharmonicScore(object):
                  third_order_fc='./phono3py/fc3.hdf5',
                  include_fourth_order=False,
                  fourth_order_fc=None,
+                 force_sets_filename='FORCE_SETS',
                  mode_resolved=False):
         self.mode_resolved = mode_resolved
 
@@ -98,7 +99,7 @@ class AnharmonicScore(object):
             self.force_constant = np.zeros((new_shape, new_shape))
             self.force_constant = self.phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
 
-        elif force_constants is None:
+        elif (force_constants is None):
             """
             Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
             reconstructing the force constants for supercells from primitive cells
@@ -109,9 +110,9 @@ class AnharmonicScore(object):
             # as the identity matrix, making the phonopy to treat the supercell as the primitive, rather than generate them
             # automatically
             if not self.mode_resolved:
-                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS')
+                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename=force_sets_filename)
             else:
-                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename='FORCE_SETS',primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename=force_sets_filename,primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
             self.phonon.produce_force_constants()
 
             print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
@@ -580,24 +581,25 @@ if __name__ == "__main__":
                         help="Time step for the molecular dynamic trajectory (in fs), default: 1fs")
     parser.add_argument("--fc", type=str,  default=None,
                         help='Name of the force constant file')
-
     parser.add_argument('--sigma', action='store_true',
                         help="Return the structural sigma value from this MD trajectory")
     parser.add_argument('--trajectory', action='store_true',
                         help="Whether to return sigma for each frame of the MD trajectory")
-
     parser.add_argument('--plot_trajectory', action='store_true',
                         help="Whether to plot sigma for each frame of the MD trajectory")
-
     parser.add_argument("-X", "--X", type=str, default='DFT',
                         help='data to plot along the X-axis for the joint probability distribution, default: DFT force')
     parser.add_argument("-Y", "--Y", type=str, default='anh',
                         help='data to plot along the Y-axis for the joint probability distribution, default: anharmonic forces')
+    parser.add_argument("-mr","--mode_resolved", action='store_true',
+                        help='Plot the anharmonic score as a function of harmonic phonon frequencies.')
+    parser.add_argument("-band", "--band", action='store_true',
+                        help='Plot the anharmonic score on the phonon band structure.')
 
     args = parser.parse_args()
 
     scorer = AnharmonicScore(md_frames=args.md_xml, unit_cell_frame=args.unit_cell_frame, ref_frame=args.ref_frame, atoms=None,
-                             potim=args.md_time_step, force_constants=args.fc)
+                             potim=args.md_time_step, force_constants=args.fc, mode_resolved=args.mode_resolved)
 
     from matplotlib import rc
 
@@ -620,3 +622,17 @@ if __name__ == "__main__":
             plt.ylabel("$\\sigma(t)$", fontsize=16)
             plt.tight_layout()
             plt.savefig("sigma_trajectory.pdf")
+
+    if args.mode_resolved:
+        freqs, sigmas = scorer.mode_resolved_sigma()
+        plt.figure(figsize=(3,5))
+        plt.scatter(sigmas,freqs,marker='o',alpha=0.5,s=5,c='#FA6775')
+        plt.ylim([-6.197006246175,5.744994980475])
+        plt.xticks([0,2,4,6,8],['$0$','$2$','$4$','$6$','$8$'])
+        plt.xlabel('$\\sigma^{(2)}(\\mathbf{q},\\nu)$')
+        plt.ylabel('Frequency (THz)')
+        plt.tight_layout()
+        plt.savefig("sigma_mode.pdf")
+
+    if args.mode_resolved and args.band:
+        scorer.mode_resolved_sigma_band()

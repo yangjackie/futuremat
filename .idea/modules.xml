@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/futuremat.iml" filepath="$PROJECT_DIR$/.idea/futuremat.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../futuremat_public/.idea/futuremat_public.iml" filepath="$PROJECT_DIR$/../futuremat_public/.idea/futuremat_public.iml" />
+      <module fileurl="file://$USER_HOME$/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/visualisation/.idea/visualisation.iml" filepath="$USER_HOME$/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/visualisation/.idea/visualisation.iml" />
     </modules>
   </component>
 </project>

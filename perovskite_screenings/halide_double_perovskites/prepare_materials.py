@@ -18,26 +18,13 @@ for t in text.split():
         system_name='dpv_'+data[0]['pretty_formula']
         print(system_name,mp_id)
 
-        #print(mpr.get_doc(mp_id)['input'])
-
-        #incar_dict = mpr.get_doc(mp_id)['input']['incar']
-        #incar_dict['ISIF'] = 7
-
-        #incar=Incar.from_dict(incar_dict)
-
         structure=mpr.get_structure_by_material_id(mp_id)
         wd = cwd + '/' + system_name
         if not os.path.exists(wd):
             os.makedirs(wd)
 
         os.chdir(wd)
-        #if os.path.isfile('./INCAR'):
-        #    os.remove('./INCAR')
-        #incar.write_file('INCAR')
-
-        #transformer = ConventionalCellTransformation()
-        #structure = transformer.apply_transformation(structure)
-
+        
         structure.to(fmt='poscar',filename='POSCAR')
         os.chdir(cwd)
 
