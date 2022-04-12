@@ -7,6 +7,7 @@ import os
 import math
 import argparse
 
+from matplotlib.lines import Line2D
 from numpy import dot
 
 from core.internal.builders.crystal import map_ase_atoms_to_crystal
@@ -135,30 +136,31 @@ def generalised_tolerance_factor(r_a, r_m, r_mp, r_x):
     return nominator / denominator
 
 
-def formation_energy_landscape(db, uids):
-    data_dict = {'formation_energies': [], 'octahedral_factors': [], 'octahedral_mismatch': [], 'tolerance_factors': []}
+def formation_energy_landscape(db, uids, switch='A-site'):
+    data_dict = {'formation_energies': [], 'octahedral_factors': [], 'octahedral_mismatch': [], 'tolerance_factors': [], 'A_site_cation':[]}
     all_data_dict = {x: data_dict for x in X_site}
 
-    from perovskite_screenings.analysis import halide_C,halide_B,halide_A,tolerance_factor
-    from perovskite_screenings.analysis import octahedral_factor as pv_octahedral_factor
+    if switch in  ['A-site']:
+        from perovskite_screenings.analysis import halide_C,halide_B,halide_A,tolerance_factor
+        from perovskite_screenings.analysis import octahedral_factor as pv_octahedral_factor
 
-    pv_tolerance_f=[]
-    pv_octahedral_f=[]
-    for c in halide_C:
-        for a in halide_A:
-            for b in halide_B:
-                tolerance_f = None
-                octahedral_f = None
-                tolerance_f = tolerance_factor(a, b, c, type='goldschmidt')
-                octahedral_f = pv_octahedral_factor(b, c)
-                pv_tolerance_f.append(tolerance_f)
-                pv_octahedral_f.append(octahedral_f)
+        pv_tolerance_f=[]
+        pv_octahedral_f=[]
+        for c in halide_C:
+            for a in halide_A:
+                for b in halide_B:
+                    tolerance_f = tolerance_factor(a, b, c, type='goldschmidt')
+                    octahedral_f = pv_octahedral_factor(b, c)
+                    pv_tolerance_f.append(tolerance_f)
+                    pv_octahedral_f.append(octahedral_f)
 
-    plt.scatter(pv_octahedral_f,pv_tolerance_f,alpha=0.1,marker='+',s=20,label='ABX$_{3}$')
+        plt.scatter(pv_octahedral_f,pv_tolerance_f,alpha=0.3,marker='+',s=20,label='ABX$_{3}$')
 
     min_energy=100000
     max_energy=-100000
-
+    min_oct_mismatch = 100000
+    max_oct_mismatch = -100000
+    colors = []
     for uid in uids:
         row = None
         formation_energy = None
@@ -182,13 +184,23 @@ def formation_energy_landscape(db, uids):
             print(octahedral_factor, octahedral_mismatch, generalised_tolerance_factor)
             all_data_dict[chemistry['X_anion']]['formation_energies'].append(formation_energy)
             all_data_dict[chemistry['X_anion']]['octahedral_factors'].append(octahedral_factor)
-            all_data_dict[chemistry['X_anion']]['octahedral_mismatch'].append(octahedral_mismatch)
+            if octahedral_factor>=octahedral_mismatch+1-math.sqrt(2):
+                __octahedral_mismatch = octahedral_mismatch
+            else:
+                __octahedral_mismatch = -1
+
+            all_data_dict[chemistry['X_anion']]['octahedral_mismatch'].append(__octahedral_mismatch)
             all_data_dict[chemistry['X_anion']]['tolerance_factors'].append(generalised_tolerance_factor)
+            all_data_dict[chemistry['X_anion']]["A_site_cation"].append(chemistry['A_cation'])
 
             if formation_energy<min_energy:
                 min_energy = formation_energy
             if formation_energy>max_energy:
                 max_energy = formation_energy
+            if octahedral_mismatch<min_oct_mismatch:
+                min_oct_mismatch=octahedral_mismatch
+            if octahedral_mismatch>max_oct_mismatch:
+                max_oct_mismatch=octahedral_mismatch
 
     for i, x in enumerate(X_site):
         if i == 0:
@@ -199,9 +211,26 @@ def formation_energy_landscape(db, uids):
             marker = 'd'
         if i == 3:
             marker = 'p'
-        plt.scatter(all_data_dict[x]['octahedral_factors'], all_data_dict[x]['tolerance_factors'], marker=marker, norm=mpl.colors.Normalize(vmin=min_energy*1.1, vmax=max_energy*1.1),
-                    c=all_data_dict[x]['formation_energies'], edgecolor=None, alpha=0.45, s=25,
-                    cmap=plt.get_cmap('RdYlGn'),label='X='+x)
+        if switch == 'formation_energy':
+            plt.scatter(all_data_dict[x]['octahedral_factors'], all_data_dict[x]['tolerance_factors'], marker=marker,
+                        norm=mpl.colors.Normalize(vmin=min_energy * 1.1, vmax=max_energy * 1.1),
+                        c=all_data_dict[x]['formation_energies'], edgecolor=None, alpha=0.45, s=25,
+                        cmap=plt.get_cmap('RdYlGn'), label='X=' + x)
+        elif switch == 'octahedral_mismatch':
+            plt.scatter(all_data_dict[x]['octahedral_factors'], all_data_dict[x]['tolerance_factors'], marker=marker,
+                        norm=mpl.colors.Normalize(vmin=min_oct_mismatch * 1.1, vmax=max_oct_mismatch * 1.1),
+                        c=all_data_dict[x]['octahedral_mismatch'], edgecolor=None, alpha=0.45, s=25,
+                        cmap=plt.get_cmap('RdYlGn'), label='X=' + x)
+        elif switch == 'A-site':
+            colors = []
+            for a in all_data_dict[x]['A_site_cation']:
+                if a=='Li': colors.append('#344d90')
+                elif a=='Na': colors.append('#5cc5ef')
+                elif a=='K': colors.append("#ffb745")
+                elif a=='Rb': colors.append("#ffbebd")
+                elif a=='Cs': colors.append("#CB0000")
+            plt.scatter(all_data_dict[x]['octahedral_factors'], all_data_dict[x]['tolerance_factors'], marker='s',
+                        c=colors, edgecolor=None, alpha=0.25, s=25)
 
     def f1(x): return  (x+1)-x #stretch limit
     def f2(x): return  (0.44*x+1.37)/(math.sqrt(2)*(x+1))
@@ -222,11 +251,82 @@ def formation_energy_landscape(db, uids):
     plt.vlines(x=1.14, ymin=0.65, ymax=0.83,color='k',linestyles='--')
 
     plt.xlabel('Octahedral factors $(\\bar{\\mu})$')
-    plt.ylabel('Terahedral factors $(t)$')
-    plt.colorbar(label='$E_{f}$ (eV/atom)')
-    plt.legend()
+    plt.ylabel('Tolerance factors $(t)$')
+
+    if switch == 'formation_energy':
+        plt.legend()
+        plt.colorbar(label='$E_{f}$ (eV/atom)')
+    elif switch == 'octahedral_mismatch':
+        plt.legend()
+        cbar=plt.colorbar(label='Octahedral mismatch $(\\Delta\\mu)$',extend='min')
+
+    elif switch == 'A-site':
+        legend_elements = [Patch(facecolor='#344d90', edgecolor='k', label='A=Li'),
+                           Patch(facecolor='#5cc5ef', edgecolor='k', label='A=Na'),
+                           Patch(facecolor="#ffb745", edgecolor='k', label='A=K'),
+                           Patch(facecolor="#ffbebd", edgecolor='k', label='A=Rb'),
+                           Patch(facecolor="#CB0000", edgecolor='k', label='A=Cs'),
+                           Line2D([0], [0], marker='+', color='w', label='ABX$_3$',markersize=5,markeredgecolor='b',alpha=0.4)
+                           ]
+        plt.legend(handles=legend_elements, loc=1, fontsize=12, ncol=1)
     plt.tight_layout()
-    plt.savefig("formation_energy_landscape_dpv.pdf")
+    if switch == 'A-site':
+        name = "formation_energy_landscape_dpv_A.pdf"
+    elif switch == 'formation_energy':
+        name = "formation_energy_landscape_dpv.pdf"
+    elif switch ==  'octahedral_mismatch':
+        name = "formation_energy_landscape_dpv_delta_mu.pdf"
+    plt.savefig(name)
+
+def sigma_landscape(db,uids,x='formation_energies'):
+    formation_energy_dict={'F':[],'Cl':[],'Br':[],'I':[]}
+    sigma_dict={'F':[],'Cl':[],'Br':[],'I':[]}
+    color_dict = {'F': '#061283', 'Cl': '#FD3C3C', 'Br': '#FFB74C', 'I': '#138D90'}
+
+    for uid in uids:
+        row = None
+        formation_energy = None
+        sigma = None
+        try:
+            row = db.get(selection=[('uid', '=', uid)])
+        except:
+            pass
+        if row is not None:
+            atoms = row.toatoms()
+            crystal = map_ase_atoms_to_crystal(atoms)
+            chemistry = chemical_classifier(crystal)
+
+            try:
+                formation_energy = row.key_value_pairs['formation_energy']
+            except KeyError:
+                pass
+
+            try:
+                sigma = row.key_value_pairs['sigma_300K_single']
+            except KeyError:
+                pass
+
+            print('system ' + uid + ' Formation Energy ' + str(formation_energy) + ' eV/atom; Sigma '+str(sigma))
+            if (formation_energy is not None) and (sigma is not None) and (str(sigma)!='nan'):
+                X = chemistry['X_anion']
+                formation_energy_dict[X].append(formation_energy)
+                sigma_dict[X].append(sigma)
+
+    if x=='formation_energies':
+        for k in formation_energy_dict.keys():
+            plt.scatter(formation_energy_dict[k],sigma_dict[k],alpha=0.6,marker='o',s=25,edgecolor=None,c=color_dict[k])
+
+        legend_elements = [Patch(facecolor=color_dict['F'], edgecolor='k', label='X=F'),
+                           Patch(facecolor=color_dict['Cl'], edgecolor='k', label='X=Cl'),
+                           Patch(facecolor=color_dict['Br'], edgecolor='k', label='X=Br'),
+                           Patch(facecolor=color_dict['I'], edgecolor='k', label='X=I')]
+        plt.legend(handles=legend_elements, loc=1, fontsize=12, ncol=1)
+        plt.axhline(y=1, color='k', linestyle='--')
+        plt.ylim([0,2])
+        plt.xlabel('$\\Delta E_{f}$ (eV/atom)')
+        plt.ylabel('$\\sigma^{(2)}$ (300 K)')
+        plt.tight_layout()
+        plt.savefig('sigma_Ef_landscape.pdf')
 
 if __name__ == "__main__":
     dbname = os.path.join(os.getcwd(), 'double_halide_pv.db')
@@ -250,4 +350,22 @@ if __name__ == "__main__":
 
     # use the ASE db interface
     db = connect(dbname)
-    formation_energy_landscape(db, all_uids)
+
+    """
+    for uid in all_uids:
+        row = None
+        sigma = None
+        try:
+            row = db.get(selection=[('uid', '=', uid)])
+        except:
+            pass
+        if row is not None:
+            try:
+                sigma = row.key_value_pairs['sigma_300K_single']
+                print('system ' + uid + ' sigma ' + str(sigma))
+            except KeyError:
+                pass
+    """
+
+    #formation_energy_landscape(db, all_uids, switch='A-site')
+    sigma_landscape(db, all_uids)

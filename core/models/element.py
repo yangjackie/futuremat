@@ -63,7 +63,7 @@ atomic_mass_dict = {'H' : 1.008,'HE' : 4.003, 'LI' : 6.941, 'BE' : 9.012,\
                  'OG' : 294}
 
 
-U_corrections = {'Ti': {'d': 5.0}, 'Mn': {'d': 3.0}, 'La': {'f': 9.0}, 'Zr': {'d': 5.79}, 'Co': {'d': 5.0}}
+U_corrections = {'Ti': {'d': 5.0}, 'Mn': {'d': 3.0}, 'La': {'f': 9.0}, 'Zr': {'d': 5.79}, 'Co': {'d': 5.0}, 'Fe':{'d':5.3}}
 
 orbital_index = {'d': 2, 'f': 3}
 

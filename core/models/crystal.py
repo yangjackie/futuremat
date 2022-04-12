@@ -3,6 +3,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import copy
 
+from core.models.lattice import Lattice
 from core.models.space_group import SpaceGroup
 from core.resources.crystallographic_space_groups import CrystallographicSpaceGroups
 
@@ -21,7 +22,7 @@ class Crystal(object):
     :type space_group: :class:`.SpaceGroup`
     '''
 
-    def __init__(self, lattice, asymmetric_unit, space_group):
+    def __init__(self, lattice: Lattice, asymmetric_unit, space_group):
         self.lattice = lattice
 
         self.asymmetric_unit = asymmetric_unit

@@ -453,22 +453,22 @@ def all_data(db, C):
                         md_tf.extractall()
                     except:
                         pass
-                if os.path.isdir('./MD'):
-                    os.chdir('MD')
-                    t = 0
-                    try:
-                        f = open('./OSZICAR', 'r')
-                        for l in f.readlines():
-                            if 'T=' in l:
-                                t += 1
-                        f.close()
-                    except:
-                        pass
-                    if t == 800:
-                        md_done = True
-                    os.chdir('..')  # step out from MD directory
+                #if os.path.isdir('./MD'):
+                #    os.chdir('MD')
+                #    t = 0
+                #    try:
+                #        f = open('./OSZICAR', 'r')
+                #        for l in f.readlines():
+                #            if 'T=' in l:
+                #                t += 1
+                #        f.close()
+                #    except:
+                #        pass
+                #    if t == 800:
+                #        md_done = True
+                #    os.chdir('..')  # step out from MD directory
 
-                if force_constant_exists and phonon_converged and md_done:
+                if force_constant_exists and phonon_converged:# and md_done:
                     logger.info(system_name + '_Pm3m' + ' Valid Phonon and MD Results')
                     uid = system_name + '_Pm3m'
                     kvp['uid'] = uid
@@ -526,6 +526,7 @@ def all_data(db, C):
                 elif os.path.isfile("phono3py.tar.gz"):
                     phono3py_folder = 'phono3py'
 
+
                 if a + b + c in ['NaHgBr', 'AuGaBr', 'AuNbBr', 'AuRhBr', 'CuCoCl', 'AuHgCl', 'CsVF', 'CuNiF', 'AuBaF',
                                  'AuPbF', 'AuScF', 'AuCuF', 'NaCaI', 'CuBaI', 'AgPdI', 'AuMnI', 'BaCrO', 'BaTcO',
                                  'BaFeO', 'BaCoO', 'BaRhO', 'CaRhO', 'BeCrO', 'CrTiO', 'CrZrO', 'CrHfO', 'CrVO',
@@ -539,6 +540,7 @@ def all_data(db, C):
                                  'CoVS', 'CoMoS', 'CoWS', 'CoReS', 'CoRhS', 'CoPoS', 'NiWS']:
                     # systems that did not have phono3py converged!
                     phono3py_folder = None
+
 
                 if phono3py_folder is not None:
                     try:
@@ -569,51 +571,56 @@ def all_data(db, C):
                 #########################################
 
                 # temperature-dependent 2nd order FC
-                tdep_fc2 = None
-                try:
-                    tdep_fc2 = get_temperature_dependent_second_order_fc()
-                    logger.info(system_name + '_Pm3m' + ' got temperature-dependent effective force constants')
-                except:
-                    pass
-
-                if tdep_fc2 is not None:
-                    __sigmas = None
+                if ('sigma_300K_single' in kvp.keys()) and (kvp['sigma_300K_single'] <= 1.0):
+                    logger.info(system_name + '_Pm3m' + 'get higher order contribution')
+                    tdep_fc2 = None
                     try:
-                        scorer = AnharmonicScore(md_frames='./vasprun_md.xml', ref_frame='./SPOSCAR',
-                                                 force_constants=tdep_fc2,
-                                                 include_third_order=False)
-                        __sigmas, _ = scorer.structural_sigma(return_trajectory=False)
+                        tdep_fc2 = get_temperature_dependent_second_order_fc()
+                        logger.info(system_name + '_Pm3m' + ' got temperature-dependent effective force constants')
                     except:
                         pass
 
-                    if __sigmas is not None:
-                        kvp['sigma_300K_tdep'] = __sigmas
-                        logger.info(system_name + '_Pm3m' + ' anharmonic score from TDEP ' + str(__sigmas))
+                    if tdep_fc2 is not None:
+                        __sigmas = None
+                        try:
+                            scorer = AnharmonicScore(md_frames='./vasprun_md.xml', ref_frame='./SPOSCAR',
+                                                     force_constants=tdep_fc2,
+                                                     include_third_order=False)
+                            __sigmas, _ = scorer.structural_sigma(return_trajectory=False)
+                        except:
+                            pass
 
-                populate_db(db, atoms, kvp, data)
+                        if __sigmas is not None:
+                            kvp['sigma_300K_tdep'] = __sigmas
+                            logger.info(system_name + '_Pm3m' + ' anharmonic score from TDEP ' + str(__sigmas))
+
+                    populate_db(db, atoms, kvp, data)
 
                 ########################################
 
-                if os.path.isfile('./sigmas.dat'):
-                    f = open('./sigmas.dat', 'r')
-                    for h, l in enumerate(f.readlines()):
-                        sp = l.split()
-                        if sp[-1] != 'None':
-                            if h == 0:
-                                kvp['sigma_300K_4th_tdep_2'] = float(sp[-1])
-                            if h == 1:
-                                kvp['sigma_300K_4th_tdep_3'] = float(sp[-1])
-                            if h == 2:
-                                kvp['sigma_300K_4th_tdep_4'] = float(sp[-1])
-                    try:
-                        logger.info(system_name + '_Pm3m SIGMA ' + str(kvp['sigma_300K_4th_tdep_2']) + ' ' + str(
-                            kvp['sigma_300K_4th_tdep_3']) + ' ' + str(kvp['sigma_300K_4th_tdep_4']))
-                    except:
-                        pass
+                    if os.path.isfile('./sigmas.dat'):
+                        f = open('./sigmas.dat', 'r')
+                        for h, l in enumerate(f.readlines()):
+                            sp = l.split()
+                            if sp[-1] != 'None':
+                                if h == 0:
+                                    kvp['sigma_300K_4th_tdep_2'] = float(sp[-1])
+                                    logger.info(system_name + '_Pm3m SIGMA ' + str(kvp['sigma_300K_4th_tdep_2']))
+                                if h == 1:
+                                    kvp['sigma_300K_4th_tdep_3'] = float(sp[-1])
+                                    logger.info(system_name + '_Pm3m SIGMA ' + str(kvp['sigma_300K_4th_tdep_3']))
+                                if h == 2:
+                                    kvp['sigma_300K_4th_tdep_4'] = float(sp[-1])
+                                    logger.info(system_name + '_Pm3m SIGMA ' + str(kvp['sigma_300K_4th_tdep_4']))
+                        try:
+                            logger.info(system_name + '_Pm3m SIGMA ' + str(kvp['sigma_300K_4th_tdep_2']) + ' ' + str(
+                                kvp['sigma_300K_4th_tdep_3']) + ' ' + str(kvp['sigma_300K_4th_tdep_4']))
+                        except:
+                            pass
 
-                    populate_db(db, atoms, kvp, data)
-                else:
-                    logger.info(system_name + '_Pm3m' + ' Invalid')
+                        populate_db(db, atoms, kvp, data)
+                    else:
+                        logger.info(system_name + '_Pm3m' + ' Invalid')
 
                 os.chdir("..")
                 try:
@@ -728,13 +735,13 @@ def lattice_thermal_conductivities(db):
                         pass
 
 
-def high_order_anharmonicity(db):
+def high_order_anharmonicity(db,C='Cl'):
     cwd = os.getcwd()
     system_counter = 0
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
             for b in B_site_list[i]:
-                for c in C_site_list[i]:
+                for c in [C]:
                     system_counter += 1
                     logger.info("Working on system number: " + str(system_counter))
                     system_name = a + b + c
@@ -774,8 +781,8 @@ def high_order_anharmonicity(db):
                             pass
                         continue
 
-                    if os.path.isfile('./sigmas.dat'):
-                        f = open('./sigmas.dat', 'r')
+                    if os.path.isfile('./sigmas_updated.dat'):
+                        f = open('./sigmas_updated.dat', 'r')
                         for h, l in enumerate(f.readlines()):
                             sp = l.split()
                             if sp[-1] != 'None':
@@ -790,7 +797,12 @@ def high_order_anharmonicity(db):
                                 kvp['sigma_300K_4th_tdep_3']) + ' ' + str(kvp['sigma_300K_4th_tdep_4']))
                         except:
                             pass
-                        populate_db(db, atoms, kvp, data)
+                    else:
+                        kvp['sigma_300K_4th_tdep_2'] = 'None'
+                        kvp['sigma_300K_4th_tdep_3'] = 'None'
+                        kvp['sigma_300K_4th_tdep_4'] = 'None'
+
+                    populate_db(db, atoms, kvp, data)
 
                     os.chdir("..")  # step out this Pm3m folder
                     try:
@@ -967,10 +979,11 @@ def get_temperature_dependent_second_order_fc():
     if not os.path.exists('./vasprun_md.xml'):
         return None
 
-    cs = ClusterSpace(reference_structure, [3])
     fit_structures = []
     atoms = read("./vasprun_md.xml", index=':')
-    for i, a in enumerate(atoms[:800]):
+    a = atoms[0].get_cell_lengths_and_angles()[0]
+    cs = ClusterSpace(reference_structure, [0.45*a])
+    for i, a in enumerate(atoms[:800:2]):
         displacements = get_displacements(a, reference_structure)
         atoms_tmp = reference_structure.copy()
         atoms_tmp.new_array('displacements', displacements)
@@ -978,28 +991,37 @@ def get_temperature_dependent_second_order_fc():
         atoms_tmp.positions = reference_structure.positions
         fit_structures.append(atoms_tmp)
 
-    try:
-        sc = StructureContainer.read("./structure_container")
-        logger.info("successfully loaded the structure container")
-    except:
-        sc = StructureContainer(cs)  # need a cluster space to instantiate the object!
-        sc.delete_all_structures()
-        for ii, s in enumerate(fit_structures):
+    #try:
+    #    sc = StructureContainer.read("./structure_container")
+    #    logger.info("successfully loaded the structure container")
+    #except:
+    sc = StructureContainer(cs)  # need a cluster space to instantiate the object!
+    sc.delete_all_structures()
+    for ii, s in enumerate(fit_structures):
+        try:
+            sc.add_structure(s)
+        except Exception as e:
             try:
-                sc.add_structure(s)
-            except Exception as e:
                 logger.info(ii, e)
+            except:
                 pass
+            pass
 
-    logger.info("Start the optimizer")
+    #logger.info("Start the optimizer")
     try:
         opt = Optimizer(sc.get_fit_data(), fit_method="ardr", train_size=0.9)
         opt.train()
         fcp = ForceConstantPotential(cs, opt.parameters)
         fcs = fcp.get_force_constants(reference_structure)
-        logger.info("successfully created the TDEP second order F.C.")
+        try:
+            logger.info("successfully created the TDEP second order F.C.")
+        except:
+            pass
     except Exception as e:
-        logger.info(e)
+        try:
+            logger.info('TDEP error:'+e)
+        except:
+            pass
         raise Exception()
 
     return fcs.get_fc_array(2)
@@ -1007,8 +1029,8 @@ def get_temperature_dependent_second_order_fc():
 
 def collect(db,C):
     errors = []
-    steps = [element_energy, all_data]
-    # steps = [high_order_anharmonicity]
+    #steps = [element_energy, all_data]
+    steps = [high_order_anharmonicity]
 
     for step in steps:
         try:

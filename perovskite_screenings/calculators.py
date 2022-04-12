@@ -2,22 +2,191 @@ from phonopy.interface.calculator import read_crystal_structure
 from pymatgen.analysis.magnetism import CollinearMagneticStructureAnalyzer
 from pymatgen.transformations.standard_transformations import ConventionalCellTransformation
 
-from core.calculators.vasp import Vasp, VaspReader
+from core.calculators.vasp import Vasp, VaspReader, VaspWriter
 from core.internal.builders.crystal import build_supercell
+from core.models import Crystal
+from core.models.lattice import Lattice
+from core.resources.crystallographic_space_groups import CrystallographicSpaceGroups
 from twodPV.calculators import default_bulk_optimisation_set, setup_logger, update_core_info, load_structure
 import argparse, os, tarfile, shutil
+from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
+from phonopy.interface.vasp import parse_set_of_forces
+from phonopy.file_IO import write_force_constants_to_hdf5, write_FORCE_SETS, parse_disp_yaml, write_disp_yaml
+from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
+from phonopy import Phonopy
+
+import phonopy
+import random
+
+def randomise_crystal(crystal):
+    a = crystal.lattice.a
+    b = crystal.lattice.b
+    c = crystal.lattice.c
+    alpha = crystal.lattice.alpha
+    beta = crystal.lattice.beta
+    gamma = crystal.lattice.gamma
+    lattice = Lattice(a,b,c,alpha,beta,gamma)
+    asymmetric_unit = crystal.asymmetric_unit
+    for _i in range(len(crystal.asymmetric_unit)):
+        for _j in range(len(crystal.asymmetric_unit[_i].atoms)):
+            asymmetric_unit[_i].atoms[_j].scaled_position.x = crystal.asymmetric_unit[_i].atoms[
+                                                                          _j].scaled_position.x * (
+                                                                              1 + random.randrange(
+                                                                          -5, 5) / 900)
+            asymmetric_unit[_i].atoms[_j].scaled_position.y = crystal.asymmetric_unit[_i].atoms[
+                                                                          _j].scaled_position.y * (
+                                                                              1 + random.randrange(
+                                                                          -5, 5) / 900)
+            asymmetric_unit[_i].atoms[_j].scaled_position.z = crystal.asymmetric_unit[_i].atoms[
+                                                                          _j].scaled_position.z * (
+                                                                              1 + random.randrange(
+                                                                          -5, 5) / 900)
+    new_crystal = Crystal(lattice,asymmetric_unit,space_group=CrystallographicSpaceGroups.get(1))
+    return new_crystal
+
+
+def ionic_optmisation():
+    cwd = os.getcwd()
+
+    logger = setup_logger(output_filename='ionic_relax.log')
+
+    #if os.path.exists('CONTCAR_ion_opt'):
+    #    logger.info('Previous ionic relaxation done, skip')
+    #    return
+
+    #if not os.path.exists('CONTCAR'):
+    #    raise Exception("No optimised structure, skip!")
+
+    if os.path.exists('ionic_opt.tar.gz'):
+        tf = tarfile.open('ionic_opt.tar.gz')
+        tf.extractall()
+    else:
+        if not os.path.isdir('./ionic_opt'):
+            os.mkdir('ionic_opt')
+
+    os.chdir('ionic_opt')
+    #if not os.path.exists('../CONTCAR_ion_opt'):
+    shutil.copyfile('../POSCAR', 'CONTCAR')
+    #else:
+    #    shutil.copyfile('../CONTCAR_ion_opt', 'CONTCAR')
+
+    crystal = VaspReader(input_location='CONTCAR').read_POSCAR()
+    #new_crystal = randomise_crystal(crystal)
+    VaspWriter().write_structure(crystal,'POSCAR')
+    os.remove('./CONTCAR')
+    try:
+        os.remove('./KPOINTS')
+    except:
+        pass
+    structure = load_structure(logger)
+    default_bulk_optimisation_set.update(
+        {'ISIF': 1, 'ibrion':2, 'Gamma_centered': True, 'NCORE': 28, 'ENCUT': 400, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38,
+         'use_gw': True,'EDIFF':1e-8,'NELM':100})
+
+    try:
+        vasp = Vasp(**default_bulk_optimisation_set)
+        vasp.set_crystal(structure)
+        vasp.execute()
+    except:
+        vasp.completed = False
+        pass
+
+    logger.info("VASP terminated?: " + str(vasp.completed))
+    shutil.copyfile('CONTCAR', '../CONTCAR_ion_opt')
+    os.chdir('..')
+
+    output_filename = 'ionic_opt.tar.gz'
+    source_dir = './ionic_opt'
+    with tarfile.open(output_filename, "w:gz") as tar:
+        tar.add(source_dir, arcname=os.path.basename(source_dir))
+
+    try:
+        shutil.rmtree('./ionic_opt')
+    except:
+        pass
+    try:
+        os.rmtree('./ionic_opt')
+    except:
+        pass
 
 
 def default_symmetry_preserving_optimisation():
     # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
     # structure.
     default_bulk_optimisation_set.update(
-        {'ISIF': 7, 'Gamma_centered': True, 'NCORE': 28, 'ENCUT': 520, 'PREC': "ACCURATE", 'ispin': 2, 'IALGO': 38,
-         'use_gw': True})
-    structural_optimization_with_initial_magmom()
+        {'ISIF': 7, 'Gamma_centered': True, 'NCORE':28, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38, 'EDIFF':1e-5,
+         'use_gw': True, 'MP_points':[1,1,1],'ENCUT': 400})
+
+    #try:
+    #    del default_bulk_optimisation_set['ENCUT']
+    #except:
+    #    pass
+    #try:
+    #    del default_bulk_optimisation_set['encut']
+    #except:
+    #    pass
+    structural_optimization()
+
+def staged_full_optimisation():
+    #try:
+    #    os.remove('KPOINTS')
+    #except:
+    #    pass
+    #try:
+    #    os.remove('INCAR')
+    #except:
+    #    pass
+    #try:
+    #    os.remove('POTCAR')
+    #except:
+    #    pass
+
+    #default_bulk_optimisation_set.update(
+    #    {'ISIF': 3, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "NORMAL", 'ispin': 1, 'IALGO': 38,
+    #     'use_gw': True, 'ENCUT': 400, 'EDIFF':1e-5, 'MP_points': [1, 1, 1],'SIGMA':0.15})#, 'symprec':1e-3})
+
+    #structural_optimization(gamma_only=True)
+
+    try:
+        os.remove('KPOINTS')
+    except:
+        pass
+    try:
+        os.remove('INCAR')
+    except:
+        pass
+    try:
+        os.remove('POTCAR')
+    except:
+        pass
+
+    default_bulk_optimisation_set.update(
+        {'ISIF': 3, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "NORMAL", 'ispin': 1, 'IALGO': 38,
+         'use_gw': True, 'ENCUT': 400, 'EDIFF': 1e-5, 'SIGMA':0.15, 'MP_points': [2, 2, 1],})#,'symprec':1e-3})
+
+    #try:
+    #    del default_bulk_optimisation_set['MP_points']
+    #except:
+    #    pass
+
+    structural_optimization(gamma_only=False)
+    exit(0)
+
+def full_optimisation():
+    # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
+    # structure.
+
+    os.remove('KPOINTS')
+    os.remove('INCAR')
+
+    default_bulk_optimisation_set.update(
+        {'ISIF': 3, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "NORMAL", 'ispin': 1, 'IALGO': 38,
+         'use_gw': True, 'ENCUT': 400, 'EDIFF': 1e-5, 'KPAR':7})
+
+    structural_optimization(gamma_only=False)
 
 
-def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
+def structural_optimization(retried=None, gamma_only=False):
     """
     Perform geometry optimization without spin polarisation. It is always helpful to converge an initial
     structure without spin polarization before further refined with a spin polarization calculations.
@@ -40,7 +209,7 @@ def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
     structure = load_structure(logger)
     structure.gamma_only = gamma_only
 
-    default_bulk_optimisation_set['magmom'] = magmom_string_builder(structure)
+    #default_bulk_optimisation_set['magmom'] = magmom_string_builder(structure)
 
     logger.info("incar options" + str(default_bulk_optimisation_set))
 
@@ -54,7 +223,7 @@ def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
 
     logger.info("VASP terminated?: " + str(vasp.completed))
 
-    # if (vasp.completed is not True) and (retried<MAX_RETRY):
+    #if (vasp.completed is not True) and (retried<MAX_RETRY):
     #    retried+=1
     #    structural_optimization_with_initial_magmom(retried=retried)
 
@@ -73,19 +242,14 @@ def magmom_string_builder(structure):
 
 
 def phonopy_workflow(force_rerun=False):
-    from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
-    from phonopy.interface.vasp import parse_set_of_forces
-    from phonopy.file_IO import write_force_constants_to_hdf5,write_FORCE_SETS,parse_disp_yaml,write_disp_yaml
-    from phonopy import Phonopy
-    #from phonopy.cui import create_FORCE_SETS
 
-    mp_points = [2, 2, 2]
+    mp_points = [2,2,1]
     gamma_centered = True
     force_no_spin = False
     use_default_encut = False
-    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
-    ialgo = 38
-    use_gw = False #only for vanadium compounds
+    supercell_matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    ialgo = 48
+    use_gw = True #only for vanadium compounds
     ncore = 28
 
     if mp_points != [1, 1, 1]:
@@ -93,11 +257,13 @@ def phonopy_workflow(force_rerun=False):
     else:
         gamma_only = True
 
-    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'encut': 500, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
+    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'EDIFF':1e-7, 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
                    'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6}
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'encut':400}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
+
+
 
     logger = setup_logger(output_filename='phonopy.log')
     cwd = os.getcwd()
@@ -346,25 +512,24 @@ def molecular_dynamics_workflow(force_rerun=False):
     structure = __load_supercell_structure()
     structure.gamma_only = False
 
-    equilibrium_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
+    equilibrium_set = {'prec': 'Normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
                        'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 2, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
-                       'iwavpr': 11, 'encut': 500, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
-                       'write_poscar': True}
+                       'iwavpr': 11, 'encut': 300, 'Gamma_centered': True, 'MP_points': [1,1,1], 'use_gw': True,
+                       'write_poscar': True, 'EDIFF':1e-7}
 
-    production_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
-                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 800, 'isif': 1, 'tebeg': 300,
+    production_set = {'prec': 'Normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
+                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 2000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 2, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
-                      'encut': 500, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
-                      'use_gw': True, 'write_poscar': False}
-
+                      'encut': 300, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1,1,1],
+                      'use_gw': True, 'write_poscar': False, 'EDIFF':1e-7}
 
     equilibrium_set['ispin'] = 1
     production_set['ispin'] = 1
 
-    if not os.path.exists('./MD_2_2_2'):
-        os.mkdir('./MD_2_2_2')
-    os.chdir('./MD_2_2_2')
+    if not os.path.exists('./MD_2_2_2_accurate'):
+        os.mkdir('./MD_2_2_2_accurate')
+    os.chdir('./MD_2_2_2_accurate')
 
     try:
         os.remove('./INCAR')
@@ -500,7 +665,7 @@ def molecular_dynamics_workflow(force_rerun=False):
         shutil.copy('OUTCAR', 'OUTCAR_prod')
         shutil.copy('OSZICAR', 'OSZICAR_prod')
 
-        shutil.copy('vasprun.xml', '../vasprun_md_2_2_2.xml')
+        shutil.copy('vasprun.xml', '../vasprun_md_2_2_2_accurate.xml')
 
     os.chdir(cwd)
 
@@ -539,9 +704,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='workflow control for double perovskite ',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--opt", action='store_true', help='perform initial structural optimization')
+    parser.add_argument("--full_opt", action='store_true', help='perform initial structural optimization without symmetry constraints')
+    parser.add_argument("--staged", action='store_true', help='')
+
     parser.add_argument("--phonopy", action='store_true', help='run phonopy calculations')
     parser.add_argument("--force_rerun", action='store_true', help='force rerun  calculations')
     parser.add_argument("--MD", action='store_true', help='run MD calculations')
+    parser.add_argument("--ionic_opt", action='store_true', help='run ionic optimisation with fixed lattice constants')
 
     args = parser.parse_args()
 
@@ -553,3 +722,12 @@ if __name__ == "__main__":
 
     if args.MD:
         molecular_dynamics_workflow(force_rerun=args.force_rerun)
+
+    if args.ionic_opt:
+        ionic_optmisation()
+
+    if args.full_opt:
+        if not args.staged:
+            full_optimisation()
+        else:
+            staged_full_optimisation()

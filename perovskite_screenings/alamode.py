@@ -36,17 +36,17 @@ except:
     raise Exception("Cannot work on system " + system + ' QUITTING')
 os.chdir(system)
 
-tf = tarfile.open('phonon.tar.gz')
+tf = tarfile.open('phonon_2_2_2.tar.gz')
 tf.extractall()
 
 unitcell_crystal = VaspReader(input_location='./CONTCAR').read_POSCAR()
-supercell_crystal = VaspReader(input_location='./phonon/SPOSCAR').read_POSCAR()
+supercell_crystal = VaspReader(input_location='./phonon_2_2_2/SPOSCAR').read_POSCAR()
 
 # set up the alamode directory
 
 if not os.path.isfile('./alamode.tar.gz'):
     if not os.path.exists('./alamode'):
-        os.mkdir('alamode_quartic')
+        os.mkdir('alamode')
 else:
     tf = tarfile.open('./alamode.tar.gz')
     tf.extractall()
@@ -75,13 +75,13 @@ if not args.calculate_kappa:
         # Get the harmonic forces
         # =======================================================================================================================
         os.system(
-            "python3 /scratch/dy3/jy8620/alamode/tools/extract.py ../phonon/ph-POSCAR*/vasprun.xml --VASP ../phonon/SPOSCAR > DFSET_harmonic")
+            "python3 /scratch/dy3/jy8620/alamode/tools/extract.py ../phonon_2_2_2/ph-POSCAR*/vasprun.xml --VASP ../phonon_2_2_2/SPOSCAR > DFSET_harmonic")
 
         # =======================================================================================================================
         # Get the MD forces
         # =======================================================================================================================
-        # os.system(
-        #    "python3 /scratch/dy3/jy8620/alamode/tools/extract.py ../vasprun_md_accurate.xml --VASP ../phonon/SPOSCAR > DFSET")
+        os.system(
+            "python3 /scratch/dy3/jy8620/alamode/tools/extract.py ../vasprun_md.xml --VASP ../phonon_2_2_2/SPOSCAR > DFSET")
 
         try:
             os.system("cp ../DFSET .")
@@ -97,7 +97,10 @@ if not args.calculate_kappa:
             alm_output_name = 'stage_1.out'
             second_fit_prefix = 'super_harm'
             w.write_alm_in_for_fitting_second_order(prefix=second_fit_prefix, input_name=alm_input_name, cutoff=[12])
+            #os.system('source activate my-conda-env')
+            #os.system('export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LD_LIBRARY_PATH')
             os.system("/scratch/dy3/jy8620/alamode/_build/alm/alm " + alm_input_name + " > " + alm_output_name)
+            #os.system('conda deactivate')
 
             # =======================================================================================================================
             # Use ALM to fit the higher order force constants from the MD forces
@@ -110,7 +113,10 @@ if not args.calculate_kappa:
                                                         input_name=alm_input_name)
             #os.system("/scratch/dy3/jy8620/alamode/_build/alm/alm " + alm_input_name + " > " + alm_output_name)
             timeout=3000
+            #os.system('source activate my-conda-env')
+            #os.system('export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LD_LIBRARY_PATH')
             exit_status = PopenTimeout(["/scratch/dy3/jy8620/alamode/_build/alm/alm", alm_input_name], output_file=open(alm_output_name,'w')).run(timeout)
+            #os.system('conda deactivate')
             try:
                 f = open('stage_2.out', 'r')
                 for l in f.readlines():
@@ -166,11 +172,11 @@ with tarfile.open('alamode_quartic.tar.gz', mode='w:gz') as archive:
     archive.add('./alamode_quartic', recursive=True)
 
 try:
-    shutil.rmtree('phonon')
+    shutil.rmtree('phonon_2_2_2')
 except:
     pass
 try:
-    os.rmtree('phonon')
+    os.rmtree('phonon_2_2_2')
 except:
     pass
 

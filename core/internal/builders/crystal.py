@@ -166,6 +166,17 @@ def map_to_pymatgen_Structure(crystal):
                      coords=[a.scaled_position.to_numpy_array() for a in all_atoms],
                      coords_are_cartesian=False)
 
+def deform_crystal_by_lattice_expansion_coefficients(crystal, def_fraction=[0.0,0.0,0.0]):
+    _new_asym_unit = []
+    for mol in crystal.asymmetric_unit:
+        _new_atoms = [Atom(label=atom.label, scaled_position=atom.scaled_position) for atom in mol.atoms]
+        _new_asym_unit.append(Molecule(atoms=_new_atoms))
+
+    # make a new lattice
+    lattice = crystal.lattice.scale_by_lattice_expansion_coefficients(def_fraction)
+
+    return Crystal(lattice=lattice, asymmetric_unit=_new_asym_unit, space_group=crystal.space_group)
+
 
 class SubstitutionalSolidSolutionBuilder(object):
 
@@ -279,13 +290,3 @@ class SubstitutionalSolidSolutionBuilder(object):
         return self.supercells
 
 
-def deform_crystal_by_lattice_expansion_coefficients(crystal, def_fraction=[0.0,0.0,0.0]):
-    _new_asym_unit = []
-    for mol in crystal.asymmetric_unit:
-        _new_atoms = [Atom(label=atom.label, scaled_position=atom.scaled_position) for atom in mol.atoms]
-        _new_asym_unit.append(Molecule(atoms=_new_atoms))
-
-    # make a new lattice
-    lattice = crystal.lattice.scale_by_lattice_expansion_coefficients(def_fraction)
-
-    return Crystal(lattice=lattice, asymmetric_unit=_new_asym_unit, space_group=crystal.space_group)

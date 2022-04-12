@@ -24,7 +24,7 @@ class Atom(object):
     @property
     def position(self):
         if self.__position is None:
-            if self.__scaled_position and self.crystal:
+            if (self.__scaled_position is not None) and self.crystal:
                 self.__position = self.__scaled_position.vec_mat_mul(self.get_lattice().lattice_vectors)
         return self.__position
 

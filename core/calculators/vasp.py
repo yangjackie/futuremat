@@ -141,6 +141,8 @@ bool_keys = [
     'lasync',  # overlap communcation with calculations
     'lcharg',  #
     'lcorr',  # Harris-correction to forces
+    'lcalcpol',
+    'lcalceps',
     'ldau',  # L(S)DA+U
     'ldiag',  # algorithm: perform sub space rotation
     'ldipol',  # potential correction mode
@@ -335,6 +337,9 @@ class Vasp(Calculator):
     def run(self):
         logger.info("Start executing VASP")
         cmd = 'mpirun ' + self.executable
+
+        #cmd = 'mpirun -np $PBS_NGPUS --map-by ppr:1:numa vasp_gam-gpu'
+
         exitcode = os.system('%s > %s' % (cmd, 'vasp.log'))
         if exitcode != 0:
             raise RuntimeError('Vasp exited with exit code: %d.  ' % exitcode)

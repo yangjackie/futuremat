@@ -48,9 +48,12 @@ def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
         default_bulk_optimisation_set['ispin'] = 1
         del default_bulk_optimisation_set['magmom']
 
-    del default_bulk_optimisation_set['magmom']
-    default_bulk_optimisation_set['IALGO'] = 48
-    default_bulk_optimisation_set['ISIF'] = 3
+    try:
+        del default_bulk_optimisation_set['magmom']
+    except:
+        pass
+    default_bulk_optimisation_set['IALGO'] = 38
+    #default_bulk_optimisation_set['ISIF'] = 3
     default_bulk_optimisation_set['use_gw']= True
     #default_bulk_optimisation_set['ismear'] = -5
     #default_bulk_optimisation_set['sigma'] = 0.05
@@ -96,13 +99,13 @@ def phonopy_workflow(force_rerun=False):
     from phonopy.file_IO import write_force_constants_to_hdf5,write_FORCE_SETS,parse_disp_yaml,write_disp_yaml
     from phonopy import Phonopy
 
-    mp_points = [1, 1, 1]
+    mp_points = [1,1,1]
     gamma_centered = True
     force_no_spin = False
     use_default_encut = False
     supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
     ialgo = 38
-    use_gw = False
+    use_gw = True
     ncore = 32
 
     if mp_points != [1, 1, 1]:
@@ -113,7 +116,7 @@ def phonopy_workflow(force_rerun=False):
     phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'encut': 520, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
                    'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6}
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'EDIFF':1e-7}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
 
     logger = setup_logger(output_filename='phonopy.log')
@@ -137,12 +140,14 @@ def phonopy_workflow(force_rerun=False):
                 else:
                     spin_polarized = False
 
-    if os.path.isfile('./force_constants.hdf5'):
+    if os.path.isfile('./FORCE_SETS'):
         if not force_rerun:
             logger.info("previous phonopy calculations completed, will not rerun it again")
             return
         else:
-            logger.info('Force to rerun phonopy, continue')
+            logger.info('previous phonopy not completed, continue')
+    else:
+        logger.info('NO FORCE_SETS file, previous phonon calculations crashed, try to :rerun')
 
     # if os.path.isfile('phonopy.log'):
     #     success = []
@@ -203,6 +208,9 @@ def phonopy_workflow(force_rerun=False):
         phonopy_set['magmom'], all_zeros = magmom_string_builder(crystal)
         phonopy_set['ispin'] = 2
 
+    logger.info('Force everything to be spin unpolarised calculation, avoid problem of electronic convergence')
+    phonopy_set['ispin'] = 1
+
     logger.info(
         "PHONOPY - generate (2x2x2) displaced supercells, total number of configurations " + str(len(supercells)))
 
@@ -231,11 +239,12 @@ def phonopy_workflow(force_rerun=False):
                     logger.info("Configuration " + str(i + 1) + '/' + str(
                         len(supercells)) + " previous calculation converged.")
                 else:
-
-                    if not force_rerun:
-                        calculate_next = False
-                        proceed = False
-                        logger.info('At least one finite displaced configuration cannot converge, quit the rest')
+                    calculate_next=True
+                    proceed=True
+                    #if not force_rerun:
+                        #calculate_next = False
+                        #proceed = False
+                        #logger.info('At least one finite displaced configuration cannot converge, quit the rest')
 
             if proceed:
                 logger.info("Configuration " + str(i + 1) + '/' + str(len(supercells)) + " proceed VASP calculation")
@@ -244,6 +253,7 @@ def phonopy_workflow(force_rerun=False):
                 structure.gamma_only = gamma_only
                 #phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
                 #phonopy_set['ispin'] = 2
+
 
                 try:
                     vasp = Vasp(**phonopy_set)
@@ -275,7 +285,9 @@ def phonopy_workflow(force_rerun=False):
 
     if all(completed) and len(completed) == len(supercells):
         logger.info("All finite displacement calculations completed, extract force constants")
+        structure = VaspReader(input_location='./SPOSCAR').read_POSCAR()
         set_of_forces = parse_set_of_forces(structure.total_num_atoms(), force_files)
+
         phonon.set_forces(sets_of_forces=set_of_forces)
         phonon.produce_force_constants()
         write_force_constants_to_hdf5(phonon.force_constants, filename='force_constants.hdf5')
@@ -383,7 +395,7 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
         raise Exception("No phonopy data! QUIT")
     else:
         spin_polarized = check_phonon_run_settings()
-        structure = __load_supercell_structure()
+        structure = load_supercell_structure()
         structure.gamma_only = True
         logger.info("Will run MD with spin polarization: " + str(spin_polarized))
 
@@ -394,10 +406,13 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
                        'write_poscar': True}
 
     production_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
-                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 800, 'isif': 1, 'tebeg': 300,
+                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 2000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
                       'encut': 520, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
                       'use_gw': True, 'write_poscar': False}
+
+    del equilibrium_set['ncore']
+    del production_set['ncore']
 
     #if spin_polarized:
     #    raise Exception("Skip running spin polarized MD first ...")
@@ -532,15 +547,19 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
         else:
             run_production = True
 
+    previous_productions = len(glob.glob('CONTCAR_prod*'))
+    logger.info('Number of previous production MD runs:' + str(previous_productions))
+
+    if previous_productions >= 3:
+        run_production = False
 
     if run_production:
-        previous_productions = len(glob.glob('CONTCAR_prod*'))
-        logger.info('Number of previous production MD runs:'+str(previous_productions))
+
         if continue_MD:
             if previous_productions == 1:
                 shutil.copy('CONTCAR_prod','POSCAR')
             elif previous_productions > 1:
-                shutil.copy('CONTCAR_prod_'+str(previous_productions), 'POSCAR')
+                shutil.copy('CONTCAR_prod_'+str(previous_productions-1), 'POSCAR')
 
         try:
             logger.info("start production run")
@@ -620,10 +639,10 @@ def check_MD_run_settings():
 
 
 
-def __load_supercell_structure():
+def load_supercell_structure(supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]]):
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy import Phonopy
-    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
+    supercell_matrix = supercell_matrix
     unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
     phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
     write_crystal_structure('POSCAR_super', phonon.supercell, interface_mode='vasp')

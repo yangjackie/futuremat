@@ -653,25 +653,34 @@ def plot_thickness_dependent_imaginary_frequency_distribution(db, orientation='1
     plt.figure(figsize=(8, 6))
 
     thickness_freqs, thickness_bins = __frequency_histogram(db, orientation, term_type)
-    __histogram_plotter(thickness_freqs, thickness_bins)
+    if term_type == 'AO3':
+        term = "AO$_{3}$"
+    elif term_type == 'BO2':
+        term = "BO$_{2}$"
+    elif term_type == 'O2':
+        term = "O$_{2}$"
+    else:
+        term = term_type
+    __histogram_plotter(thickness_freqs, thickness_bins, title='['+str(orientation)+']//'+term+'-termination')
     plt.tight_layout()
     plt.savefig(output)
 
 
-def __histogram_plotter(thickness_freqs, thickness_bins):
+def __histogram_plotter(thickness_freqs, thickness_bins, title):
     color_dict = {3: '#A3586D', 5: '#5C4A72', 7: '#F3B05A', 9: '#F4874B'}
-    plt.bar(thickness_bins[3], thickness_freqs[3], 2, alpha=0.7, label='$n=3$', color=color_dict[3])
-    plt.bar(thickness_bins[5], thickness_freqs[5], 2, alpha=0.7, bottom=thickness_freqs[3], label='$n=5$',
+    plt.bar(thickness_bins[3], thickness_freqs[3], 0.1, alpha=0.7, label='$n=3$', color=color_dict[3])
+    plt.bar(thickness_bins[5], thickness_freqs[5], 0.1, alpha=0.7, bottom=thickness_freqs[3], label='$n=5$',
             color=color_dict[5])
-    plt.bar(thickness_bins[7], thickness_freqs[7], 2, alpha=0.7,
+    plt.bar(thickness_bins[7], thickness_freqs[7], 0.1, alpha=0.7,
             bottom=[thickness_freqs[3][l] + thickness_freqs[5][l] for l in range(len(thickness_freqs[3]))],
             label='$n=7$', color=color_dict[7])
-    plt.bar(thickness_bins[9], thickness_freqs[9], 2, alpha=0.7,
+    plt.bar(thickness_bins[9], thickness_freqs[9], 0.1, alpha=0.7,
             bottom=[thickness_freqs[3][l] + thickness_freqs[5][l] + thickness_freqs[7][l] for l in
                     range(len(thickness_freqs[3]))], label='$n=9$', color=color_dict[9])
     # plt.xlabel("$\omega^2_{\min}$ (THz$^2$)")
-    plt.xlabel("$\langle\omega^2\\rangle$ (THz$^2$)")
+    plt.xlabel("$\omega^2_{\min}$ (THz$^2$)$")
     plt.ylabel("Occurences")
+    plt.title(title)
     plt.legend()
 
 
@@ -697,7 +706,7 @@ def __frequency_histogram(db, orientation=None, term_type=None):
     thickness_bins = {3: [], 5: [], 7: [], 9: []}
 
     for thick in [3, 5, 7, 9]:
-        this_freq = []
+        _this_freq = []
         for i in range(len(A_site_list)):
             for a in A_site_list[i]:
                 for b in B_site_list[i]:
@@ -709,17 +718,20 @@ def __frequency_histogram(db, orientation=None, term_type=None):
                             gamma_point_freqs = row.data['gamma_phonon_freq']
                             try:
                                 gamma_point_freqs = [(f ** 2).real for f in gamma_point_freqs if f.imag != 0.0]
-                                this_freq.append(min(gamma_point_freqs))
+                                _this_freq.append(min(gamma_point_freqs))
+                                if uid == 'BaTiO3_100_AO_3':
+                                    print(uid,min(gamma_point_freqs))
                             except ValueError:
-                                # print("No imaginary frequency for " + str(uid))
+                                #print("No imaginary frequency for " + str(uid))
                                 pass
                         except KeyError:
                             # print("Phonon calculation failed for " + str(uid))
                             pass
-        this_freq = [f for f in this_freq if f > -5]
+        this_freq = [f for f in _this_freq if f > -5]
         hist, bin_edge = np.histogram(this_freq, bins=[-5 + j * 0.1 for j in range(55)], range=(-5, 0))
         thickness_freqs[thick] = list(hist)
         thickness_bins[thick] = list(bin_edge)[:-1]
+        print(hist,thickness_bins[thick])
         # print(len(thickness_bins[thick]), len(thickness_freqs[thick]))
         print(str(orientation), str(term_type), str(thick), len([f for f in this_freq if f >= -2]))
     return thickness_freqs, thickness_bins
@@ -786,13 +798,13 @@ def __thickness_dependent_imaginary_frequency_vs_energy(db, orientation='100', t
                                 stable_chemical_space[1].append(b)
                                 stable_chemical_space[2].append(c)
 
-                            if (two_d_formation_energy <= min_energy) or (min_gamma_freq >= max_freq):
-                                min_energy = two_d_formation_energy
-                                max_freq = min_gamma_freq
-                                good_A = a
-                                good_B = b
-                                good_C = c
-                                good_thick = thick
+                                if (two_d_formation_energy <= min_energy) and (min_gamma_freq >= max_freq):
+                                    min_energy = two_d_formation_energy
+                                    max_freq = min_gamma_freq
+                                    good_A = a
+                                    good_B = b
+                                    good_C = c
+                                    good_thick = thick
 
         print(most_frequent(stable_chemical_space[0]), most_frequent(stable_chemical_space[1]),
               most_frequent(stable_chemical_space[2]))
