@@ -171,11 +171,14 @@ class AnharmonicScore(object):
         from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
         qpoints, connections = get_band_qpoints_and_path_connections(__qpoints,
                                                                      npoints=nqpoints)  # now this qpoints will contain points within two high-symmetry points along the Q-path
-        self.phonon.run_band_structure(qpoints, with_eigenvectors=True)
+        self.phonon.run_band_structure(qpoints, with_eigenvectors=True, with_group_velocities=True)
         _eigvecs = self.phonon.band_structure.__dict__['_eigenvectors']
         _eigvals = self.phonon.band_structure.__dict__['_eigenvalues']
+        _group_velocities = self.phonon.band_structure.__dict__['_group_velocities']
+        print(self.phonon.band_structure.__dict__.keys())
         self.eigvecs = []
         self.eigvals = []
+        self.group_velocities = []
 
         import math
         self.atomic_masses = []
@@ -193,6 +196,8 @@ class AnharmonicScore(object):
                         self.eigvecs.append(self.atomic_masses*vec)
                         eigv=_eigvals[i][j][k]
                         self.eigvals.append(np.sqrt(abs(eigv))*np.sign(eigv)*VaspToTHz)
+
+                        self.group_velocities.append(abs(np.mean(_group_velocities[i][j][k])))
         print('eigenvector shape ', np.shape(vec))
         print('Total number of eigenstates ' + str(len(self.eigvals)))
 
@@ -205,7 +210,7 @@ class AnharmonicScore(object):
         print("finished dot")
         #self.mode_sigmas = [np.dot(self.anharmonic_forces,eigvec).std()/np.dot(self.dft_forces,eigvec).std() for eigvec in self.eigvecs]
         self.mode_sigmas = np.divide(anh_dot,dft_dot)
-        return self.eigvals,self.mode_sigmas
+        return self.eigvals, self.group_velocities, self.mode_sigmas
 
     def mode_resolved_sigma_band(self):
         from pymatgen.symmetry.bandstructure import HighSymmKpath
@@ -639,7 +644,18 @@ if __name__ == "__main__":
             plt.savefig("sigma_trajectory.pdf")
 
     if args.mode_resolved:
-        freqs, sigmas = scorer.mode_resolved_sigma()
+        freqs, velocity, sigmas = scorer.mode_resolved_sigma()
+        print("plotting")
+        print(np.shape(velocity),np.shape(sigmas))
+        plt.figure(figsize=(3, 5))
+        plt.scatter(sigmas, velocity, marker='o', alpha=0.5, s=5, c='#FA6775')
+        plt.xlabel('$\\sigma^{(2)}(\\mathbf{q},\\nu)$')
+        plt.ylabel('$v_{g}$ (m/s)')
+        plt.yscale('symlog')
+        plt.tight_layout()
+        plt.savefig("sigma_vg.pdf")
+
+        """
         plt.figure(figsize=(3,5))
         plt.scatter(sigmas,freqs,marker='o',alpha=0.5,s=5,c='#FA6775')
         plt.ylim([args.ymin,args.ymax])
@@ -648,6 +664,7 @@ if __name__ == "__main__":
         plt.ylabel('Frequency (THz)')
         plt.tight_layout()
         plt.savefig("sigma_mode.pdf")
+        """
 
     if args.mode_resolved and args.band:
         scorer.mode_resolved_sigma_band()

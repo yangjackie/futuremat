@@ -142,6 +142,30 @@ def get_softest_mode_frequencies(system):
         pass
     return system
 
+def get_frequency_averaged_weighted_by_sigma(system):
+    if not os.path.exists("./SPOSCAR"):
+        try:
+            unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
+            supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
+            phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
+            phonon.generate_displacements()
+            write_crystal_structure('SPOSCAR', phonon.supercell)
+        except:
+            return system
+
+    try:
+        import numpy as np
+        scorer = AnharmonicScore(md_frames=glob.glob('./MD/vasprun_prod*.xml'), ref_frame='./SPOSCAR',
+                                force_constants='force_constants.hdf5',   unit_cell_frame='./SPOSCAR',
+                                mode_resolved=True)
+        eigen_vals, sigmas = scorer.mode_resolved_sigma()
+        eigen_vals=np.array(eigen_vals)
+        sigmas=np.array(sigmas)
+        system.kvp['sigma_mode_averaged_300K']=np.dot(eigen_vals,sigmas)/np.sum(sigmas)
+        logger.info(system.name + ' weighted frequency is: '+str(system.kvp['sigma_mode_averaged_300K']))
+    except:
+        pass
+    return system
 
 def get_anharmonic_score(system):
     if not os.path.exists("./SPOSCAR"):
@@ -181,8 +205,9 @@ def collect_this(system):
 
     system = get_formation_energy(system)
     if system.populate_energy:
-        system = get_softest_mode_frequencies(system)
-        system = get_anharmonic_score(system)
+        #system = get_softest_mode_frequencies(system)
+        #system = get_anharmonic_score(system)
+        system = get_frequency_averaged_weighted_by_sigma(system)
 
     os.chdir(cwd)
     clear_system(system.name)
