@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 from ase.db import connect
 import sqlite3
@@ -46,6 +47,10 @@ M_site_mono_exclusive = [x for x in M_site_mono if x not in M_site_tri]
 M_site_tri_exclusive = [x for x in M_site_tri if x not in M_site_mono]
 M_site_variable = [x for x in M_site_tri if x in M_site_mono]
 
+promising_pvs = ['K2InAgCl6','Rb2InAgCl6','Rb2InAgBr6','Cs2InAgCl6','Cs2InAgBr6','Rb2InAsCl6','Cs2InAsBr6','Rb2InBiCl6',
+                 'Cs2InBiCl6','Cs2InBiBr6','Rb2InSbCl6','Rb2InSbBr6','Cs2InSbBr6','Rb2TlAsBr6','Cs2TlAsBr6','Cs2TlAsI6',
+                 'Cs2TlBiI6','Cs2TlSbBr6','Cs2TlSbI6','Cs2AsAuCl6','Rb2SbAuCl6','K2ScAuI6','Rb2ScAuI6','Cs2ScAuI6','Cs2InGaI6',
+                 'RbInBr3','CsInBr3','RbTlCl3','RbTlBr3','CsTlBr3']
 
 def chemical_classifier(crystal: Crystal) -> dict:
     atom_dict = crystal.all_atoms_count_dictionaries()
@@ -367,11 +372,19 @@ def sigma_landscape(db, uids, x='frequency',y=None):
     freq_dict = {'F': [], 'Cl': [], 'Br': [], 'I': []}
     color_dict = {'F': '#061283', 'Cl': '#FD3C3C', 'Br': '#FFB74C', 'I': '#138D90'}
 
+    if x=='band_gap':
+        band_gap_data = pickle.load(open('bandgap.p','rb'))
+        band_gap_dict = {'F': [], 'Cl': [], 'Br': [], 'I': []}
+        promising_sigma=[]
+        promising_Eg=[]
+
     for uid in uids:
         row = None
         formation_energy = None
         sigma = None
         frequency = None
+        band_gap = None
+
         try:
             row = db.get(selection=[('uid', '=', uid)])
         except:
@@ -380,6 +393,12 @@ def sigma_landscape(db, uids, x='frequency',y=None):
             atoms = row.toatoms()
             crystal = map_ase_atoms_to_crystal(atoms)
             chemistry = chemical_classifier(crystal)
+
+            if x == 'band_gap':
+                try:
+                    band_gap = band_gap_data[uid]
+                except KeyError:
+                    pass
 
             try:
                 formation_energy = row.key_value_pairs['formation_energy']
@@ -396,7 +415,7 @@ def sigma_landscape(db, uids, x='frequency',y=None):
             except KeyError:
                 pass
 
-            print('system ' + uid + ' Formation Energy ' + str(formation_energy) + ' eV/atom; Sigma ' + str(sigma))
+            #print('system ' + uid + ' Formation Energy ' + str(formation_energy) + ' eV/atom; Sigma ' + str(sigma))
             if x=='formation_energies':
                 if (formation_energy is not None) and (sigma is not None) and (str(sigma) != 'nan'):
                     X = chemistry['X_anion']
@@ -408,6 +427,16 @@ def sigma_landscape(db, uids, x='frequency',y=None):
                     freq_dict[X].append(frequency)
                     sigma_dict[X].append(sigma)
                     formation_energy_dict[X].append(formation_energy)
+            elif x=='band_gap':
+                if (sigma is not None) and (band_gap is not None):
+                    X = chemistry['X_anion']
+                    band_gap_dict[X].append(band_gap)
+                    sigma_dict[X].append(sigma)
+
+                    if uid in ['dpv_'+l for l in promising_pvs]:
+                        promising_sigma.append(sigma)
+                        promising_Eg.append(band_gap)
+                        print(uid, sigma)
 
     if x == 'formation_energies':
         for k in formation_energy_dict.keys():
@@ -473,6 +502,24 @@ def sigma_landscape(db, uids, x='frequency',y=None):
         ax1.set_ylabel('$\\mathcal{P}(\\langle\\omega\\rangle_{\\sigma})$')
 
         plt.savefig('sigma_fe_landscape.pdf')
+    elif x == 'band_gap':
+
+        for k in formation_energy_dict.keys():
+            plt.scatter(band_gap_dict[k], sigma_dict[k], alpha=0.5, marker='o', s=25, edgecolor=None,
+                        c=color_dict[k])
+        print(len(promising_Eg))
+        plt.scatter(promising_Eg, promising_sigma, marker='s', s=30, edgecolor='k', c='k')
+        legend_elements = [Patch(facecolor=color_dict['F'], edgecolor='k', label='X=F'),
+                           Patch(facecolor=color_dict['Cl'], edgecolor='k', label='X=Cl'),
+                           Patch(facecolor=color_dict['Br'], edgecolor='k', label='X=Br'),
+                           Patch(facecolor=color_dict['I'], edgecolor='k', label='X=I')]
+        plt.legend(handles=legend_elements, loc=1, fontsize=12, ncol=1)
+        plt.axhline(y=1, color='k', linestyle='--')
+        plt.ylim([0, 2])
+        plt.xlabel('$E_{g}$ (eV)')
+        plt.ylabel('$\\sigma^{(2)}$ (300 K)')
+        plt.tight_layout()
+        plt.savefig('sigma_Eg_landscape.pdf')
 
 
 if __name__ == "__main__":
@@ -515,8 +562,9 @@ if __name__ == "__main__":
     """
 
     #formation_energy_landscape(db, all_uids, switch='sigma')
-    sigma_landscape(db, all_uids, x='frequency', y='formation_energy')
+    sigma_landscape(db, all_uids, x='band_gap')
 
     #get_band_gap_energy_dict()
 
     #sigma_frequency_plot(db,all_uids)
+

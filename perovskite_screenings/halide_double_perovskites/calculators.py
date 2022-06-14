@@ -3,7 +3,7 @@ from pymatgen.analysis.magnetism import CollinearMagneticStructureAnalyzer
 from pymatgen.transformations.standard_transformations import ConventionalCellTransformation
 
 from core.calculators.vasp import Vasp, VaspReader
-from core.internal.builders.crystal import build_supercell
+from core.internal.builders.crystal import build_supercell, map_pymatgen_IStructure_to_crystal
 from twodPV.calculators import default_bulk_optimisation_set, setup_logger, update_core_info, load_structure
 import argparse, os, tarfile, shutil, glob
 
@@ -53,10 +53,10 @@ def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
     except:
         pass
     default_bulk_optimisation_set['IALGO'] = 38
-    #default_bulk_optimisation_set['ISIF'] = 3
-    default_bulk_optimisation_set['use_gw']= True
-    #default_bulk_optimisation_set['ismear'] = -5
-    #default_bulk_optimisation_set['sigma'] = 0.05
+    # default_bulk_optimisation_set['ISIF'] = 3
+    default_bulk_optimisation_set['use_gw'] = True
+    # default_bulk_optimisation_set['ismear'] = -5
+    # default_bulk_optimisation_set['sigma'] = 0.05
 
     logger.info("incar options" + str(default_bulk_optimisation_set))
 
@@ -96,10 +96,10 @@ def magmom_string_builder(structure):
 def phonopy_workflow(force_rerun=False):
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy.interface.vasp import parse_set_of_forces
-    from phonopy.file_IO import write_force_constants_to_hdf5,write_FORCE_SETS,parse_disp_yaml,write_disp_yaml
+    from phonopy.file_IO import write_force_constants_to_hdf5, write_FORCE_SETS, parse_disp_yaml, write_disp_yaml
     from phonopy import Phonopy
 
-    mp_points = [1,1,1]
+    mp_points = [1, 1, 1]
     gamma_centered = True
     force_no_spin = False
     use_default_encut = False
@@ -116,7 +116,7 @@ def phonopy_workflow(force_rerun=False):
     phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'encut': 520, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
                    'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'EDIFF':1e-7}
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'EDIFF': 1e-7}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
 
     logger = setup_logger(output_filename='phonopy.log')
@@ -199,12 +199,12 @@ def phonopy_workflow(force_rerun=False):
     phonon.generate_displacements()
 
     supercells = phonon.supercells_with_displacements
-    write_crystal_structure('SPOSCAR',phonon.supercell)
+    write_crystal_structure('SPOSCAR', phonon.supercell)
     write_disp_yaml(displacements=phonon.displacements, supercell=phonon.supercell, filename='disp.yaml')
 
-    logger.info("Will phonon calculations be run with spin polarisation? "+str(spin_polarized))
+    logger.info("Will phonon calculations be run with spin polarisation? " + str(spin_polarized))
     if spin_polarized:
-        crystal=VaspReader(input_location='./SPOSCAR').read_POSCAR()
+        crystal = VaspReader(input_location='./SPOSCAR').read_POSCAR()
         phonopy_set['magmom'], all_zeros = magmom_string_builder(crystal)
         phonopy_set['ispin'] = 2
 
@@ -239,21 +239,20 @@ def phonopy_workflow(force_rerun=False):
                     logger.info("Configuration " + str(i + 1) + '/' + str(
                         len(supercells)) + " previous calculation converged.")
                 else:
-                    calculate_next=True
-                    proceed=True
-                    #if not force_rerun:
-                        #calculate_next = False
-                        #proceed = False
-                        #logger.info('At least one finite displaced configuration cannot converge, quit the rest')
+                    calculate_next = True
+                    proceed = True
+                    # if not force_rerun:
+                    # calculate_next = False
+                    # proceed = False
+                    # logger.info('At least one finite displaced configuration cannot converge, quit the rest')
 
             if proceed:
                 logger.info("Configuration " + str(i + 1) + '/' + str(len(supercells)) + " proceed VASP calculation")
                 write_crystal_structure('POSCAR', sc, interface_mode='vasp')
                 structure = load_structure(logger)
                 structure.gamma_only = gamma_only
-                #phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
-                #phonopy_set['ispin'] = 2
-
+                # phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
+                # phonopy_set['ispin'] = 2
 
                 try:
                     vasp = Vasp(**phonopy_set)
@@ -322,6 +321,7 @@ def phonopy_workflow(force_rerun=False):
 
     os.chdir(cwd)
 
+
 def clean_up_phonon():
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy.interface.vasp import parse_set_of_forces
@@ -336,7 +336,7 @@ def clean_up_phonon():
         print('here')
         unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
 
-        #write out the supercell structures used for phonon calculations
+        # write out the supercell structures used for phonon calculations
         supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
         phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
         phonon.generate_displacements()
@@ -383,7 +383,7 @@ def clean_up_phonon():
             pass
 
 
-def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
+def molecular_dynamics_workflow(force_rerun=False, continue_MD=True):
     logger = setup_logger(output_filename='molecular_dynamics.log')
     cwd = os.getcwd()
 
@@ -399,13 +399,15 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
         structure.gamma_only = True
         logger.info("Will run MD with spin polarization: " + str(spin_polarized))
 
-    equilibrium_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
+    equilibrium_set = {'prec': 'Accurate', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+                       'maxmix': 40,
                        'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
                        'iwavpr': 11, 'encut': 520, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
                        'write_poscar': True}
 
-    production_set = {'prec': 'Accurate','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
+    production_set = {'prec': 'Accurate', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+                      'maxmix': 40,
                       'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 2000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
                       'encut': 520, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
@@ -414,7 +416,7 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
     del equilibrium_set['ncore']
     del production_set['ncore']
 
-    #if spin_polarized:
+    # if spin_polarized:
     #    raise Exception("Skip running spin polarized MD first ...")
 
     if not os.path.exists('./MD'):
@@ -452,7 +454,9 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
         # Check if the previous run is also ran with spin-polarisation settings as for the phonon calculations
         md_spin_polarization = check_MD_run_settings()
         if md_spin_polarization != spin_polarized:
-            logger.info("Previous MD was not run with the same spin polarization setting as for Phonopy, will rerun with "+str(spin_polarized))
+            logger.info(
+                "Previous MD was not run with the same spin polarization setting as for Phonopy, will rerun with " + str(
+                    spin_polarized))
             run_equilibration = True
             run_production = True
 
@@ -467,7 +471,8 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
 
     if run_equilibration:
         if continue_MD:
-            logger.warning("Only trying to continue a production MD, but there seems to be incomplete equilibration, will not continue")
+            logger.warning(
+                "Only trying to continue a production MD, but there seems to be incomplete equilibration, will not continue")
             os.chdir(cwd)
             return
         try:
@@ -557,9 +562,9 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
 
         if continue_MD:
             if previous_productions == 1:
-                shutil.copy('CONTCAR_prod','POSCAR')
+                shutil.copy('CONTCAR_prod', 'POSCAR')
             elif previous_productions > 1:
-                shutil.copy('CONTCAR_prod_'+str(previous_productions-1), 'POSCAR')
+                shutil.copy('CONTCAR_prod_' + str(previous_productions - 1), 'POSCAR')
 
         try:
             logger.info("start production run")
@@ -586,18 +591,18 @@ def molecular_dynamics_workflow(force_rerun=False,continue_MD=True):
             except:
                 pass
 
-        if previous_productions==0:
+        if previous_productions == 0:
             shutil.copy('POSCAR', 'POSCAR_prod')
             shutil.copy('CONTCAR', 'CONTCAR_prod')
             shutil.copy('vasprun.xml', 'vasprun_prod.xml')
             shutil.copy('OUTCAR', 'OUTCAR_prod')
             shutil.copy('OSZICAR', 'OSZICAR_prod')
-        elif previous_productions>0:
-            shutil.copy('POSCAR', 'POSCAR_prod_'+str(previous_productions))
-            shutil.copy('CONTCAR', 'CONTCAR_prod_'+str(previous_productions))
-            shutil.copy('vasprun.xml', 'vasprun_prod_'+str(previous_productions)+'.xml')
-            shutil.copy('OUTCAR', 'OUTCAR_prod_'+str(previous_productions))
-            shutil.copy('OSZICAR', 'OSZICAR_prod_'+str(previous_productions))
+        elif previous_productions > 0:
+            shutil.copy('POSCAR', 'POSCAR_prod_' + str(previous_productions))
+            shutil.copy('CONTCAR', 'CONTCAR_prod_' + str(previous_productions))
+            shutil.copy('vasprun.xml', 'vasprun_prod_' + str(previous_productions) + '.xml')
+            shutil.copy('OUTCAR', 'OUTCAR_prod_' + str(previous_productions))
+            shutil.copy('OSZICAR', 'OSZICAR_prod_' + str(previous_productions))
 
     os.chdir(cwd)
 
@@ -620,15 +625,16 @@ def check_phonon_run_settings():
         os.chdir('..')
     return spin_polarized
 
+
 def check_MD_run_settings():
     spin_polarized = False
     if os.path.isfile('OUTCAR_prod'):
         output = 'OUTCAR_prod'
     elif os.path.isfile('OUTCAR_equ'):
-        output ='OUTCAR_equ'
+        output = 'OUTCAR_equ'
     else:
         return spin_polarized
-    f = open(output,'r')
+    f = open(output, 'r')
     for l in f.readlines():
         if 'ISPIN' in l:
             ispin = int(l.split()[2])
@@ -636,7 +642,6 @@ def check_MD_run_settings():
         return False
     elif ispin == 2:
         return True
-
 
 
 def load_supercell_structure(supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]]):
@@ -650,6 +655,105 @@ def load_supercell_structure(supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]])
     os.remove('./POSCAR_super')
     return supercell
 
+
+def run_electronic_dos_for_md_trajectory(part=0, batch_size=20):
+    # load all the production run xml file
+    from pymatgen.io.vasp.outputs import Vasprun
+    from core.utils.zipdir import ZipDir
+    all_vasp_runs = []
+    all_structures = []
+    for v in ['vasprun_prod.xml', 'vasprun_prod_1.xml', 'vasprun_prod_2.xml']:
+        if os.path.exists('./' + v):
+            all_vasp_runs.append(v)
+
+    for v in all_vasp_runs:
+        vasprun = Vasprun(v)
+        trajectory = vasprun.get_trajectory()
+        all_structures += [trajectory.get_structure(i) for i in range(len(trajectory.frac_coords))]
+
+    if (part + 1) * batch_size > len(all_structures):
+        raise Exception("over the length of the trajectory, quit")
+
+    for i in range(batch_size * part, batch_size * (part + 1)):
+
+        pwd = os.getcwd()
+        folder = 'frame_' + str(i)
+
+        if os.path.exists(pwd + '/' + folder + '.zip'): continue
+
+        try:
+            os.mkdir(folder)
+        except:
+            pass
+        os.chdir(pwd + '/' + folder)
+
+        this_structure = map_pymatgen_IStructure_to_crystal(all_structures[i])
+        this_structure.gamma_only = True #DO NOT DELETE THIS!!!
+
+        single_pt_set = {'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38, 'NPAR': 28, 'ENCUT': 350, 'PRECFOCK':'Fast',
+                         'LCHARG': True, 'LWAVE': True, 'use_gw': True, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
+                         'clean_after_success': False, 'LREAL': 'False', 'executable':'vasp_gam'}
+        vasp = Vasp(**single_pt_set)
+        vasp.set_crystal(this_structure)
+        vasp.execute()
+
+        gga_gap = None
+        hybrid_gap = None
+
+        if vasp.completed:
+            shutil.copy('OUTCAR','OUTCAR_GGA')
+            gga_gap = get_dos_gap()
+            shutil.copy('vasprun.xml', 'vasprun_gga.xml')
+            del single_pt_set['IALGO']
+            single_pt_set.update(
+                {'LCHARG': False, 'LVTOT': False, 'LWAVE': False, 'NELM': 200, 'ISPIN': 1, 'ENCUT': 350,
+                 'LHFCALC': True, 'HFSCREEN': 0.2, 'PRECFOCK': 'FAST', 'Gamma_centered': True, 'MP_points': [1, 1, 1],
+                 'use_gw': True, 'clean_after_success': True, 'write_poscar': False, 'PREC': "Normal"})
+            vasp = Vasp(**single_pt_set)
+            vasp.set_crystal(this_structure)
+            vasp.execute()
+            if vasp.completed:
+                shutil.copy('OUTCAR', 'OUTCAR_hybrid')
+                hybrid_gap = get_dos_gap()
+                shutil.copy('vasprun.xml', 'vasprun_hybrid.xml')
+
+        files = ['CHG', 'CHGCAR', 'LOCPOT', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', "vasprun.xml", 'DOSCAR', 'OUTCAR',
+                 'PROCAR', 'KPOINTS']
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
+        os.chdir(pwd)
+
+        ZipDir(folder, folder + '.zip')
+        shutil.rmtree(folder, ignore_errors=True)
+
+        output = open(pwd + '/gap_dynamics_300K_' + str(part) + '.dat', 'a+')
+        output.write(str(i) + '\t' + "{:.4f}".format(gga_gap) + '\t' + "{:.4f}".format(hybrid_gap) + '\n')
+        output.close()
+
+def get_dos_gap():
+    f=open('OUTCAR','r')
+    start_collect = False
+    cbm = None
+    for line in f.readlines():
+        if not start_collect:
+            if ' band No.  band energies     occupation' in line:
+                start_collect = True
+                continue
+        if start_collect:
+            s=line.split()
+            if len(s) == 3:
+                if float(s[-1])>0.0: vbm = float(s[1])
+                if (float(s[-1])==0.0) and (cbm is None): cbm = float(s[1])
+            else:
+                break
+    gap = cbm-vbm
+    print('band gap is :',gap)
+    return gap
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='workflow control for double perovskite ',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -659,6 +763,9 @@ if __name__ == "__main__":
     parser.add_argument("--continue_MD", action='store_true', help='continue running MD')
     parser.add_argument("--MD", action='store_true', help='run MD calculations')
     parser.add_argument("--clean_phonon", action='store_true', help='clean up the phonon calculation')
+    parser.add_argument("--electdyn", action='store_true')
+    parser.add_argument("--part", type=int, default=0)
+    parser.add_argument("--get_gap", action='store_true', default=0)
     args = parser.parse_args()
 
     if args.opt:
@@ -668,7 +775,13 @@ if __name__ == "__main__":
         phonopy_workflow(force_rerun=args.force_rerun)
 
     if args.MD:
-        molecular_dynamics_workflow(force_rerun=args.force_rerun,continue_MD=args.continue_MD)
+        molecular_dynamics_workflow(force_rerun=args.force_rerun, continue_MD=args.continue_MD)
 
     if args.clean_phonon:
         clean_up_phonon()
+
+    if args.electdyn:
+        run_electronic_dos_for_md_trajectory(part=args.part)
+
+    if args.get_gap:
+        get_dos_gap()

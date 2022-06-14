@@ -653,7 +653,13 @@ def GGA_U_structure_optimisation():
     structure = load_structure(logger)
     gga_u_options = __set_U_correction_dictionary(structure)
     default_bulk_optimisation_set.update(gga_u_options)
-    default_bulk_optimisation_set.update({'ENCUT': 400, 'ISPIN': 2})
+    default_bulk_optimisation_set.update({'ENCUT': 400, 'ISPIN': 2, 'IVDW':12, 'MP_points':[4,4,1], 'Gamma_centered':True})
+
+    if 'ISIF' in default_bulk_optimisation_set:
+        del default_bulk_optimisation_set['ISIF']
+    if 'isif' in default_bulk_optimisation_set:
+        del default_bulk_optimisation_set['isif']
+
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
     vasp.execute()
@@ -755,4 +761,5 @@ def default_xy_strained_optimisation_with_existing_vasp_setup():
 
 if __name__ == "__main__":
     #default_symmetry_preserving_optimisation()
-    rpa_dielectric_constants(hybrid_GGA=True)
+    #rpa_dielectric_constants(hybrid_GGA=True)
+    GGA_U_structure_optimisation()
