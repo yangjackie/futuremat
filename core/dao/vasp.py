@@ -324,6 +324,26 @@ class VaspReader(FileReader):
                     l += 1
         return potential_grid, crystal
 
+    def read_ml_heat(self):
+        """
+        Method to read the ML_HEAT file to retrieve the heat flux values from a molecular dynamic run in VASP
+        using the machine-learning forcefield (MLFF).
+        Returns:
+            qx (list):Heat flux values in the x-direction
+            qy (list):Heat flux values in the y-direction
+            qz (list):Heat flux values in the z-direction
+        """
+        qx=[]
+        qy=[]
+        qz=[]
+        for line in self.file_content:
+            l = line.split()
+            if len(l)!=0:
+                qx.append(float(l[-3]))
+                qy.append(float(l[-2]))
+                qz.append(float(l[-1]))
+        return qx,qy,qz
+
 class VaspWriter(object):
 
     def write_INCAR(self, filename='INCAR',
