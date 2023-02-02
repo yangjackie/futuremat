@@ -322,11 +322,25 @@ class AnharmonicScore(object):
 
             print('MD force vector shape ', np.shape(all_forces))
         self.dft_forces = np.array(all_forces)
+
+        #for i in range(len(all_forces)):
+        #    print('FORCES ', np.std(all_forces[i]))
+
         print('All MD force vector shape ', np.shape(self.dft_forces))
         print("Atomic forces along the MD trajectory loaded\n")
         print(self.force_dimension_counter)
 
     def get_all_md_atomic_displacements(self):
+
+        #from pymatgen.util.coord import pbc_shortest_vectors
+        #from pymatgen.core.lattice import Lattice as PymatLattice
+        #__pymatgen_lattice = PymatLattice.from_parameters(a=self.ref_frame.lattice.a,
+        #                                                  b=self.ref_frame.lattice.b,
+        #                                                  c=self.ref_frame.lattice.c,
+        #                                                  alpha=self.ref_frame.lattice.alpha,
+        #                                                  beta=self.ref_frame.lattice.beta,
+        #                                                  gamma=self.ref_frame.lattice.gamma)
+
         all_positions = []
         for fc,frame in enumerate(self.md_frames):
             this_position_set = []
@@ -334,26 +348,34 @@ class AnharmonicScore(object):
                 if elem.tag == 'varray':
                     if elem.attrib['name'] == 'positions':
                         this_positions = []
-                        for v in elem:
+                        for i,v in enumerate(elem):
                             this_position = [float(_v) for _v in v.text.split()]
                             this_positions.append(this_position)
+
+                            #pbc_shortest_dist = pbc_shortest_vectors(__pymatgen_lattice,self.ref_coords[i],this_position)[0][0]
+                            #this_positions.append(pbc_shortest_dist)
+
                         this_position_set.append(np.array(this_positions))
+
             this_position_set = this_position_set[-1*self.force_dimension_counter[fc]:]
             all_positions = all_positions + this_position_set
-        print(len(all_positions),len(self.dft_forces))
+
         # only need those with forces
         all_positions = all_positions[-len(self.dft_forces):]
         all_positions = np.array(all_positions)
         print("Atomic positions along the MD trajectory loaded, converting to displacement, taking into account PBC")
         print("Atomic positions, shape ", np.shape(all_positions))
-        __all_displacements = np.array(
-            [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
 
-        # periodic boundary conditions
-        #__all_displacements = (__all_displacements + 0.5 + 1e-5) % 1 - 0.5 - 1e-5
-        __all_displacements = __all_displacements - np.round(__all_displacements)  # this is how it's done in Pymatgen
+        __all_displacements = all_positions
+
+        __all_displacements_holder = np.array([all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
+        __all_displacements = __all_displacements_holder - np.round(__all_displacements_holder)  # this is how it's done in Pymatgen
+
         # Convert to Cartesian
         self.all_displacements = np.zeros(np.shape(__all_displacements))
+
+        #for i in range(__all_displacements.shape[0]):
+        #    print('DISP', np.mean(__all_displacements[i]))
 
         for i in range(__all_displacements.shape[0]):
             np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self.all_displacements[i, :, :])
@@ -417,6 +439,9 @@ class AnharmonicScore(object):
                 hasattr(self, '_anharmonic_forces') and self._anharmonic_forces is None):
             self._anharmonic_forces = self.dft_forces - self.harmonic_forces
 
+            #for i in range(self._anharmonic_forces.shape[0]):
+            #    print('ANHF ',np.std(self._anharmonic_forces[i]))
+
             if self.include_third_oder:
                 self._anharmonic_forces = self._anharmonic_forces - self.third_order_forces
             if self.include_fourth_order:
@@ -425,6 +450,7 @@ class AnharmonicScore(object):
 
     def trajectory_normalized_dft_forces(self, flat=False):
         all_forces_std = self.dft_forces.flatten().std()
+
         out = np.zeros(np.shape(self.dft_forces))
         np.divide(self.dft_forces, all_forces_std, out=out)
         if flat:
@@ -570,10 +596,17 @@ class AnharmonicScore(object):
             return sigma, self.time_series
         else:
             sigma = rmse.std(axis=(1,2), dtype=np.float64) / std.std(axis=(1,2), dtype=np.float64)
-            print('sigma is ', sigma)
+            #print('sigma is ', sigma)
+            print("=" * 100)
             print('averaged sigma is ',sigma.mean())
+            print("=" * 100)
             return sigma, self.time_series
 
+    def moving_direction(self):
+        dot_prod = np.sum(self.all_displacements * self.dft_forces,axis=(2,1))
+        print(np.shape(self.all_displacements))
+        print(np.shape(dot_prod))
+        return dot_prod
 
 
 if __name__ == "__main__":
@@ -637,7 +670,7 @@ if __name__ == "__main__":
         print('sigma is ',sigma)
         if args.plot_trajectory:
             #print(len(sigma))
-            plt.plot(time_stps, sigma, 'b-')
+            plt.plot(time_stps, sigma, 'b-', lw=1)
             plt.xlabel("Time (fs)", fontsize=16)
             plt.ylabel("$\\sigma(t)$", fontsize=16)
             plt.tight_layout()

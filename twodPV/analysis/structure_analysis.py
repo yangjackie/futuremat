@@ -69,6 +69,7 @@ def polarisation(db, a, b, c, orientation, termination, thickness):
     return pol
 
 
+
 def polarisation_out_distributions(db):
     termination_types = {'100': ['AO', 'BO2'], '110': ['ABO', 'O2'], '111': ['AO3', 'B']}
     two_d_out_of_plane_vec = cVector3D(0.0, 0.0, 1.0)
@@ -236,7 +237,7 @@ def bond_lengths_distributions(db, direction='in'):
     in_plane_statistics = {'100': {3: [], 5: [], 7: [], 9: []},
                            '110': {3: [], 5: [], 7: [], 9: []},
                            '111': {3: [], 5: [], 7: [], 9: []}}
-    out_of_plane_statistics = {'100#': {3: [], 5: [], 7: [], 9: []},
+    out_of_plane_statistics = {'100': {3: [], 5: [], 7: [], 9: []},
                                '110': {3: [], 5: [], 7: [], 9: []},
                                '111': {3: [], 5: [], 7: [], 9: []}}
 
@@ -462,6 +463,6 @@ if __name__ == "__main__":
     else:
         raise Exception("Database " + args.db + " does not exists, cannot proceed!")
 
-    # bond_lengths_distributions(args.db, direction=args.direction)
+    bond_lengths_distributions(args.db, direction=args.direction)
 
-    polarisation_out_distributions(args.db)
+    #polarisation_out_distributions(args.db)

@@ -37,6 +37,8 @@ def collect_dielectric_bulk(db):
                         print('dielectric ionic tensor')
                         print(outcar.dielectric_ionic_tensor)
                         data['dielectric_ionic_tensor'] = outcar.dielectric_ionic_tensor
+                        print('Born Effective Charge')
+                        print(outcar.born)
                         populate_db(db, None, kvp, data)
                         os.remove('./OUTCAR_ph')
                     os.chdir(cwd)
@@ -249,4 +251,4 @@ if __name__=="__main__":
     dbname = os.path.join(os.getcwd(), '2dpv.db')
     db = connect(dbname)
     logger = setup_logger(output_filename='data_collector_static_dielectric.log')
-    collect_dielectric_2D(db)
+    collect_dielectric_bulk(db)

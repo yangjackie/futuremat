@@ -29,8 +29,8 @@ def phonopy_workflow(force_rerun=False):
 
     phonopy_set = {'prec': 'Normal', 'ibrion': -1, 'encut': 350, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
-                   'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'amin':0.01}
+                   'ismear': 0, 'MP_points': mp_points, 'nelm': 400, 'lreal': False, 'use_gw': use_gw,
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'amin':0.01, 'gpu_run': True,'SYMPREC':1e-4}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
 
     logger = setup_logger(output_filename='phonopy.log')
@@ -218,13 +218,13 @@ def molecular_dynamics_workflow(force_rerun=False):
     #logger.info("Will run MD with spin polarization: " + str(spin_polarized))
 
     equilibrium_set = {'prec': 'normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40, 'amin':0.01,
-                       'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
+                       'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 300, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
                        'iwavpr': 11, 'encut': 350, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
                        'write_poscar': True}
 
     production_set = {'prec': 'normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40, 'amin':0.01,
-                      'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 400, 'isif': 1, 'tebeg': 300,
+                      'lmaxmix': 6, 'ncore': 32, 'nelmin': 4, 'nsw': 2000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
                       'encut': 350, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
                       'use_gw': True, 'write_poscar': False}
@@ -386,7 +386,7 @@ def __load_supercell_structure():
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy import Phonopy
     supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 1]]
-    unitcell, _ = read_crystal_structure('./CONTCAR_nospin', interface_mode='vasp')
+    unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
     phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
     write_crystal_structure('POSCAR_super', phonon.supercell, interface_mode='vasp')
     supercell = VaspReader(input_location='./POSCAR_super').read_POSCAR()

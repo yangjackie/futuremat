@@ -84,7 +84,7 @@ def default_structural_optimisation():
     Perform a full geometry optimization on the structure in POSCAR stored in the current folder (supposed named as opt/).
     To submit this optimisation job using the command line argument from myqueue package, do
 
-    mq submit twodPV.geometry_optimisation@default_structural_relaxation -R <resources> opt/
+    mq submit twodPV.calculators@default_structural_optimisation -R <resources> opt/
 
     Note that this method is implemented in such a way that an existing CONTCAR will be read first, if it can be found,
     otherwise, it will read in the POSCAR file. So restart mechansim is already built in. For example, if a VASP calculation
@@ -111,17 +111,23 @@ def __default_spin_polarised_vasp_optimisation_procedure(logger, structure):
     except:
         pass
 
-    #vasp = Vasp(**default_bulk_optimisation_set)
-    #vasp.set_crystal(structure)
-    #vasp.execute()
+    # vasp = Vasp(**default_bulk_optimisation_set)
+    # vasp.set_crystal(structure)
+    # vasp.execute()
     if True:
-    #if vasp.self_consistency_error:
+        # if vasp.self_consistency_error:
         # Spin polarisation calculations might be very difficult to converge.
         # For this case, we converge a non-spin polarisation calculation first and
         # then use the converged wavefunction to carry out spin-polarised optimisation
         logger.info(
             "Spin-polarised SCF convergence failed, try generate a non-spin-polarised wavefunction as starting guess")
+
+        default_bulk_optimisation_set.update(
+            {'Gamma_centered': True, 'MP_points': [1, 1, 1], 'executable': 'vasp_gam', 'gpu_run': False})
+        structure.gamma_only = True
+
         default_bulk_optimisation_set.update({'ISPIN': 1, 'NSW': 500, 'LWAVE': True, 'clean_after_success': False})
+
         vasp = Vasp(**default_bulk_optimisation_set)
         vasp.set_crystal(structure)
         vasp.execute()
@@ -130,15 +136,54 @@ def __default_spin_polarised_vasp_optimisation_procedure(logger, structure):
             logger.info("WAVECAR found")
             logger.info("Restart spin-polarised structure relaxation...")
             structure = VaspReader(input_location='./CONTCAR').read_POSCAR()
-            default_bulk_optimisation_set.update({'ISPIN': 2, 'NSW': 500, 'LWAVE': False, 'clean_after_success': True})
+            default_bulk_optimisation_set.update(
+                {'ISPIN': 2, 'NSW': 500, 'LWAVE': False, 'clean_after_success': True, 'write_poscar': True})
             vasp = Vasp(**default_bulk_optimisation_set)
             vasp.set_crystal(structure)
             vasp.execute()
 
             logger.info("VASP terminated properly: " + str(vasp.completed))
             if not vasp.completed:
-                logger.info("VASP did not completed properly, you might want to check it by hand.")
+                raise Exception("VASP did not completed properly, you might want to check it by hand.")
 
+
+def ionic_optimisation():
+    logger = setup_logger(output_filename='relax.log')
+    update_core_info()
+    logger.info("==========Full Structure Optimisation with VASP==========")
+
+    default_bulk_optimisation_set.update(
+        {'ISPIN': 2, 'NSW': 500, 'LWAVE': False, 'clean_after_success': True, 'Gamma_centered': True,
+         'MP_points': [4, 4, 1], 'executable': 'vasp_std', 'gpu_run': False, 'IBRION': 2, 'ISIF': 0})
+    structure = load_structure(logger)
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+    logger.info("VASP terminated properly: " + str(vasp.completed))
+    if not vasp.completed:
+        raise Exception("VASP did not completed properly, you might want to check it by hand.")
+
+
+def single_point_calculation():
+    logger = setup_logger(output_filename='single_point.log')
+    update_core_info()
+
+    logger.info("==========Full Structure Optimisation with VASP==========")
+    try:
+        os.remove('./INCAR')
+    except:
+        pass
+
+    default_bulk_optimisation_set.update(
+        {'ISPIN': 2, 'NSW': 500, 'LWAVE': False, 'clean_after_success': True, 'Gamma_centered': True,
+         'MP_points': [4, 4, 1], 'executable': 'vasp_std', 'gpu_run': False, 'IBRION': -1, 'ISIF': 0, 'NSW':0, 'IALGO':38,'NELM':150})
+    structure = load_structure(logger)
+    vasp = Vasp(**default_bulk_optimisation_set)
+    vasp.set_crystal(structure)
+    vasp.execute()
+    logger.info("VASP terminated properly: " + str(vasp.completed))
+    if not vasp.completed:
+        raise Exception("VASP did not completed properly, you might want to check it by hand.")
 
 def load_structure(logger):
     if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):
@@ -173,7 +218,7 @@ def spin_unpolarised_optimization():
 
     logger.info("Perform an"
                 " initial spin-non-polarised calculations to help convergence")
-    #default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04','MP_points':[4,4,1],'Gamma_centered': True, 'NCORE':28, 'KPAR':28, })#'executable':'vasp_gam'})
+    # default_bulk_optimisation_set.update({'ispin': 1, 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04','MP_points':[4,4,1],'Gamma_centered': True, 'NCORE':28, 'KPAR':28, })#'executable':'vasp_gam'})
 
     logger.info("incar options" + str(default_bulk_optimisation_set))
 
@@ -182,7 +227,7 @@ def spin_unpolarised_optimization():
         vasp.set_crystal(structure)
         vasp.execute()
     except:
-        vasp.completed=False
+        vasp.completed = False
         pass
 
     logger.info("VASP terminated?: " + str(vasp.completed))
@@ -199,7 +244,8 @@ def default_two_d_optimisation():
 
 def spin_unploarised_two_d_optimisation():
     default_bulk_optimisation_set.update(
-        {'executable': 'vasp_std-xy', 'MP_points': [4, 4, 1], 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04', 'idipol': 3, 'ispin': 1, 'NCORE':28, 'KPAR':28})
+        {'executable': 'vasp_std-xy', 'MP_points': [4, 4, 1], 'nsw': 500, 'ENCUT': 300, 'EDIFF': '1e-04', 'idipol': 3,
+         'ispin': 1, 'NCORE': 28, 'KPAR': 28})
     spin_unpolarised_optimization()
 
 
@@ -380,7 +426,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         logger.info("      " + str(k) + "=" + str(single_pt_set[k]))
 
     single_pt_set.update(single_point_pbe)
-    #single_pt_set['IALGO']=48
+    # single_pt_set['IALGO']=48
     vasp = Vasp(**single_pt_set)
     vasp.set_crystal(structure)
     vasp.execute()
@@ -388,7 +434,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
     if vasp.completed:
         logger.info("PBE self-consistent run completed properly.")
     else:
-        single_pt_set = {'NCORE': 28, 'NPAR': 4, "ENCUT":350, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
+        single_pt_set = {'NCORE': 28, 'NPAR': 4, "ENCUT": 350, 'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38}
         single_pt_set.update(single_point_pbe)
         single_pt_set['IALGO'] = 38
         structure = VaspReader(input_location='./POSCAR').read_POSCAR()
@@ -399,7 +445,8 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         if vasp.completed:
             logger.info("PBE self-consistent run completed properly.")
         else:
-            files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'LOCPOT', 'node_info', "WAVECAR", "WAVEDER", 'DOSCAR', 'PROCAR']
+            files = ['CHG', 'CHGCAR', 'EIGENVAL', 'IBZKPT', 'PCDAT', 'POTCAR', 'WAVECAR', 'LOCPOT', 'node_info',
+                     "WAVECAR", "WAVEDER", 'DOSCAR', 'PROCAR']
             for f in files:
                 try:
                     os.remove(f)
@@ -446,7 +493,7 @@ def rpa_dielectric_constants(hybrid_GGA=False):
         logger.info('Hybrid GGA (HSE06) self-consistent run')
         single_pt_set.update(hse06_set)
         single_pt_set.update(
-            {'ALGO': 'ALL', 'LVHAR': True,  'ISPIN': 1, 'ICHRG': 1, 'NELM': 80, 'LCHARG': True, "ENCUT":350})
+            {'ALGO': 'ALL', 'LVHAR': True, 'ISPIN': 1, 'ICHRG': 1, 'NELM': 80, 'LCHARG': True, "ENCUT": 350})
         vasp = Vasp(**single_pt_set)
         vasp.set_crystal(structure)
         vasp.execute()
@@ -653,7 +700,8 @@ def GGA_U_structure_optimisation():
     structure = load_structure(logger)
     gga_u_options = __set_U_correction_dictionary(structure)
     default_bulk_optimisation_set.update(gga_u_options)
-    default_bulk_optimisation_set.update({'ENCUT': 400, 'ISPIN': 2, 'IVDW':12, 'MP_points':[4,4,1], 'Gamma_centered':True})
+    default_bulk_optimisation_set.update(
+        {'ENCUT': 400, 'ISPIN': 2, 'IVDW': 12, 'MP_points': [4, 4, 1], 'Gamma_centered': True})  # ,'NELECT':0})
 
     if 'ISIF' in default_bulk_optimisation_set:
         del default_bulk_optimisation_set['ISIF']
@@ -760,6 +808,6 @@ def default_xy_strained_optimisation_with_existing_vasp_setup():
 
 
 if __name__ == "__main__":
-    #default_symmetry_preserving_optimisation()
-    #rpa_dielectric_constants(hybrid_GGA=True)
-    GGA_U_structure_optimisation()
+    # default_symmetry_preserving_optimisation()
+    # rpa_dielectric_constants(hybrid_GGA=True)
+    default_structural_optimisation()

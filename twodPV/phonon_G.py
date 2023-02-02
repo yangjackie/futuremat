@@ -8,7 +8,16 @@ def execute():
     directory = 'phonon_G'
     if not os.path.exists(directory):
        os.makedirs(directory)
+
     os.chdir(directory)
+    try:
+        os.remove('./INCAR')
+    except:
+        pass
+    try:
+        os.remove('./KPOINTS')
+    except:
+        pass
 
     logger = setup_logger(output_filename='phonon.log')
     shutil.copy('../CONTCAR', 'POSCAR')
@@ -26,10 +35,10 @@ def execute():
          'POTIM': 0.01,
          "NELM": 200,
          "LEPSILON": True,
-         'MP_points': [6, 6, 6],
+         'MP_points': [4,4,1],
          'Gamma_centered': True,
          'clean_after_success': True,
-         'NPAR':14})
+         'NCORE':28})
 
     logger.info("==========Gamma point phonon calculation with VASP==========")
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()

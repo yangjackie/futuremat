@@ -230,17 +230,17 @@ def plot_MD_energies_and_temperature_evolution(time_step=0.001):
             temp.append(float(line.split()[2]))
             energies.append(float(line.split()[4]))
     plt.subplot(2, 1, 1)
-    plt.plot([x * time_step for x in range(len(temp))], temp, 'b-')
+    plt.plot([x * time_step for x in range(len(temp))], temp, 'b-',lw=1)
     plt.xlabel('Time (ps)')
     plt.ylabel('Temperature (K)')
 
     plt.subplot(2, 1, 2)
-    plt.plot([x * time_step for x in range(len(energies))], energies, 'r-')
+    plt.plot([x * time_step for x in range(len(energies))], energies, 'r-',lw=1)
     plt.xlabel('Time (ps)')
     plt.ylabel('Energy (eV)')
     plt.tight_layout()
-    plt.show()
-
+    plt.savefig('energy_and_temp_trajectory.pdf')
+    #plt.show()
 
 def pair_correlation_function_averaged(frames, bins=50, A='', B='', cross_term=False):
     if not A:
@@ -550,7 +550,7 @@ if __name__ == "__main__":
     if args.md:
         plot_MD_energies_and_temperature_evolution(time_step=args.time_step)
     if args.displacement_traj or args.displacement_histograms:
-        from entdecker.core.io.vasp import VaspReader
+        from core.dao.vasp import VaspReader
 
         print(args.ref_atoms)
         args.md_frames=['XDATCAR_'+str(i+1) for i in range(len(args.md_frames))]

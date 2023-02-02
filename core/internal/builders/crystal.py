@@ -1,4 +1,7 @@
-from pymatgen import Composition
+try:
+    from pymatgen import Composition
+except:
+    from pymatgen.core import Composition
 from pymatgen.alchemy.filters import RemoveDuplicatesFilter
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from pymatgen.core.structure import Structure

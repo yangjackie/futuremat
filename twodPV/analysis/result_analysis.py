@@ -661,7 +661,7 @@ def plot_thickness_dependent_imaginary_frequency_distribution(db, orientation='1
         term = "O$_{2}$"
     else:
         term = term_type
-    __histogram_plotter(thickness_freqs, thickness_bins, title='['+str(orientation)+']//'+term+'-termination')
+    __histogram_plotter(thickness_freqs, thickness_bins, title='[' + str(orientation) + ']//' + term + '-termination')
     plt.tight_layout()
     plt.savefig(output)
 
@@ -720,9 +720,9 @@ def __frequency_histogram(db, orientation=None, term_type=None):
                                 gamma_point_freqs = [(f ** 2).real for f in gamma_point_freqs if f.imag != 0.0]
                                 _this_freq.append(min(gamma_point_freqs))
                                 if uid == 'BaTiO3_100_AO_3':
-                                    print(uid,min(gamma_point_freqs))
+                                    print(uid, min(gamma_point_freqs))
                             except ValueError:
-                                #print("No imaginary frequency for " + str(uid))
+                                # print("No imaginary frequency for " + str(uid))
                                 pass
                         except KeyError:
                             # print("Phonon calculation failed for " + str(uid))
@@ -731,7 +731,7 @@ def __frequency_histogram(db, orientation=None, term_type=None):
         hist, bin_edge = np.histogram(this_freq, bins=[-5 + j * 0.1 for j in range(55)], range=(-5, 0))
         thickness_freqs[thick] = list(hist)
         thickness_bins[thick] = list(bin_edge)[:-1]
-        print(hist,thickness_bins[thick])
+        print(hist, thickness_bins[thick])
         # print(len(thickness_bins[thick]), len(thickness_freqs[thick]))
         print(str(orientation), str(term_type), str(thick), len([f for f in this_freq if f >= -2]))
     return thickness_freqs, thickness_bins
@@ -945,31 +945,87 @@ def plot_thickness_dependent_imaginary_frequency_energy_single_summary(db, outpu
     plt.savefig(output)
 
 
-def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None):
+def non_zero(tensor):
+    return (tensor[0][0] != 0.0) and (tensor[1][1] != 0.0) and (tensor[2][2] != 0.0)
+
+
+def trace(tensor):
+    return (tensor[0][0] + tensor[1][1] + tensor[2][2]) / 3.0
+
+
+def trace_inplane(tensor):
+    return (tensor[0][0] + tensor[1][1]) / 2.0
+
+
+def trace_outplane(tensor):
+    return tensor[2][2]
+
+
+# def tolerance_factor_bulk_ionic_dielectric_compare(db):
+#     all_tolerance_factors=[]
+#     all_dielectric_consts=[]
+#     for i in range(len(A_site_list)):
+#         for a in A_site_list[i]:
+#             for b in B_site_list[i]:
+#                 for c in C_site_list[i]:
+#                     system_name = a + b + c
+#                     uid = system_name + '3_pm3m'
+#                     row = db.get(selection=[('uid', '=', uid)])
+#                     print(uid)
+#                     tolerance_f = ionic_radii[a][charge_state_A_site[i]] + ionic_radii[c][charge_state_C_site[i]]
+#                     tolerance_f /= ionic_radii[b][charge_state_B_site[i]] + ionic_radii[c][charge_state_C_site[i]]
+#                     tolerance_f /= math.sqrt(2)
+#
+#                     bulk_dielectric_tensor = None
+#                     try:
+#                         bulk_dielectric_tensor = row.data['dielectric_ionic_tensor']
+#                     except:
+#                         continue
+#
+#                     if bulk_dielectric_tensor is not None:
+#                         bulk_dielectric_constant = trace(bulk_dielectric_tensor)
+#                         print(bulk_dielectric_constant)
+#                         all_tolerance_factors.append(tolerance_f)
+#                         all_dielectric_consts.append(bulk_dielectric_constant)
+#
+#     plt.scatter(all_tolerance_factors,all_dielectric_consts,marker='o',alpha=0.7)
+#     plt.yscale('symlog')
+#
+#    plt.tight_layout()
+#    plt.savefig('bulk_epsilon_tolerance.pdf')
+
+def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structure_only=True):
     import scipy
     termination_types = {'100': ['AO', 'BO2'], '110': ['ABO', 'O2'], '111': ['AO3', 'B']}
     thicknesses = [3, 5, 7, 9]
     color_dict = {'100': '#F2A104', '110': '#00743F', '111': '#1D65A6'}
 
-    def non_zero(tensor):
-        return (tensor[0][0] != 0.0) and (tensor[1][1] != 0.0) and (tensor[2][2] != 0.0)
+    def corrected_trace_inplane(sys_name):
+        row = db.get(selection=[('uid', '=', sys_name)])
+        structure_2d = row.toatoms()
+        supercell_c = structure_2d.get_cell_lengths_and_angles()[2]
 
-    def trace(tensor):
-        return (tensor[0][0] + tensor[1][1] + tensor[2][2]) / 3.0
-
-    def trace_inplane(tensor):
-        return (tensor[0][0] + tensor[1][1]) / 2.0
-
-    def trace_outplane(tensor):
-        return tensor[2][2]
+        structure = map_ase_atoms_to_crystal(structure_2d)
+        all_z_positions = np.array([a.scaled_position.z for a in structure.asymmetric_unit[0].atoms])
+        all_z_positions = all_z_positions - np.round(all_z_positions)
+        all_z_positions = [z * supercell_c for z in all_z_positions]
+        slab_thick = max(all_z_positions) - min(all_z_positions)
+        twod_dielectric_tensor = row.data['dielectric_ionic_tensor']
+        twod_epsilon_inplane = trace_inplane(twod_dielectric_tensor)
+        twod_epsilon_inplane = (supercell_c / slab_thick) * (twod_epsilon_inplane - 1.0) + 1.0
+        return twod_epsilon_inplane
 
     plt.figure(figsize=(14, 9))
     # get the bulk data
 
     epsilon_SrTiO = trace(db.get(selection=[('uid', '=', 'SrTiO3_pm3m')]).data['dielectric_ionic_tensor'])
+    print("SrTiO",epsilon_SrTiO)
     epsilon_BaTiO = trace(db.get(selection=[('uid', '=', 'BaTiO3_pm3m')]).data['dielectric_ionic_tensor'])
+    print("BaTiO",epsilon_BaTiO)
     epsilon_BaZrO = trace(db.get(selection=[('uid', '=', 'BaZrO3_pm3m')]).data['dielectric_ionic_tensor'])
-    epsilon_CsPbBr = trace(db.get(selection=[('uid', '=', 'CsPbBr3_pm3m')]).data['dielectric_ionic_tensor'])
+    print("BaZrO",epsilon_BaZrO)
+    epsilon_CsSnF = trace(db.get(selection=[('uid', '=', 'CsSnF3_pm3m')]).data['dielectric_ionic_tensor'])
+    print("CsSnF", epsilon_CsSnF)
 
     for i in range(len(A_site_list)):
         for orient_id, orient in enumerate(['100', '110', '111']):
@@ -1005,9 +1061,10 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None):
                                 supercell_c = structure_2d.get_cell_lengths_and_angles()[2]
 
                                 structure = map_ase_atoms_to_crystal(structure_2d)
-                                all_z_positions = np.array([a.scaled_position.z for a in structure.asymmetric_unit[0].atoms])
+                                all_z_positions = np.array(
+                                    [a.scaled_position.z for a in structure.asymmetric_unit[0].atoms])
                                 all_z_positions = all_z_positions - np.round(all_z_positions)
-                                all_z_positions = [z*supercell_c for z in all_z_positions]
+                                all_z_positions = [z * supercell_c for z in all_z_positions]
                                 slab_thick = max(all_z_positions) - min(all_z_positions)
 
                                 try:
@@ -1015,193 +1072,231 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None):
                                 except:
                                     continue
 
+                                skip_this = False
+                                if stable_structure_only:
+                                    # check if this structure is both energetically and structurally stable
+                                    fe_2d = None
+                                    try:
+                                        fe_2d = row_2d.key_value_pairs['formation_energy']
+                                    except:
+                                        pass
 
-                                twod_epsilon_inplane = None
-                                twod_epsilon_outplane = None
-                                if non_zero(twod_dielectric_tensor):
-                                    twod_epsilon_inplane = trace_inplane(twod_dielectric_tensor)
-                                    twod_epsilon_inplane = (supercell_c/slab_thick)*(twod_epsilon_inplane-1.0) + 1.0
+                                    min_omega = None
+                                    try:
+                                        freq_2d = row_2d.data['gamma_phonon_freq']
+                                    except:
+                                        pass
 
-                                    twod_epsilon_outplane = trace_outplane(twod_dielectric_tensor)
-                                    twod_epsilon_outplane = 1.0/((supercell_c/slab_thick)*(1.0/twod_epsilon_outplane-1.0)+1.0)
+                                    try:
+                                        gamma_point_freqs = [(f ** 2).real for f in freq_2d if f.imag != 0.0]
+                                        min_omega = min(gamma_point_freqs)
+                                    except:
+                                        pass
 
-                                if (bulk_epsilon is not None) and (twod_epsilon_inplane is not None) and (
-                                        twod_epsilon_outplane is not None):
-                                    #print(uid_2d, twod_epsilon_inplane, twod_epsilon_outplane)
-                                    bulk_epsilons.append(bulk_epsilon)
-                                    twod_epsilons_inplane.append(twod_epsilon_inplane)
-                                    twod_epsilons_outplane.append(twod_epsilon_outplane)
-                                    sizes.append(thick * 7.5)
+                                    if ((fe_2d is not None) and (fe_2d > 0.2)) or (
+                                            (min_omega is not None) and (min_omega < -2)):
+                                        skip_this = True
 
-                    plt.scatter(bulk_epsilons, twod_epsilons_outplane, marker='o', alpha=0.75, edgecolor=color_dict[orient],
-                                facecolor='None', s=sizes)
+                                if not skip_this:
+                                    twod_epsilon_inplane = None
+                                    twod_epsilon_outplane = None
+                                    if non_zero(twod_dielectric_tensor):
+                                        twod_epsilon_inplane = trace_inplane(twod_dielectric_tensor)
+                                        twod_epsilon_inplane = (supercell_c / slab_thick) * (
+                                                    twod_epsilon_inplane - 1.0) + 1.0
+
+                                        twod_epsilon_outplane = trace_outplane(twod_dielectric_tensor)
+                                        twod_epsilon_outplane = 1.0 / ((supercell_c / slab_thick) * (
+                                                    1.0 / twod_epsilon_outplane - 1.0) + 1.0)
+
+                                    if (bulk_epsilon is not None) and (twod_epsilon_inplane is not None) and (
+                                            twod_epsilon_outplane is not None):
+                                        # print(uid_2d, twod_epsilon_inplane, twod_epsilon_outplane)
+                                        bulk_epsilons.append(bulk_epsilon)
+                                        twod_epsilons_inplane.append(twod_epsilon_inplane)
+                                        twod_epsilons_outplane.append(twod_epsilon_outplane)
+                                        sizes.append(thick * 7.5)
+
+                    # plt.scatter(bulk_epsilons, twod_epsilons_outplane, marker='o', alpha=0.75, edgecolor=color_dict[orient],
+                    #            facecolor='None', s=sizes)
 
                     plt.scatter(bulk_epsilons, twod_epsilons_inplane, marker='o', alpha=0.35, edgecolor='None',
                                 facecolor=color_dict[orient], s=sizes)
 
-                    print(orient,term,thick,i,"{:.3f}".format(scipy.stats.pearsonr(bulk_epsilons,twod_epsilons_inplane)[0]))
+                    print(orient, term, thick, i,
+                          "{:.3f}".format(scipy.stats.pearsonr(bulk_epsilons, twod_epsilons_inplane)[0]))
 
-            plt.xlabel('$\\varepsilon_{\\mbox{bulk}}$')
-            plt.ylabel('$\\varepsilon_{\\mbox{2D}}$')
-            plt.plot([min(bulk_epsilons), max(bulk_epsilons)], [min(bulk_epsilons), max(bulk_epsilons)], 'k--', lw=1.5)
+                plt.xlabel('$\\varepsilon_{\\mbox{bulk}}$')
+                plt.ylabel('$\\varepsilon_{\\mbox{2D}}$')
 
-            plt.axvline(epsilon_BaTiO, ls=':', c='r')
-            plt.text(epsilon_BaTiO, 1e4, 'BaTiO$_3$', rotation=90, verticalalignment='center', c='r', fontsize=13)
-            plt.axvline(epsilon_BaZrO, ls=':', c='r')
-            plt.text(epsilon_BaZrO, 1e4, 'BaZrO$_3$', rotation=90, verticalalignment='center', c='r', fontsize=13)
-            plt.axvline(epsilon_SrTiO, ls=':', c='r')
-            plt.text(epsilon_SrTiO, 1e4, 'SrTiO$_3$', rotation=90, verticalalignment='center', c='r', fontsize=13)
-            plt.axvline(epsilon_CsPbBr, ls=':', c='r')
-            plt.text(epsilon_CsPbBr, 1e4, 'CsPbBr$_3$', rotation=90, verticalalignment='center', c='r', fontsize=13)
+                plot_this = True
 
-            plt.xscale('log')
-            plt.yscale('log')
+                if plot_this:
+                    plt.plot([min(bulk_epsilons), max(bulk_epsilons)], [min(bulk_epsilons), max(bulk_epsilons)], 'k--',
+                             lw=1.5)
 
-            if slot == 1:
-                legend_elements = [Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=3$', alpha=0.35,
-                                          markerfacecolor=color_dict['100'],
-                                          markersize=4, lw=0),
-                                   Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=5$', alpha=0.35,
-                                          markerfacecolor=color_dict['100'],
-                                          markersize=5, lw=0),
-                                   Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=7$', alpha=0.35,
-                                          markerfacecolor=color_dict['100'],
-                                          markersize=6, lw=0),
-                                   Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=9$', alpha=0.35,
-                                          markerfacecolor=color_dict['100'],
-                                          markersize=7, lw=0),
-                                   Line2D([0], [0], marker='o', color=color_dict['100'],
-                                          label='$\\varepsilon_{2D}(xy)$', alpha=0.35,
-                                          markerfacecolor=color_dict['100'],
-                                          markersize=7, lw=0),
-                                   Line2D([0], [0], marker='o', color=color_dict['100'], label='$\\varepsilon_{2D}(z)$',
-                                          alpha=0.35,
-                                          markerfacecolor='None',
-                                          markersize=7, lw=0)
-                                   ]
-                plt.legend(handles=legend_elements, loc=4, fontsize=13, ncol=1)
+                    plt.axvline(epsilon_BaTiO, ls=':', c='r')
+                    plt.text(epsilon_BaTiO, 5e4, 'BaTiO$_3$', rotation=90, verticalalignment='center', c='r',
+                             fontsize=13)
+                    plt.axvline(epsilon_BaZrO, ls=':', c='r')
+                    plt.text(epsilon_BaZrO, 5e4, 'BaZrO$_3$', rotation=90, verticalalignment='center', c='r',
+                             fontsize=13)
+                    plt.axvline(epsilon_SrTiO, ls=':', c='r')
+                    plt.text(epsilon_SrTiO, 5e4, 'SrTiO$_3$', rotation=90, verticalalignment='center', c='r',
+                             fontsize=13)
+                    plt.axvline(epsilon_CsSnF, ls=':', c='r')
+                    plt.text(epsilon_CsSnF, 5e4, 'CsSnF$_3$', rotation=90, verticalalignment='center', c='r', fontsize=13)
 
-            if slot == 1: textstr = "AX-termination"
-            if slot == 2: textstr = 'ABX-termination'
-            if slot == 3: textstr = 'AX$_{3}$-termination'
-            if slot == 4: textstr = 'BX$_{2}$-termination'
-            if slot == 5: textstr = 'X$_{2}$-termination'
-            if slot == 6: textstr = 'B-termination'
+                    plt.ylim([0.1, 3e6])
+                else:
+                    plt.ylim([5e-5, 1e1])
 
-            if slot == 1:
-                plt.scatter([epsilon_BaTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaTiO3_100_AO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_SrTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'SrTiO3_100_AO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_BaZrO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaZrO3_100_AO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_CsPbBr for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'CsPbBr3_100_AO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                 in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-            if slot == 2:
-                plt.scatter([epsilon_BaTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaTiO3_110_ABO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_SrTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'SrTiO3_110_ABO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_BaZrO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaZrO3_110_ABO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_CsPbBr for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'CsPbBr3_110_ABO_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-            if slot == 3:
-                plt.scatter([epsilon_BaTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaTiO3_111_AO3_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_SrTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'SrTiO3_111_AO3_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_BaZrO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaZrO3_111_AO3_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_CsPbBr for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'CsPbBr3_111_AO3_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                                                                 in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-            if slot == 4:
-                plt.scatter([epsilon_BaTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaTiO3_100_BO2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_SrTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'SrTiO3_100_BO2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_BaZrO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaZrO3_100_BO2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
+                plt.xlim([0.1, 1e5])
 
-                a=[]
-                b=[]
-                s=[]
-                for t in thicknesses:
-                    try:
-                        e=trace_inplane(db.get(selection=[('uid', '=', 'CsPbBr3_100_BO2_' + str(t))]).data['dielectric_ionic_tensor'])
-                        b.append(e)
-                        a.append(epsilon_CsPbBr)
-                        s.append(t*7.5)
-                    except:
-                        pass
-                plt.scatter(a, b, s=s, facecolor='None', edgecolor='r')
+                plt.xscale('log')
+                plt.yscale('log')
 
-            if slot == 5:
-                plt.scatter([epsilon_BaTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaTiO3_110_O2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_SrTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'SrTiO3_110_O2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_BaZrO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaZrO3_110_O2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_CsPbBr for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'CsPbBr3_110_O2_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-            if slot == 6:
-                plt.scatter([epsilon_BaTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaTiO3_111_B_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_SrTiO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'SrTiO3_111_B_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_BaZrO for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'BaZrO3_111_B_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
-                plt.scatter([epsilon_CsPbBr for _ in range(4)], [trace_inplane(
-                    db.get(selection=[('uid', '=', 'CsPbBr3_111_B_' + str(t))]).data['dielectric_ionic_tensor']) for t
-                    in thicknesses], s=[t * 7.5 for t in thicknesses],
-                            facecolor='None', edgecolor='r')
+                if slot == 1:
+                    legend_elements = [Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=3$', alpha=0.35,
+                                              markerfacecolor=color_dict['100'],
+                                              markersize=4, lw=0),
+                                       Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=5$', alpha=0.35,
+                                              markerfacecolor=color_dict['100'],
+                                              markersize=5, lw=0),
+                                       Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=7$', alpha=0.35,
+                                              markerfacecolor=color_dict['100'],
+                                              markersize=6, lw=0),
+                                       Line2D([0], [0], marker='o', color=color_dict['100'], label='$n=9$', alpha=0.35,
+                                              markerfacecolor=color_dict['100'],
+                                              markersize=7, lw=0),
+                                       # Line2D([0], [0], marker='o', color=color_dict['100'],
+                                       #       label='$\\varepsilon_{2D}(xy)$', alpha=0.35,
+                                       #       markerfacecolor=color_dict['100'],
+                                       #       markersize=7, lw=0),
+                                       # Line2D([0], [0], marker='o', color=color_dict['100'], label='$\\varepsilon_{2D}(z)$',
+                                       #       alpha=0.35,
+                                       #       markerfacecolor='None',
+                                       #       markersize=7, lw=0)
+                                       ]
+                    plt.legend(handles=legend_elements, loc=4, fontsize=13, ncol=1)
 
-            plt.title(textstr)
+                if slot == 1: textstr = "AX-termination"
+                if slot == 2: textstr = 'ABX-termination'
+                if slot == 3: textstr = 'AX$_{3}$-termination'
+                if slot == 4: textstr = 'BX$_{2}$-termination'
+                if slot == 5: textstr = 'X$_{2}$-termination'
+                if slot == 6: textstr = 'B-termination'
+
+                if plot_this:
+                    if slot == 1:
+                        plt.scatter([epsilon_BaTiO for _ in range(4)],
+                                    [corrected_trace_inplane('BaTiO3_100_AO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_SrTiO for _ in range(4)],
+                                    [corrected_trace_inplane('SrTiO3_100_AO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_BaZrO for _ in range(4)],
+                                    [corrected_trace_inplane('BaZrO3_100_AO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_100_AO_' + str(t)) for t
+                                                                         in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                    if slot == 2:
+                        plt.scatter([epsilon_BaTiO for _ in range(4)],
+                                    [corrected_trace_inplane('BaTiO3_110_ABO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_SrTiO for _ in range(4)],
+                                    [corrected_trace_inplane('SrTiO3_110_ABO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_BaZrO for _ in range(4)],
+                                    [corrected_trace_inplane('BaZrO3_110_ABO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_110_ABO_' + str(t)) for t
+                            in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                    if slot == 3:
+                        plt.scatter([epsilon_BaTiO for _ in range(4)],
+                                    [corrected_trace_inplane('BaTiO3_111_AO3_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_SrTiO for _ in range(4)],
+                                    [corrected_trace_inplane('SrTiO3_111_AO3_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_BaZrO for _ in range(4)],
+                                    [corrected_trace_inplane('BaZrO3_111_AO3_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_111_AO3_' + str(t)) for t
+                                                                         in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                    if slot == 4:
+                        plt.scatter([epsilon_BaTiO for _ in range(4)],
+                                    [corrected_trace_inplane('BaTiO3_100_BO2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_SrTiO for _ in range(4)],
+                                    [corrected_trace_inplane('SrTiO3_100_BO2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_BaZrO for _ in range(4)],
+                                    [corrected_trace_inplane('BaZrO3_100_BO2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+
+                        a = []
+                        b = []
+                        s = []
+                        for t in thicknesses:
+                            try:
+                                e = corrected_trace_inplane('CsSnF3_100_BO2_' + str(t))
+                                b.append(e)
+                                a.append(epsilon_CsSnF)
+                                s.append(t * 7.5)
+                            except:
+                                pass
+                        plt.scatter(a, b, s=s, facecolor='None', edgecolor='r')
+
+                    if slot == 5:
+                        plt.scatter([epsilon_BaTiO for _ in range(4)],
+                                    [corrected_trace_inplane('BaTiO3_110_O2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_SrTiO for _ in range(4)],
+                                    [corrected_trace_inplane('SrTiO3_110_O2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_BaZrO for _ in range(4)],
+                                    [corrected_trace_inplane('BaZrO3_110_O2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_110_O2_' + str(t)) for t
+                            in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                    if slot == 6:
+                        plt.scatter([epsilon_BaTiO for _ in range(4)],
+                                    [corrected_trace_inplane('BaTiO3_111_B_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_SrTiO for _ in range(4)],
+                                    [corrected_trace_inplane('SrTiO3_111_B_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_BaZrO for _ in range(4)],
+                                    [corrected_trace_inplane('BaZrO3_111_B_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_111_B_' + str(t)) for t
+                            in thicknesses], s=[t * 7.5 for t in thicknesses],
+                                    facecolor='None', edgecolor='r')
+
+                plt.title(textstr)
 
     plt.tight_layout()
     plt.savefig(output)
@@ -1234,6 +1329,7 @@ if __name__ == "__main__":
                         help='Distribution of imaginary phonon frequencies with respect to formation energy.')
     parser.add_argument("--ionic_dielectric", action='store_true',
                         help='Plot ionic dielectric constants, comparison between bulk and 2D')
+    parser.add_argument("--bulk_ionic_dielectric", action='store_true')
     parser.add_argument("--output", type=str, default=None,
                         help='Output file name for figure generated.')
 
@@ -1274,7 +1370,10 @@ if __name__ == "__main__":
         plot_size_dependent_energy_histograms(args.db, output=args.output)
 
     if args.ionic_dielectric:
-        plot_bulk_and_2D_ionic_dielectric_constants(args.db, output=args.output)
+        plot_bulk_and_2D_ionic_dielectric_constants(args.db, output=args.output, stable_structure_only=False)
 
 #    if args.supercell_effect:
 #        plot_super_cell_dependent_formation_energies(args.db, orientation='100', output=args.output)
+
+#    if args.bulk_ionic_dielectric:
+#        tolerance_factor_bulk_ionic_dielectric_compare(args.db)

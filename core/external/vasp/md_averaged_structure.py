@@ -67,4 +67,4 @@ class MDAveragedStructure(object):
         VaspWriter().write_structure(new_cystal,filename='POSCAR_averaged')
 
 if __name__=="__main__":
-    MDAveragedStructure(ref_frame='POSCAR-md',md_frames='vasprun_md.xml').compute_averaged_structure()
+    MDAveragedStructure(ref_frame='../SPOSCAR',md_frames='vasprun.xml').compute_averaged_structure()

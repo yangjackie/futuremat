@@ -157,6 +157,7 @@ bool_keys = [
     'lscalu',  # switch of LU decomposition
     'lsepb',  # write out partial charge of each band seperately?
     'lsepk',  # write out partial charge of each k-point seperately?
+    'lsorbit', #whether to include spin-orbit coupling?
     'lthomas',  #
     'luse_vdw',  # Invoke vdW-DF implementation by Klimes et. al
     'lvhar',  # write Hartree potential to LOCPOT (vasp 5.x)
@@ -221,6 +222,11 @@ class Vasp(Calculator):
             self.magnetic = kwargs['magnetic']
         except KeyError:
             self.magnetic = False
+
+        try:
+            self.gpu_run = kwargs['gpu_run']
+        except KeyError:
+            self.gpu_run = False
 
         try:
             self.use_gw = kwargs['use_gw']
@@ -337,9 +343,11 @@ class Vasp(Calculator):
 
     def run(self):
         logger.info("Start executing VASP")
-        cmd = 'mpirun ' + self.executable
 
-        #cmd = 'mpirun -np $PBS_NGPUS --map-by ppr:1:numa vasp_gam-gpu'
+        if self.gpu_run:
+            cmd = 'mpirun -np $PBS_NGPUS --map-by ppr:1:numa vasp_gam-gpu'
+        else:
+            cmd = 'mpirun ' + self.executable
 
         exitcode = os.system('%s > %s' % (cmd, 'vasp.log'))
         if exitcode != 0:
