@@ -452,14 +452,14 @@ def molecular_dynamics_workflow(force_rerun=False, continue_MD=True):
     equilibrium_set = {'prec': 'Accurate', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
                        'maxmix': 40,
                        'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 500, 'smass': -1, 'isif': 1, 'tebeg': 10,
-                       'teend': 500, 'potim': 2, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
+                       'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
                        'iwavpr': 11, 'encut': 550, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
                        'write_poscar': True, 'gpu_run': True}
 
     production_set = {'prec': 'Accurate', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
                       'maxmix': 40,
-                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 25000, 'isif': 1, 'tebeg': 500,
-                      'teend': 500, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
+                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 25000, 'isif': 1, 'tebeg': 300,
+                      'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
                       'encut': 550, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
                       'use_gw': True, 'write_poscar': False, 'gpu_run': True}
 

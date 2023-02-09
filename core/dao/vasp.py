@@ -576,6 +576,9 @@ if __name__ == "__main__":
     parser.add_argument('--convert_xml', action='store_true')
     parser.add_argument('--gw', action='store_true')
     parser.add_argument("-f", "--f", action='store_true', help='extract MD frames and write them into folder')
+    parser.add_argument("-r", "--random", action='store_true', help='extract MD frames randomly and write them into folder')
+    parser.add_argument("-n", "--n", type=int, default=16, help='numnber of random MD frames to extract')
+
     args = parser.parse_args()
 
     if args.genpot:
@@ -591,11 +594,24 @@ if __name__ == "__main__":
         import os
         assert ('XDATCAR' in args.input)
         frames = VaspReader(input_location=args.input).read_XDATCAR()
-        pwd=os.getcwd()
-        for i,frame in enumerate(frames):
-            folder_name='frame_'+str(str(i).zfill(len(str(len(frames)))))
-            if not os.path.exists(folder_name):
-                os.makedirs(folder_name)
-            os.chdir(folder_name)
-            VaspWriter().write_structure(frame)
-            os.chdir(pwd)
+        pwd = os.getcwd()
+        if not args.random:
+
+            for i,frame in enumerate(frames):
+                folder_name='frame_'+str(str(i).zfill(len(str(len(frames)))))
+                if not os.path.exists(folder_name):
+                    os.makedirs(folder_name)
+                os.chdir(folder_name)
+                VaspWriter().write_structure(frame)
+                os.chdir(pwd)
+        else:
+            import random
+            from pymatgen.core.trajectory import Trajectory
+            trajectory = Trajectory.from_file('./vasprun.xml')
+            print(len(trajectory))
+            frame_indicies = list(sorted(random.sample(range(len(frames)),k=args.n)))
+            print(frame_indicies)
+            for i,index in enumerate(frame_indicies):
+                print(i,index)
+                structure=trajectory.get_structure(index)
+                structure.to(fmt='vasp',filename='POSCAR_'+str(i))

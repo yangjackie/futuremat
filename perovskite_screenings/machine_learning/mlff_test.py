@@ -6,7 +6,7 @@ from matplotlib import gridspec
 from core.external.vasp.anharmonic_score import *
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-
+from matplotlib import rc
 rc('text', usetex=True)
 import matplotlib.pylab as pylab
 
@@ -312,37 +312,10 @@ def statistic_box_plot():
     plt.savefig("ML_benchmark_boxplot.pdf")
 
 
-def thermal_conductivity_from_kubo(crystal,ml_heat,time_step=1,temp=550,plot_convergence=True):
-    CONVERSION_FACTOR=1.85392e10 # This is the conversion factor to change the unit of lattice thermal conductivity into W/(mK)
-                                 # Given that the heat flux (as read from ML_HEAT) is in eV.A/fs
-                                 # unit cell volume is in A^3
-                                 # Boltzmann constant is in eV/K
-                                 # with this, the final lattice thermal conductivity is k=<q.q'>/(3VT^2)*1.85392e10 W/(mK)
-
-    # Getting the information about the crystal volume
-    if isinstance(crystal,str):
-        crystal=VaspReader(input_location=crystal).read_POSCAR()
-    V=crystal.lattice.volume #in Angstorm^3
-
-    # The pre-factor in the lattice thermal conductivities
-    pre_factor = CONVERSION_FACTOR/(3*V*temp*temp)
-
-    # Get the heat flux data
-    qx, qy, qz = VaspReader(input_location=ml_heat).read_ml_heat()
-
-    # calculate the heat flux correlation function
-    qx_corr = 0.0
-    qy_corr = 0.0
-    qz_corr = 0.0
-    qx_corrs = []
-    qy_corrs = []
-    qz_corrs = []
-    #this is not working, it's more complicated than this. see https://gitlab.com/vibes-developers/vibes/-/blob/master/vibes/correlation.py
 
 if __name__ == "__main__":
-    #compare_sigma_dft_mlff(trajectory=True)
+    compare_sigma_dft_mlff(trajectory=True)
     #dft_calculation_points()
     #collect_results()
     #statistic_box_plot()
 
-    thermal_conductivity_from_kubo('./CONTCAR', './ML_HEAT', time_step=1, temp=550, plot_convergence=True)
