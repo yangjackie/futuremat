@@ -28,13 +28,13 @@ parser.add_argument('-cp', '--checkpoint_path', type=str,
 parser.add_argument('-n_train', '--n_train', type=int, help='number of training data to use', default=200)
 parser.add_argument('-n_valid', '--n_valid', type=int, help='number of valid data to use', default=200)
 parser.add_argument('-w_en', '--energy_weight', type=float, help='weight for the energy component in the loss function',
-                    default=0.5)
+                    default=0.95)
 parser.add_argument('-w_f', '--force_weight', type=float, help='weight for the force component in the loss function',
-                    default=0.5)
+                    default=0.05)
 
 # arguments controlling the network structures
 parser.add_argument('-F', '--F', type=int, default=32)
-parser.add_argument('-n_layer', '--n_layer', type=int, default=6)
+parser.add_argument('-n_layer', '--n_layer', type=int, default=3)
 
 # wandb arguments
 parser.add_argument('-p', '--project', type=str, help='name of the wandb project', default=None)
@@ -49,6 +49,7 @@ port = portpicker.pick_unused_port()
 jax.distributed.initialize(f'localhost:{port}', num_processes=number_of_processors(args.node), process_id=0)
 
 # Set up the filesystem for this calculation
+args.checkpoint_path = os.getcwd()+'/'+args.checkpoint_path
 ckpt_dir = os.path.join(args.checkpoint_path, 'module')
 ckpt_dir = create_directory(ckpt_dir, exists_ok=False)
 
@@ -129,6 +130,7 @@ train_ds = data_tuple(d['train'])
 valid_ds = data_tuple(d['valid'])
 
 inputs = jax.tree_map(lambda x: jnp.array(x[0, ...]), train_ds[0])
+
 params = net.init(jax.random.PRNGKey(coach.net_seed), inputs)
 train_state, h_train_state = create_train_state(net,
                                                 params,

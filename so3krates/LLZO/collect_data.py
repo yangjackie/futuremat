@@ -41,7 +41,7 @@ for folder_name in list(sorted(os.listdir(root_dir))):
                     z.append(atoms.get_atomic_numbers())
                     pbc.append(atoms.get_pbc())
                     unit_cell.append(atoms.get_cell())
-                    node_mask.append([False for _ in range(len(R[-1]))])
+                    node_mask.append([True for _ in range(len(R[-1]))])
 
                     print(E[-1])
             except:
