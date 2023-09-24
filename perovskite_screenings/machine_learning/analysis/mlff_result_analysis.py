@@ -1,12 +1,9 @@
-import os
-
-import numpy as np
 from matplotlib import gridspec
 
-from core.external.vasp.anharmonic_score import *
-import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 from matplotlib import rc
+
+from core.external.vasp.anharmonic_score import *
+
 rc('text', usetex=True)
 import matplotlib.pylab as pylab
 
@@ -183,7 +180,7 @@ def collect_results():
             else:
                 num_ML_failed += 1
             print(system_name,' ML successful? ',ml_successful, 'Suuccess:', num_ML_success, 'Failed:', num_ML_failed)
-            os.chdir("..")
+            os.chdir("../..")
 
         if ml_successful:
             mlff_result_folder = 'MLFF_benchmark'

@@ -13,7 +13,7 @@ parser.add_argument("-atom", "--atom", type=str, help="atom to be displaced", de
 args = parser.parse_args()
 
 args.direction = [float(i) for i in args.direction]
-
+#print(args.direction)
 crystal = VaspReader(input_location=args.structure).read_POSCAR()
 
 # get the direction of displacement in real space
@@ -21,10 +21,12 @@ lv1=crystal.lattice.lattice_vectors.get_row(0).vec_scale(args.direction[0])
 lv2=crystal.lattice.lattice_vectors.get_row(1).vec_scale(args.direction[1])
 lv3=crystal.lattice.lattice_vectors.get_row(2).vec_scale(args.direction[2])
 
+
 displace_vec = lv1+lv2
 displace_vec = displace_vec+lv3
 displace_vec = displace_vec.normalise()
 displace_vec = displace_vec.vec_scale(args.amplitude)
+
 
 atoms=[]
 for mol in crystal.asymmetric_unit:

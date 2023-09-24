@@ -8,14 +8,19 @@ from twodPV.calculators import default_bulk_optimisation_set, setup_logger, upda
 import argparse, os, tarfile, shutil, glob
 
 
-def default_symmetry_preserving_optimisation():
+def default_symmetry_preserving_optimisation(gpu_run=False):
     # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
     # structure.
     default_bulk_optimisation_set.update(
-        {'ISIF': 7, 'Gamma_centered': True, 'NCORE': 28, 'ENCUT': 550, 'PREC': "ACCURATE", 'ispin': 2, 'IALGO': 38,
-         'use_gw': True, 'MP_points': [12, 12, 12], 'GGA':'PS'})
-    structural_optimization_with_initial_magmom()
+        {'ISIF': 7, 'Gamma_centered': True, 'NCORE': 32, 'ENCUT': 500, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38,
+         'use_gw': True, 'MP_points': [10, 2, 2], 'GGA':'PS','gpu_run':gpu_run, 'EDIFF': 1e-8, 'EDIFFG':1e-6})
 
+    del default_bulk_optimisation_set['MP_points']
+    default_bulk_optimisation_set.update({'mp_grid_density':0.025})
+    #structural_optimization_with_initial_magmom()
+
+    from perovskite_screenings.calculators import structural_optimization
+    structural_optimization()
 
 def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
     """
@@ -41,6 +46,7 @@ def structural_optimization_with_initial_magmom(retried=None, gamma_only=False):
     structure.gamma_only = gamma_only
 
     default_bulk_optimisation_set['magmom'], is_magnetic = magmom_string_builder(structure)
+    is_magnetic=False
 
     if is_magnetic:
         default_bulk_optimisation_set['ispin'] = 2
@@ -143,31 +149,37 @@ def magmom_string_builder(structure):
     return magmom_string, is_magnetic
 
 
-def phonopy_workflow(force_rerun=False):
+def phonopy_workflow(force_rerun=False, gpu_run=False):
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy.interface.vasp import parse_set_of_forces
     from phonopy.file_IO import write_force_constants_to_hdf5, write_FORCE_SETS, parse_disp_yaml, write_disp_yaml
     from phonopy import Phonopy
 
-    mp_points = [6, 6, 6]
+    #mp_points = [5,1,2]
+    mp_points = [4,4,4]
     gamma_centered = True
     force_no_spin = False
     use_default_encut = False
+
+
     supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
     ialgo = 38
     use_gw = True
-    ncore = 28
+    ncore = 32
 
-    if mp_points != [1, 1, 1]:
+    if mp_points != [1,1,1]:
         gamma_only = False
     else:
         gamma_only = True
 
-    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'encut': 550, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
+    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'encut': 500, 'ediff': '1e-08', 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
                    'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'EDIFF': 1e-7, 'GGA':'PS'}
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'EDIFF': 1e-7, 'GGA':'PS','gpu_run': gpu_run}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
+
+    del phonopy_set['MP_points']
+    phonopy_set.update({'mp_grid_density': 0.025})
 
     logger = setup_logger(output_filename='phonopy.log')
     cwd = os.getcwd()
@@ -433,38 +445,49 @@ def clean_up_phonon():
             pass
 
 
-def molecular_dynamics_workflow(force_rerun=False, continue_MD=True):
+def molecular_dynamics_workflow(force_rerun=False, continue_MD=True, gpu_run=False):
     logger = setup_logger(output_filename='molecular_dynamics.log')
     cwd = os.getcwd()
 
     logger.info(
         "Setting up the room temperature molecular dynamics calculations, check if we have previous phonon data")
 
+    """
     if not os.path.isfile('./force_constants.hdf5'):
         logger.info("previous phonopy calculations did not complete properly, will not proceed...")
         raise Exception("No phonopy data! QUIT")
     else:
         spin_polarized = check_phonon_run_settings()
         structure = load_supercell_structure()
-        structure.gamma_only = True
+        #structure.gamma_only = True
         logger.info("Will run MD with spin polarization: " + str(spin_polarized))
+    """
+    spin_polarized = True
+    #structure = load_supercell_structure()
+    structure = load_structure(logger)
 
-    equilibrium_set = {'prec': 'Accurate', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+    equilibrium_set = {'prec': 'Normal', 'algo': 'VeryFast', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
                        'maxmix': 40,
-                       'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 500, 'smass': -1, 'isif': 1, 'tebeg': 10,
+                       'ncore': 32, 'nelmin': 4, 'nsw': 10000, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
-                       'iwavpr': 11, 'encut': 550, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
-                       'write_poscar': True, 'gpu_run': True}
+                       'iwavpr': 11, 'encut': 400, 'Gamma_centered': True, 'MP_points': [1,1,1], 'use_gw': False,
+                       'write_poscar': False, 'gpu_run': gpu_run, 'GGA':'RP' ,'IVDW':12}
 
-    production_set = {'prec': 'Accurate', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+    production_set = {'prec': 'Normal', 'algo': 'VeryFast', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
                       'maxmix': 40,
-                      'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 25000, 'isif': 1, 'tebeg': 300,
+                       'ncore': 32, 'nelmin': 4, 'nsw': 40000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
-                      'encut': 550, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
-                      'use_gw': True, 'write_poscar': False, 'gpu_run': True}
+                      'encut': 400, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1,1,1],
+                      'use_gw': False, 'write_poscar': False, 'gpu_run': gpu_run, 'GGA':'RP','IVDW':12}
 
-    del equilibrium_set['ncore']
-    del production_set['ncore']
+    #del equilibrium_set['ncore']
+    #del production_set['ncore']
+
+    #del equilibrium_set['MP_points']
+    #equilibrium_set.update({'mp_grid_density': 0.025})
+
+    #del production_set['MP_points']
+    #production_set.update({'mp_grid_density': 0.025})
 
     # if spin_polarized:
     #    raise Exception("Skip running spin polarized MD first ...")
@@ -865,16 +888,19 @@ if __name__ == "__main__":
     parser.add_argument("--get_gap", action='store_true', default=0)
     parser.add_argument("--quench", action='store_true')
     parser.add_argument("--soc", action='store_true')
+    parser.add_argument("--gamma_only", action='store_true')
+    parser.add_argument("--gpu", action='store_true', help='specify whether the calculation is to be run on the GPU node')
     args = parser.parse_args()
 
     if args.opt:
-        default_symmetry_preserving_optimisation()
+        #default_symmetry_preserving_optimisation(gpu_run=args.gpu,gamma_only=args.gamma_only)
+        structural_optimization_with_initial_magmom(gamma_only=args.gamma_only)
 
     if args.phonopy:
-        phonopy_workflow(force_rerun=args.force_rerun)
+        phonopy_workflow(force_rerun=args.force_rerun, gpu_run=args.gpu)
 
     if args.MD:
-        molecular_dynamics_workflow(force_rerun=args.force_rerun, continue_MD=args.continue_MD)
+        molecular_dynamics_workflow(force_rerun=args.force_rerun, continue_MD=args.continue_MD, gpu_run=args.gpu)
 
     if args.clean_phonon:
         clean_up_phonon()

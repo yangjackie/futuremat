@@ -16,8 +16,8 @@ def get_total_energies(db, dir=None):
 
         kvp['uid'] = zip.replace(".zip", '').replace('/', '_')
 
-        if 'element' in dir:
-            kvp['uid'] = 'element_'+kvp['uid']
+        #if 'element' in dir:
+        #    kvp['uid'] = 'element_'+kvp['uid']
 
         archive = zipfile.ZipFile(zip)
 
@@ -57,13 +57,16 @@ def get_total_energies(db, dir=None):
 def pure_total_energies(db):
     get_total_energies(db, dir='pure')
 
+
+
+"""
 def zero_d_CsCs3Sb2X9(db):
     get_total_energies(db, dir='0D_samplings')
 
 def two_d_CsCs3Sb2X9(db):
     get_total_energies(db, dir='2D_samplings')
 
-"""
+
 def CsPbSnCl3_energies(db):
     get_total_energies(db, dir='mixed_CsPbSnCl3')
 
@@ -96,10 +99,10 @@ def elements(db):
 
 def collect(db):
     errors = []
-    steps = [elements,
-             pure_total_energies,
-             zero_d_CsCs3Sb2X9,
-             two_d_CsCs3Sb2X9]
+    steps = [elements]
+             #pure_total_energies,
+             #zero_d_CsCs3Sb2X9,
+             #two_d_CsCs3Sb2X9]
 
     for step in steps:
         try:

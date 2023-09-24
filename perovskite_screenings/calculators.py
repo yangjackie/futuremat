@@ -115,7 +115,7 @@ def default_symmetry_preserving_optimisation():
     # structure.
     default_bulk_optimisation_set.update(
         {'ISIF': 7, 'Gamma_centered': True, 'NCORE':28, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38, 'EDIFF':1e-5,
-         'use_gw': True, 'MP_points':[1,1,1],'ENCUT': 400})
+         'use_gw': True, 'MP_points':[4,4,4],'ENCUT': 520, 'GGA':'PS'})
 
     #try:
     #    del default_bulk_optimisation_set['ENCUT']
@@ -207,7 +207,7 @@ def structural_optimization(retried=None, gamma_only=False):
         pass
 
     structure = load_structure(logger)
-    structure.gamma_only = gamma_only
+    #structure.gamma_only = gamma_only
 
     #default_bulk_optimisation_set['magmom'] = magmom_string_builder(structure)
 
@@ -509,7 +509,7 @@ def molecular_dynamics_workflow(force_rerun=False):
         "Setting up the room temperature molecular dynamics calculations, check if we have previous phonon data")
 
 
-    structure = __load_supercell_structure()
+    structure = load_supercell_structure()
     structure.gamma_only = False
 
     equilibrium_set = {'prec': 'Normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
@@ -689,10 +689,10 @@ def check_phonon_run_settings():
     return spin_polarized
 
 
-def __load_supercell_structure():
+def load_supercell_structure(supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]]):
     from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
     from phonopy import Phonopy
-    supercell_matrix = [[2, 0, 0], [0, 2, 0], [0, 0, 2]]
+
     unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
     phonon = Phonopy(unitcell, supercell_matrix=supercell_matrix)
     write_crystal_structure('POSCAR_super', phonon.supercell, interface_mode='vasp')

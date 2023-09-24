@@ -17,3 +17,8 @@ def kpoints_from_grid(crystal, grid=0.04, molecular=False):
         k_points=[1.0,1.0,1.0]
 
     return k_points
+
+if __name__=="__main__":
+    from core.dao.vasp import VaspReader
+    crystal = VaspReader(input_location="./POSCAR").read_POSCAR()
+    print(kpoints_from_grid(crystal,grid=0.025))

@@ -209,11 +209,18 @@ class SubstitutionalSolidSolutionBuilder(object):
 
         substituted_structures = [copy.deepcopy(supercell) for _ in substitution_site_coords]
 
+
         for i, struct in enumerate(substituted_structures):
+            atoms_to_remove=[]
             for no, site in enumerate(struct.__dict__['_sites']):
                 if np.array_equal(site.__dict__['_coords'], substitution_site_coords[i]):
-                    site.__dict__["_species"] = Composition(self.atom_substitute_to)
-
+                    if self.atom_substitute_to != 'vac':
+                        site.__dict__["_species"] = Composition(self.atom_substitute_to)
+                    else:
+                        atoms_to_remove.append(no)
+            if self.atom_substitute_to=='vac':
+                struct.__dict__['_sites']=[k for j, k in enumerate(struct.__dict__["_sites"]) if
+                                             j not in atoms_to_remove]
         return substituted_structures
 
     def _write_vasp_files(self, supercell, dir_name):

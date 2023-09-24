@@ -18,7 +18,7 @@ from ase.utils import basestring
 from functools import reduce
 
 from core.internal.builders.pytilting.puc import Puc
-from  core.internal.builders.pytilting.glazer import decode_glazer, my_equal
+from core.internal.builders.pytilting.glazer import decode_glazer, my_equal
 
 from copy import deepcopy
 
@@ -137,6 +137,8 @@ class Distortion:
         self.glazer = decode_glazer(self._distort['glazer'])
         self.k_omega = self.glazer[0]
         # the angles of rotation should be consistent with the letters of glazer notation
+        print(self.glazer[1])
+        print(relat2)
         if (self.glazer[1] != relat2):
             print("Given omega values are not consistent with the given Glazer notation.")
             exit()

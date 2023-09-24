@@ -30,7 +30,7 @@ float_keys = [
     'encutgw',
     'hfscreen',  # attribute to change from PBE0 to HSE
     'potim',  # time-step for ion-motion (fs)
-    'nelect',  # total number of electrons
+    'nelect',  # total number of electronscd
     'param1',  # Exchange parameter
     'param2',  # Exchange parameter
     'pomass',  # mass of ions in am
@@ -261,7 +261,8 @@ mlff_keys = [
     'ML_WTSIF' #This tag sets the weight for the scaling of the stress in the training data within the machine learning force field method.
 ]
 
-all_incar_keys = dict_keys + special_keys + list_keys + bool_keys + int_keys + string_keys + exp_keys + float_keys + mlff_keys
+all_incar_keys = dict_keys + special_keys + list_keys + bool_keys + int_keys + string_keys + exp_keys + \
+                 float_keys + [str(m).lower() for m in mlff_keys]
 
 
 class Vasp(Calculator):
@@ -403,7 +404,11 @@ class Vasp(Calculator):
         logger.info("Start executing VASP")
 
         if self.gpu_run:
-            cmd = 'mpirun -np $PBS_NGPUS --map-by ppr:1:numa vasp_gam-gpu'
+            logger.info("Choose to run with GPU, reset executable to vasp-gpu")
+            if self.crystal.gamma_only is True:
+                cmd = 'mpirun -np $PBS_NGPUS --map-by ppr:1:numa vasp_gam-gpu'
+            else:
+                cmd = 'mpirun -np $PBS_NGPUS --map-by ppr:1:numa vasp_std-gpu'
         else:
             cmd = 'mpirun ' + self.executable
 
