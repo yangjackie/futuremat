@@ -1,6 +1,7 @@
 from core.models.lattice import Lattice
 from core.models.space_group import *
 
+
 class CrystallographicSpaceGroups(object):
     @classmethod
     def get(cls, index):

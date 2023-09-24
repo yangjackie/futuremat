@@ -114,7 +114,7 @@ for m in range(len(spectrum.modes)):  # loop around the mode index
                 Z_m_alpha += born_charges[i][alpha][gamma] * mass_list[i] * spectrum.modes[m].eigenvec[i][gamma]
 
         Z_tensor[m][alpha] = Z_m_alpha
-    print('Mode','\t',m,'\t','spatial averaged Born charge ','\t',sum(Z_tensor[m][:]))
+    print('Mode', '\t', m, '\t', 'spatial averaged Born charge ', '\t', sum(Z_tensor[m][:]))
 
 print("""======Mode-Dependent Dielectric Constants======""")
 
@@ -152,8 +152,8 @@ for m in range(len(spectrum.modes)):
 print("Summed across modes raw:", sum_e_xy_raw)
 print("Summed across modes corrected:", sum_e_xy)
 
-plt.bar(frequencies, mode_dielectrics, align='center',  width=0.2, color='#FEE715FF')
-#plt.yscale('log')
+plt.bar(frequencies, mode_dielectrics, align='center', width=0.2, color='#FEE715FF')
+# plt.yscale('log')
 plt.xlabel('Phonon mode frequency ($\\omega_{m}$, THz)')
 plt.ylabel('$\\varepsilon_{2D}^{\\parallel}(\\omega_{m})$')
 plt.tight_layout()

@@ -154,8 +154,6 @@ legend_elements = [
 ax[0, 0].legend(handles=legend_elements)
 ax[0, 0].axis('off')
 
-
-
 ax[0, 1].scatter(design_matrix_embedded[:, 0], design_matrix_embedded[:, 1], marker='o', facecolors=thickness_colors,
                  edgecolors=None,
                  alpha=0.5)
@@ -168,19 +166,17 @@ legend_elements = [
 ax[0, 1].legend(handles=legend_elements)
 ax[0, 1].axis('off')
 
-
-
 im = ax[0, 2].scatter(design_matrix_embedded[:, 0], design_matrix_embedded[:, 1], marker='o', c=formation_energy_color,
                       edgecolors=None,
                       alpha=0.5, cmap=plt.get_cmap('PuOr'))
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 axins1 = inset_axes(ax[0, 2],
                     width="50%",  # width = 50% of parent_bbox width
                     height="5%",  # height : 5%
                     loc='upper right')
 fig.colorbar(im, cax=axins1, orientation="horizontal", label="$E_f^{2D,n=3}-E_{f}^{Pm\\bar{3}m}$ (eV/atom)")
 ax[0, 2].axis('off')
-
 
 ax[1, 0].axis('off')
 im = ax[1, 0].scatter(design_matrix_embedded[:, 0], design_matrix_embedded[:, 1], marker='o', c=vibrational_freq_color,

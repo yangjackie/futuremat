@@ -28,7 +28,7 @@ class Crystal(object):
         self.asymmetric_unit = asymmetric_unit
 
         # auto set up the reverse link
-        #TODO - need to realign molecule at origin and axis! To be consistent for treating molecular crystals!!!
+        # TODO - need to realign molecule at origin and axis! To be consistent for treating molecular crystals!!!
         for molecule in self.asymmetric_unit:
             molecule._crystal = self
         self.lattice._crystal = self
@@ -76,17 +76,16 @@ class Crystal(object):
             if not sort:
                 pass
         else:
-            _unique_atoms=[]
+            _unique_atoms = []
             for a in all_atoms:
                 if a not in _unique_atoms:
                     _unique_atoms.append(a)
-            all_atoms=_unique_atoms
+            all_atoms = _unique_atoms
 
         return all_atoms
 
     def total_num_atoms(self) -> int:
         return len(self.all_atoms(unique=False))
-
 
     def all_atoms_count_dictionaries(self) -> dict:
         """
@@ -96,7 +95,7 @@ class Crystal(object):
         :return: A dictionary of number of each element in the asymmetric units
         """
         labels = [x.label for x in self.all_atoms()]
-        return dict((x,labels.count(x)) for x in set(labels))
+        return dict((x, labels.count(x)) for x in set(labels))
 
     @property
     def mag_group(self):

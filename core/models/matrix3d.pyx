@@ -79,9 +79,9 @@ cdef class cMatrix3D:
 
     cdef cVector3D _c_dot_vec(cMatrix3D self, cVector3D vec):
         cdef cVector3D out_vec = cVector3D(0.0, 0.0, 0.0)
-        out_vec.xyz[0] = self.data[0][0]*vec.xyz[0] + self.data[0][1]*vec.xyz[1] + self.data[0][2]*vec.xyz[2]
-        out_vec.xyz[1] = self.data[1][0]*vec.xyz[0] + self.data[1][1]*vec.xyz[1] + self.data[1][2]*vec.xyz[2]
-        out_vec.xyz[2] = self.data[2][0]*vec.xyz[0] + self.data[2][1]*vec.xyz[1] + self.data[2][2]*vec.xyz[2]
+        out_vec.xyz[0] = self.data[0][0] * vec.xyz[0] + self.data[0][1] * vec.xyz[1] + self.data[0][2] * vec.xyz[2]
+        out_vec.xyz[1] = self.data[1][0] * vec.xyz[0] + self.data[1][1] * vec.xyz[1] + self.data[1][2] * vec.xyz[2]
+        out_vec.xyz[2] = self.data[2][0] * vec.xyz[0] + self.data[2][1] * vec.xyz[1] + self.data[2][2] * vec.xyz[2]
         return out_vec
 
     cdef cMatrix3D _c_transpose(self):
@@ -91,5 +91,5 @@ cdef class cMatrix3D:
 
     def __repr__(self):
         return str([cVector3D(self.data[0][0], self.data[0][1], self.data[0][2]),
-                cVector3D(self.data[1][0], self.data[1][1], self.data[1][2]),
-                cVector3D(self.data[2][0], self.data[2][1], self.data[2][2])])
+                    cVector3D(self.data[1][0], self.data[1][1], self.data[1][2]),
+                    cVector3D(self.data[2][0], self.data[2][1], self.data[2][2])])

@@ -11,6 +11,7 @@ from myqueue.scheduler import Scheduler
 An updated version of pbs handler for Raijin from the original myqueue python package
 """
 
+
 class PBS(Scheduler):
     def submit(self,
                task: Task,
@@ -19,25 +20,25 @@ class PBS(Scheduler):
         nodelist = config['nodes']
         nodes, nodename, nodedct = task.resources.select(nodelist)
 
-        #this is a hack to interact with our own code to find out
-        #which node has this job been submitted to
-        f = open(str(task.folder)+'/node_info','w')
-        f.write(nodename+'\n')
+        # this is a hack to interact with our own code to find out
+        # which node has this job been submitted to
+        f = open(str(task.folder) + '/node_info', 'w')
+        f.write(nodename + '\n')
         f.close()
-   
+
         nodelist = config['nodes']
         for i in nodelist:
-            if i[0]==nodename:
-               mem=int(i[1]['memory'].replace('G',''))
+            if i[0] == nodename:
+                mem = int(i[1]['memory'].replace('G', ''))
 
-        memory = mem*int(nodes)
-        memory = str(memory)+'G'
+        memory = mem * int(nodes)
+        memory = str(memory) + 'G'
         name = task.cmd.name
         processes = task.resources.processes
 
-        #if processes < nodedct['cores']:
+        # if processes < nodedct['cores']:
         #    ppn = processes
-        #else:
+        # else:
         #    assert processes % nodes == 0
         #    ppn = processes // nodes
         ppn = processes
@@ -53,7 +54,7 @@ class PBS(Scheduler):
                 '-l',
                 'ncpus={ncpus}'.format(ncpus=ppn),
                 '-l',
-                'mem='+memory,
+                'mem=' + memory,
                 '-q', str(nodename)]
 
         qsub += nodedct.get('extra_args', [])
@@ -63,14 +64,14 @@ class PBS(Scheduler):
             qsub.extend(['-W', 'depend=afterok:{}'.format(ids)])
 
         cmd = str(task.cmd)
-        #if task.resources.processes > 1:
+        # if task.resources.processes > 1:
         #    mpiexec = 'mpiexec -x OMP_NUM_THREADS=1 -x MPLBACKEND=Agg '
         #    if 'mpiargs' in nodedct:
         #        mpiexec += nodedct['mpiargs'] + ' '
         #    cmd = mpiexec + cmd.replace('python3',
         #                                config.get('parallel_python',
         #                                           'python3'))
-        #else:
+        # else:
         #    cmd = 'MPLBACKEND=Agg ' + cmd
 
         home = config['home']
@@ -88,7 +89,7 @@ class PBS(Scheduler):
             'mq={home}/.myqueue/pbs-$id\n'
             '(touch $mq-0 && cd {dir} && {cmd} && touch $mq-1) || '
             'touch $mq-2\n'
-            .format(home=home, dir=task.folder, cmd=cmd))
+                .format(home=home, dir=task.folder, cmd=cmd))
 
         if dry_run:
             print(qsub, script)

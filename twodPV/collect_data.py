@@ -534,7 +534,7 @@ def get_out_of_plane_charge_polarisations(kvp):
         kvp['nu_pol'] = nuclear_densities / area
         logger.info('electronic polarisation: ' + str(kvp['e_pol']) + ' nuclear polarisation: ' + str(kvp['nu_pol']))
     except:
-       pass
+        pass
 
     for i in ['CHGCAR_temp', 'CHGCAR_SPIN_temp', 'CHGCAR_NOSPIN_temp']:
         try:
@@ -823,6 +823,7 @@ def collect(db):
             error = '{}: {}'.format(x.__class__.__name__, x)
             errors.append(error)
     return errors
+
 
 if __name__ == "__main__":
     # We use absolute path because of chdir below!

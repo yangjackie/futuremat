@@ -44,7 +44,8 @@ def kde_scipy(x, x_grid, bandwidth=0.2, **kwargs):
 
 
 def map_structures_with_given_orientation(db, orientation='100', kernel='average', rcut=4, nmax=8, lmax=9, sigma=0.05,
-                                          centers=['A','B','C'], color_by='B', descriptor='soap',save_kernel_kpca=True):
+                                          centers=['A', 'B', 'C'], color_by='B', descriptor='soap',
+                                          save_kernel_kpca=True):
     termination_types = {'100': ['BO2', 'AO'], '110': ['O2', 'ABO'], '111': ['AO3', 'B']}
     anion_color_dict = {'F': '#6FB98F', 'Cl': '#2C7873', 'Br': '#004445', 'I': '#021C1E', 'O': '#8D230F',
                         'S': '#Fcc875', 'Se': '#E8A735', 'Te': '#E29930'}
@@ -56,7 +57,8 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
     color_attributes = []
 
     if save_kernel_kpca:
-        data_dict = {'system':[],'energy':[],'tolerance_factor':[],'termination':[],'kpca1':[],'kpca2':[],'structures':[]}
+        data_dict = {'system': [], 'energy': [], 'tolerance_factor': [], 'termination': [], 'kpca1': [], 'kpca2': [],
+                     'structures': []}
 
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:
@@ -90,7 +92,7 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
 
                             row = None
                             row = db.get(selection=[('uid', '=', uid)])
-                            formation_e=None
+                            formation_e = None
                             if row is not None:
                                 try:
                                     formation_e = row.key_value_pairs['formation_energy']
@@ -127,11 +129,11 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
                             elif color_by == 'lattice_const':
                                 color_attributes.append(tolerance_f)
                             elif color_by == 'energy':
-                                color_attributes.append(formation_e-pm3m_formation_e)
+                                color_attributes.append(formation_e - pm3m_formation_e)
 
                             if save_kernel_kpca:
                                 data_dict['system'].append(uid)
-                                _atoms=row
+                                _atoms = row
                                 data_dict['structures'].append(_atoms)
                                 data_dict['energy'].append(formation_e)
                                 data_dict['tolerance_factor'].append(tolerance_f)
@@ -140,7 +142,7 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
     if descriptor == 'soap':
         all_desc = [
             row_to_soap_descriptor(all_systems_rows[i], centers=center_lists[i], rcut=rcut, nmax=nmax, lmax=lmax,
-                                     sigma=sigma)
+                                   sigma=sigma)
             for i in range(len(all_systems_rows))]
     elif descriptor == 'mbtr':
         all_desc = [row_to_mbtr_descriptor(row) for row in all_systems_rows]
@@ -167,18 +169,19 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
         data_dict['kpca1'] = X_kpca[:, 0]
         data_dict['kpca2'] = X_kpca[:, 1]
 
-        pickle.dump(data_dict,open("similarity_kernel_" + str(orientation) + '_' + str(descriptor) + '.bp','wb'))
+        pickle.dump(data_dict, open("similarity_kernel_" + str(orientation) + '_' + str(descriptor) + '.bp', 'wb'))
 
-    if color_by not in ['lattice_const','energy']:
+    if color_by not in ['lattice_const', 'energy']:
         plt.scatter(X_kpca[:, 0], X_kpca[:, 1], alpha=0.85, c=color_attributes)
     else:
         if color_by == 'lattice_const':
             plt.scatter(X_kpca[:, 0], X_kpca[:, 1], alpha=0.95, c=color_attributes, cmap='YlGnBu')
         elif color_by == 'energy':
             import matplotlib.colors as colors
-            plt.scatter(X_kpca[:, 0], X_kpca[:, 1], alpha=0.95, c=color_attributes, cmap='YlGnBu_r',vmin=-1.5,vmax=1.5,
+            plt.scatter(X_kpca[:, 0], X_kpca[:, 1], alpha=0.95, c=color_attributes, cmap='YlGnBu_r', vmin=-1.5,
+                        vmax=1.5,
                         norm=colors.SymLogNorm(linthresh=0.03, linscale=0.03,
-                                              vmin=-1.5, vmax=1.5, base=10))
+                                               vmin=-1.5, vmax=1.5, base=10))
 
     legend_elements = None
     if color_by == 'C':
@@ -196,23 +199,24 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
                            Patch(facecolor='#00539CFF', edgecolor='none',
                                  label=termination_types[orientation][1].replace('O', 'X').replace('2', '$_2$').replace(
                                      '3', '$_3$'))]
-    if color_by not in ['lattice_const','energy']:
+    if color_by not in ['lattice_const', 'energy']:
         plt.legend(handles=legend_elements)
     else:
         if color_by == 'energy':
-            ticks = [-1,-0.9,-0.8,-0.7,-0.6,-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]
-            #cbar = plt.colorbar(ticks=ticks)
+            ticks = [-1, -0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7,
+                     0.8, 0.9, 1]
+            # cbar = plt.colorbar(ticks=ticks)
             labels = []
-            for n,t in enumerate(ticks):
-                if t==-1:
+            for n, t in enumerate(ticks):
+                if t == -1:
                     labels.append('$-1$')
-                elif t==-0.1:
+                elif t == -0.1:
                     labels.append('$-0.1$')
-                elif t==0:
+                elif t == 0:
                     labels.append('$0$')
-                elif t==0.1:
+                elif t == 0.1:
                     labels.append('$0.1$')
-                elif t==1:
+                elif t == 1:
                     labels.append('$1$')
                 elif t == 0.5:
                     labels.append('$0.5$')
@@ -220,7 +224,7 @@ def map_structures_with_given_orientation(db, orientation='100', kernel='average
                     labels.append('$-0.5$')
                 else:
                     labels.append('')
-            #cbar.ax.set_yticklabels(labels)
+            # cbar.ax.set_yticklabels(labels)
         else:
             plt.colorbar()
 

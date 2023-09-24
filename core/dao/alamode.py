@@ -8,7 +8,7 @@ class AlamodeWriter(FileWriter):
         self.crystal = crystal
         self.unique_labels = self.unique_atoms(self.crystal)
 
-    def write_alm_in_for_fitting_second_order(self, prefix='super_harm', input_name='ALM1.in',cutoff=[None]):
+    def write_alm_in_for_fitting_second_order(self, prefix='super_harm', input_name='ALM1.in', cutoff=[None]):
 
         f = open(input_name, 'w')
         f.write("&general\n")
@@ -84,7 +84,7 @@ class AlamodeWriter(FileWriter):
         f.write(" NWRITE = 5000\n")
         f.write(" MAXITER = 1000000\n")
         f.write(" CONV_TOL = 1.0e-9\n")
-        #f.write(" NSTART=400; NEND=500\n")
+        # f.write(" NSTART=400; NEND=500\n")
         f.write("/\n\n")
 
         self.write_lattice_vector_block(f)
@@ -92,7 +92,7 @@ class AlamodeWriter(FileWriter):
         f.close()
 
     def write_alm_in_for_scph(self, prefix='scph-run', input_name='scph.in', born_info=None,
-                              high_order_fix_prefix='perovskite_300', mode='mesh',mesh_grid=[10,10,10]):
+                              high_order_fix_prefix='perovskite_300', mode='mesh', mesh_grid=[10, 10, 10]):
 
         f = open(input_name, 'w')
         f.write("&general\n")
@@ -126,16 +126,14 @@ class AlamodeWriter(FileWriter):
             f.write("&kpoint\n")
             f.write(" 2\n")
             for i in mesh_grid:
-                f.write(str(i)+' ')
-            f.write('\n'+"/\n\n")
+                f.write(str(i) + ' ')
+            f.write('\n' + "/\n\n")
         elif mode == 'line':
             raise NotImplementedError()
 
         self.write_lattice_vector_block(f)
 
         f.close()
-
-
 
     def write_atom_block(self, f):
         f.write("&position\n")

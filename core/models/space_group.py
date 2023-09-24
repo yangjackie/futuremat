@@ -38,7 +38,7 @@ class SpaceGroup(object):
         for op in self.symmetry:
             self.non_centering_symmetry.append(op)
 
-        if isinstance(self.inversion,CentroSymmetric):
+        if isinstance(self.inversion, CentroSymmetric):
             for i in range(len(self.non_centering_symmetry)):
                 op = self.non_centering_symmetry[i]
                 self.non_centering_symmetry.append(op.inversion())

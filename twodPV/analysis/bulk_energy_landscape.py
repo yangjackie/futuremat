@@ -28,6 +28,7 @@ charge_state_C_site = {0: -1, 1: -1, 2: -2, 3: -2}
 
 color_dict = {0: '#A3586D', 1: '#5C4A72', 2: '#F3B05A', 3: '#F4874B'}
 
+
 def bulk_energy_landscape():
     cwd = os.getcwd()
     db = connect(cwd + '/2dpv.db')
@@ -60,7 +61,7 @@ def bulk_energy_landscape():
                         except KeyError:
                             print(uid + '   failed')
                             continue
-                            randomised_formation_e = row.key_value_pairs[   'formation_energy']
+                            randomised_formation_e = row.key_value_pairs['formation_energy']
 
                         tolerance_factors.append(tolerance_f)
 

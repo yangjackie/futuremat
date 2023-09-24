@@ -52,8 +52,8 @@ def composition_eq_point_curve():
               1: '#dd0000',  # hex code for electric red
               2: '#ffce00'  # hex code for tangerine yellow
               }
-    for counter, X in enumerate(['Cl','Br','I']):
-        data_dict={}
+    for counter, X in enumerate(['Cl', 'Br', 'I']):
+        data_dict = {}
         for dir in [r for r in glob.glob(os.getcwd() + "/*" + str(X) + "*") if '.pdf' not in r]:
             os.chdir(dir)
             print(dir)
@@ -84,7 +84,6 @@ def composition_eq_point_curve():
             x = np.array(displacements)
             y = np.array(energy)
 
-
             from scipy.optimize import curve_fit
             popt, pcov = curve_fit(pes, x, y)
             x = [0 + (0.6 / 100) * i for i in range(100)]
@@ -98,13 +97,14 @@ def composition_eq_point_curve():
             concentration = data[0]['concentration']
             data_dict[1.0 - concentration] = min_x
         os.chdir(cwd_1)
-        x=list(sorted(data_dict.keys()))
-        plt.plot(x,[data_dict[_x] for _x in x],'o-', c=colors[counter], label=labels[counter], ms=12, lw=3)
+        x = list(sorted(data_dict.keys()))
+        plt.plot(x, [data_dict[_x] for _x in x], 'o-', c=colors[counter], label=labels[counter], ms=12, lw=3)
     plt.legend()
     plt.xlabel('$x$ in Cs(Pb$_{x}$Sn$_{1-x}$)X$_{3}$')
     plt.ylabel('Minima on PES ($x_{\min}$, \AA)')
     plt.tight_layout()
     plt.savefig('xeq_comp_summary.pdf')
+
 
 def get_pes_across_composition(X='Cl'):
     cmap = matplotlib.cm.get_cmap('coolwarm')
@@ -251,7 +251,7 @@ def pressure_eq_point_curve():
         _y = np.array([(max(y) + 0.1 * max(y)) * k / 100 for k in range(100)])
         _x = square(_y, *popt)
         print(_x[0])
-        plt.plot(_x, _y, '-', lw=2,c=colors[counter])
+        plt.plot(_x, _y, '-', lw=2, c=colors[counter])
 
         os.chdir(cwd)
     plt.xlim([0.015, 0.052])
@@ -260,8 +260,6 @@ def pressure_eq_point_curve():
     plt.legend()
     plt.tight_layout()
     plt.savefig("xeq_pressure_summary_Br.pdf")
-
-
 
 
 def get_this_pes(directory=os.getcwd()):

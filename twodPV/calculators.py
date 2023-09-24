@@ -176,7 +176,8 @@ def single_point_calculation():
 
     default_bulk_optimisation_set.update(
         {'ISPIN': 2, 'NSW': 500, 'LWAVE': False, 'clean_after_success': True, 'Gamma_centered': True,
-         'MP_points': [4, 4, 1], 'executable': 'vasp_std', 'gpu_run': False, 'IBRION': -1, 'ISIF': 0, 'NSW':0, 'IALGO':38,'NELM':150})
+         'MP_points': [4, 4, 1], 'executable': 'vasp_std', 'gpu_run': False, 'IBRION': -1, 'ISIF': 0, 'NSW': 0,
+         'IALGO': 38, 'NELM': 150})
     structure = load_structure(logger)
     vasp = Vasp(**default_bulk_optimisation_set)
     vasp.set_crystal(structure)
@@ -184,6 +185,7 @@ def single_point_calculation():
     logger.info("VASP terminated properly: " + str(vasp.completed))
     if not vasp.completed:
         raise Exception("VASP did not completed properly, you might want to check it by hand.")
+
 
 def load_structure(logger):
     if os.path.isfile('./CONTCAR') and (os.path.getsize('./CONTCAR') > 0):

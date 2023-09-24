@@ -1,19 +1,20 @@
 from twodPV.calculators import *
 
+
 def energy_cutoff_scan():
     logger = setup_logger(output_filename='electronic_structures.log')
     update_core_info()
     structure = VaspReader(input_location='./POSCAR').read_POSCAR()
 
-    #for e_c in [100,150,200,250,300,350,400,450,500]:
-    for e_c in [100, 120,140,150, 160,180,200,220,240,250,260,280,300,320,340,350,400,450,500]:
+    # for e_c in [100,150,200,250,300,350,400,450,500]:
+    for e_c in [100, 120, 140, 150, 160, 180, 200, 220, 240, 250, 260, 280, 300, 320, 340, 350, 400, 450, 500]:
         try:
             os.remove('./CHGCAR')
             os.remove('./KPOINTS')
         except:
             pass
 
-        logger.info("Testing energy cutoff of "+str(e_c)+' eV')
+        logger.info("Testing energy cutoff of " + str(e_c) + ' eV')
         single_point_pbe.update(
             {'IALGO': 38, 'ISPIN': 1, 'MP_points': [4, 4, 1], 'ENCUT': e_c, 'clean_after_success': False,
              'LCHARG': True,
@@ -47,8 +48,9 @@ def energy_cutoff_scan():
             bands = run.get_band_structure("./KPOINTS")
             band_gap_data = bands.get_band_gap()
 
-            logger.info("Cutoff "+str(e_c)+" eV,  PBE band gap energy is " + str(band_gap_data['energy']) + ' eV')
-            shutil.move('./vasprun.xml', './vasprun_BAND_'+str(e_c)+'.xml')
+            logger.info("Cutoff " + str(e_c) + " eV,  PBE band gap energy is " + str(band_gap_data['energy']) + ' eV')
+            shutil.move('./vasprun.xml', './vasprun_BAND_' + str(e_c) + '.xml')
+
 
 def execute():
     try:
@@ -261,9 +263,7 @@ def execute():
 
     logger.info("PBE band gap energy is " + str(band_gap_data['energy']) + ' eV')
 
-
-    #os.chdir('../')
-    #from core.utils.zipdir import ZipDir
-    #ZipDir('electronic_workflow','electronic_workflow.zip')
-    #shutil.rmtree('./electronic_workflow')
-
+    # os.chdir('../')
+    # from core.utils.zipdir import ZipDir
+    # ZipDir('electronic_workflow','electronic_workflow.zip')
+    # shutil.rmtree('./electronic_workflow')

@@ -5,6 +5,7 @@ import shutil
 from core.dao.vasp import *
 
 from core.utils.loggings import setup_logger
+
 parser = argparse.ArgumentParser(
     description='Switches for submitting MD calculation',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -111,7 +112,7 @@ else:
     logger.info("write Gamma point only KPOINTS")
     writer.write_KPOINTS(structure_to_run, K_points=[1, 1, 1], gamma_centered=True)
 
-    #equilibration run
+    # equilibration run
 
     try:
         os.remove('./INCAR')
@@ -121,13 +122,13 @@ else:
     logger.info("EQUILIBRIUM RUN")
     logger.info("start a trial run see if there is any convergence issue")
 
-    writer.write_INCAR('INCAR', default_options=production_set.update({'NSW':"10","TEBEG": "10","TEEND": "10"}))
+    writer.write_INCAR('INCAR', default_options=production_set.update({'NSW': "10", "TEBEG": "10", "TEEND": "10"}))
     cmd = 'mpirun vasp_gam'
     os.system('%s > %s' % (cmd, 'vasp.log'))
 
-    #check if SCF converges within 60 cycles
+    # check if SCF converges within 60 cycles
     no_covergence_issues = False
-    oszicar = open('OSZICAR','r')
+    oszicar = open('OSZICAR', 'r')
     start_count = False
     for l in oszicar.readlines():
         if '10 T=':
@@ -135,7 +136,7 @@ else:
         if start_count:
             if ('DAV' in l) or ('RMM in l'):
                 scf_cycles = int(l.split()[1])
-    if scf_cycles<60:
+    if scf_cycles < 60:
         no_covergence_issues = True
 
     if no_covergence_issues:
@@ -145,13 +146,14 @@ else:
         cmd = 'mpirun vasp_gam'
         os.system('%s > %s' % (cmd, 'vasp.log'))
 
-        os.rename("./CONTCAR","./POSCAR")
+        os.rename("./CONTCAR", "./POSCAR")
         os.remove('./INCAR')
-        writer.write_INCAR('INCAR', default_options=production_set.update({'NSW': "800", "TEBEG": "300", "TEEND": "300"}))
+        writer.write_INCAR('INCAR',
+                           default_options=production_set.update({'NSW': "800", "TEBEG": "300", "TEEND": "300"}))
         cmd = 'mpirun vasp_gam'
         os.system('%s > %s' % (cmd, 'vasp.log'))
 
-    #production run
+    # production run
 
     os.chdir("../")
 # finish all the calculations, tar it back up and clear the directory.

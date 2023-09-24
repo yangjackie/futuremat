@@ -4,7 +4,8 @@ from perovskite_screenings.halide_double_perovskites.calculators import *
 import argparse, os, tarfile, shutil, glob
 from core.models.element import *
 
-def spin_polarised_optimisation_procedure(noU=False,assisted=True):
+
+def spin_polarised_optimisation_procedure(noU=False, assisted=True):
     logger = setup_logger('relax.log')
 
     if os.path.exists('./vasp.log'):
@@ -15,14 +16,15 @@ def spin_polarised_optimisation_procedure(noU=False,assisted=True):
                 return
 
     if assisted:
-        #assist the convergence of spin-polarisation calculations by first converging some spin unpolarised calculations
+        # assist the convergence of spin-polarisation calculations by first converging some spin unpolarised calculations
         logger.info('assist convergence with a non-spin polarised calculation.')
         if os.path.exists('./INCAR'):
             os.remove('./INCAR')
         structure = load_structure(logger)
         default_bulk_optimisation_set.update({'ISIF': 3, 'Gamma_centered': True, 'ENCUT': 520, 'PREC': "ACCURATE",
-                                              'ISPIN': 1, 'NSW':5, 'LWAVE': True, 'LCHARG': True, 'clean_after_success': False,
-                                              'IALGO': 38, 'use_gw': True, 'EDIFF': 1e-7,'gpu_run': True})
+                                              'ISPIN': 1, 'NSW': 5, 'LWAVE': True, 'LCHARG': True,
+                                              'clean_after_success': False,
+                                              'IALGO': 38, 'use_gw': True, 'EDIFF': 1e-7, 'gpu_run': True})
 
         if not noU:
             _all_atom_label = [a.label for a in structure.all_atoms()]
@@ -55,8 +57,8 @@ def spin_polarised_optimisation_procedure(noU=False,assisted=True):
         os.remove('./INCAR')
 
     default_bulk_optimisation_set.update(
-        {'ISIF': 3, 'Gamma_centered': True,  'ENCUT': 520, 'PREC': "ACCURATE", 'ISPIN': 2, 'IALGO': 38,
-         'use_gw': True, 'clean_after_success': True, 'EDIFF': 1e-7, 'gpu_run':True,'NSW':100})
+        {'ISIF': 3, 'Gamma_centered': True, 'ENCUT': 520, 'PREC': "ACCURATE", 'ISPIN': 2, 'IALGO': 38,
+         'use_gw': True, 'clean_after_success': True, 'EDIFF': 1e-7, 'gpu_run': True, 'NSW': 100})
 
     structure = load_structure(logger)
     default_bulk_optimisation_set['magmom'], _ = magmom_string_builder(structure)
@@ -69,28 +71,28 @@ def spin_polarised_optimisation_procedure(noU=False,assisted=True):
     print(all_atom_label)
 
     if not noU:
-        LDAUL=''
-        LDAUU=''
+        LDAUL = ''
+        LDAUU = ''
 
         for label in all_atom_label:
             if label in U_corrections.keys():
-               orbital = list(U_corrections[label].keys())[-1]
-               LDAUL += ' ' + str(orbital_index[orbital])
-               LDAUU += ' ' + str(U_corrections[label][orbital])
+                orbital = list(U_corrections[label].keys())[-1]
+                LDAUL += ' ' + str(orbital_index[orbital])
+                LDAUU += ' ' + str(U_corrections[label][orbital])
             else:
-               LDAUL += ' -1'
-               LDAUU += ' 0'
+                LDAUL += ' -1'
+                LDAUU += ' 0'
 
         GGA_U_options = {'LDAU': '.TRUE.', 'LDAUTYPE': 2, 'LDAUJ': '0 ' * len(all_atom_label), 'LDAUL': LDAUL,
-                'LDAUU': LDAUU}
+                         'LDAUU': LDAUU}
         default_bulk_optimisation_set.update(GGA_U_options)
 
-    #default_bulk_optimisation_set.update({'nelect':275})
+    # default_bulk_optimisation_set.update({'nelect':275})
 
-    #try:
+    # try:
     #    os.remove("./WAVECAR")
     #    logger.info("Previous WAVECAR found, remove before start new optimisation.")
-    #except:
+    # except:
     #    pass
 
     vasp = Vasp(**default_bulk_optimisation_set)
@@ -101,6 +103,7 @@ def spin_polarised_optimisation_procedure(noU=False,assisted=True):
     if not vasp.completed:
         logger.info("VASP did not completed properly, you might want to check it by hand.")
     return
+
 
 def dfpt_phonon_polarisation():
     logger = setup_logger('relax.log')
@@ -143,12 +146,14 @@ def dfpt_phonon_polarisation():
     if os.path.exists('./INCAR'):
         os.remove('./INCAR')
 
-    pol_set =  {'ISPIN': 2, 'LWAVE': False, 'ENCUT': 520, 'PREC': 'Accurate', 'EDIFF': 1e-07,
-                'ISYM': 0, 'LREAL': 'AUTO', "NELM": 300, 'LCALCPOL':True, 'DIPOL':'0.5 0.5 0.5','ISMEAR':-5,'gpu_run':False,
-                'clean_after_success': True, 'Gamma_centered':True,'use_gw': True, 'ADDGRID':True}#$, 'MAGMOM': '4*0 7*4 1*4 4*0 23*0'} #,'NELECT':270}
+    pol_set = {'ISPIN': 2, 'LWAVE': False, 'ENCUT': 520, 'PREC': 'Accurate', 'EDIFF': 1e-07,
+               'ISYM': 0, 'LREAL': 'AUTO', "NELM": 300, 'LCALCPOL': True, 'DIPOL': '0.5 0.5 0.5', 'ISMEAR': -5,
+               'gpu_run': False,
+               'clean_after_success': True, 'Gamma_centered': True, 'use_gw': True,
+               'ADDGRID': True}  # $, 'MAGMOM': '4*0 7*4 1*4 4*0 23*0'} #,'NELECT':270}
 
     pol_set['ISMEAR'] = 0
-    pol_set['SIGMA'] = 0.05 
+    pol_set['SIGMA'] = 0.05
     pol_set['AMIN'] = 0.01
 
     del pol_set['DIPOL']
@@ -179,7 +184,7 @@ def dfpt_phonon_polarisation():
                      'LDAUU': LDAUU}
     pol_set.update(GGA_U_options)
 
-    #pol_set.update({'nelect':275})
+    # pol_set.update({'nelect':275})
 
     logger.info("Start from supercell defined in POSCAR")
     vasp = Vasp(**pol_set)
@@ -194,12 +199,13 @@ if __name__ == "__main__":
     parser.add_argument("--opt", action='store_true', help='perform initial structural optimization')
     parser.add_argument("--pol", action='store_true', help='perform polarisation calculation')
     parser.add_argument("--noU", action='store_true', help='do not apply U correction')
-    parser.add_argument('--assisted', action='store_true', help='assisting convergence with a non spin polarised calculation')
+    parser.add_argument('--assisted', action='store_true',
+                        help='assisting convergence with a non spin polarised calculation')
 
     args = parser.parse_args()
 
     if args.opt:
-        spin_polarised_optimisation_procedure(noU=args.noU,assisted=args.assisted)
+        spin_polarised_optimisation_procedure(noU=args.noU, assisted=args.assisted)
 
     if args.pol:
         dfpt_phonon_polarisation()

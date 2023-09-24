@@ -84,7 +84,7 @@ class XTB(Calculator):
             ip, ea = self.__get_vipea(open('xtb.log', 'r'))
             self.result['vip'] = ip
             self.result['vea'] = ea
-            if (self.result['vip']  is not None) and (self.result['vea'] is not None):
+            if (self.result['vip'] is not None) and (self.result['vea'] is not None):
                 self.result['vipea_success'] = True
             else:
                 self.result['vipea_success'] = False
@@ -122,7 +122,6 @@ class XTB(Calculator):
         self.tear_down()
         return self.result
 
-
     def __get_optimised_molecule_and_energy_from_xyz(self, fileobj):
         lines = fileobj.readlines()
         natoms = int(lines[0])
@@ -136,7 +135,6 @@ class XTB(Calculator):
             positions.append([float(x), float(y), float(z)])
         return Atoms(symbols=symbols, positions=positions), total_energy_kcal_mol
 
-
     def __get_vipea(self, fileobj):
         lines = fileobj.readlines()
         ip = None
@@ -147,7 +145,6 @@ class XTB(Calculator):
             if 'delta SCC EA (eV)' in l:
                 ea = float(l.split()[-1])
         return ip, ea
-
 
     def __get_homo_lumo_gap(self, fileobj):
         _holder = []

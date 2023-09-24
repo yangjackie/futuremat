@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
+
 class FileReader(object):
     """
     A generic file reader for reading text-based files on disk. A file reader can be initialized with either
@@ -12,6 +13,7 @@ class FileReader(object):
     Under the hood, the initializer will always return the file content extracted from the file (if a
     file location is given) to be parsed for specific parser.
     """
+
     def __init__(self, input_location=None, file_content=None):
         try:
             assert input_location is not None
@@ -57,7 +59,8 @@ class FileWriter(object):
     :param str output_location: The path pointing to the file to be written out.
     :param List file_content: An object containing the content of the file to be written out.
     """
-    def __init__(self,output_location,file_content):
+
+    def __init__(self, output_location, file_content):
         self.output_location = output_location
         self.file_content = file_content
 
@@ -69,7 +72,7 @@ class ObjectMapper(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def map_to_object(self,content):
+    def map_to_object(self, content):
         """
         Method to map the contents stored in a namedturple to an object.
 
@@ -79,7 +82,7 @@ class ObjectMapper(object):
         pass
 
     @abstractmethod
-    def map_to_content(self,object):
+    def map_to_content(self, object):
         """
         Method to map the states of an object to a namedturple.
 

@@ -1,15 +1,17 @@
 import os
 import zipfile
 
+
 def ZipDirAppend(inputDir, outputZipFile):
     rootLen = len(os.path.dirname(inputDir))
+
     def _ArchiveDirectory(parentDirectory):
         contents = os.listdir(parentDirectory)
-        #store empty directories
+        # store empty directories
         if not contents:
-            #http://www.velocityreviews.com/forums/t318840-add-empty-directory-using-zipfile.html
+            # http://www.velocityreviews.com/forums/t318840-add-empty-directory-using-zipfile.html
             archiveRoot = parentDirectory[rootLen:].replace('\\', '/').lstrip('/')
-            zipInfo = zipfile.ZipInfo(archiveRoot+'/')
+            zipInfo = zipfile.ZipInfo(archiveRoot + '/')
             outputZipFile.writestr(zipInfo, '')
         for item in contents:
             fullPath = os.path.join(parentDirectory, item)
@@ -27,6 +29,7 @@ def ZipDirAppend(inputDir, outputZipFile):
                     outputZipFile.writestr(zipInfo, os.readlink(fullPath))
                 else:
                     outputZipFile.write(fullPath, archiveRoot, zipfile.ZIP_DEFLATED)
+
     _ArchiveDirectory(inputDir)
 
 

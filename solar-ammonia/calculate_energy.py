@@ -2,6 +2,7 @@ from PredictG import PredictGibbsEnergy
 import json
 import os
 from pandas import DataFrame
+
 """
 Total formation energy dataset for H2O and NH3 at different temperatures calculated by FactSage/Calculate/Reaction.
 Unit:eV.
@@ -55,11 +56,11 @@ class CalculateGibbsEnergy:
         coefficients = None
         [a, b, c, d, n] = [i for i in list_of_indices]
         if reaction == "hydrolysis":
-            coefficients = [1/c, d/c/n, 1/c/n, 1, d/c/n - 3/2]
+            coefficients = [1 / c, d / c / n, 1 / c / n, 1, d / c / n - 3 / 2]
         elif reaction == "reduction":
-            coefficients = [1/c/n, d/c/n, a/c, b/c, d/c/n]
+            coefficients = [1 / c / n, d / c / n, a / c, b / c, d / c / n]
         elif reaction == "nitridation":
-            coefficients = [a/c, b/c, 1/2, 1/c]
+            coefficients = [a / c, b / c, 1 / 2, 1 / c]
         return coefficients
 
     def calculate_pair_formation_energies(self, temperature):
@@ -112,7 +113,7 @@ class CalculateGibbsEnergy:
         wd = cwd + '/data/' + system + '/formation_energies/'
         if not os.path.exists(wd):  # Test if directory exists.
             os.makedirs(wd)
-        df.to_csv(wd + 'pair_formation_energies_'+str(temperature)+'k.csv',
+        df.to_csv(wd + 'pair_formation_energies_' + str(temperature) + 'k.csv',
                   index=None, header=True)
 
     def calculate_reaction_energy(self, system, temperature, reaction_type):
@@ -135,15 +136,17 @@ class CalculateGibbsEnergy:
                     coefficients = self.binary_reaction_coefficients("hydrolysis", i["balance_equation"])
                 elif system == 'ternary':
                     coefficients = self.ternary_reaction_coefficients("hydrolysis", i["balance_equation"])
-                dG_hyd = coefficients[2] * oxide_energy_list[looping_index] * i["oxide_atom_num_per_formula"] + coefficients[3] * \
-                         float(NH3_formation_energies[str(temperature)]) -\
-                         (coefficients[0] * nitride_energy_list[looping_index] * i["nitride_atom_num_per_formula"] + coefficients[1] *
+                dG_hyd = coefficients[2] * oxide_energy_list[looping_index] * i["oxide_atom_num_per_formula"] + \
+                         coefficients[3] * \
+                         float(NH3_formation_energies[str(temperature)]) - \
+                         (coefficients[0] * nitride_energy_list[looping_index] * i["nitride_atom_num_per_formula"] +
+                          coefficients[1] *
                           float(H2O_formation_energies[str(temperature)]))
                 reaction_energy_list.append(dG_hyd)
                 looping_index += 1
             pair_gibbs_formation_energy_dict["hydrolysis_energy"] = reaction_energy_list
             df = DataFrame(pair_gibbs_formation_energy_dict,
-                           columns=['nitride_id', 'nitride', 'oxide_id', 'oxide',"nitride_formation_energy",
+                           columns=['nitride_id', 'nitride', 'oxide_id', 'oxide', "nitride_formation_energy",
                                     "oxide_formation_energy", "hydrolysis_energy"])
         elif reaction_type == "reduction":
             for i in data["pairs"]:
@@ -159,7 +162,7 @@ class CalculateGibbsEnergy:
                 looping_index += 1
             pair_gibbs_formation_energy_dict["reduction_energy"] = reaction_energy_list
             df = DataFrame(pair_gibbs_formation_energy_dict,
-                           columns=['nitride_id', 'nitride', 'oxide_id', 'oxide',"nitride_formation_energy",
+                           columns=['nitride_id', 'nitride', 'oxide_id', 'oxide', "nitride_formation_energy",
                                     "oxide_formation_energy", "reduction_energy"])
         return df
 
@@ -175,6 +178,7 @@ class CalculateGibbsEnergy:
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description='pair the compounds for solar thermal ammonia synthesis calculations')
     parser.add_argument('system', action='store', choices=['binary', 'ternary'],
                         type=str, help='choose the system to match the pairs.')
@@ -196,6 +200,3 @@ if __name__ == "__main__":
         cge.save_reaction_energy(args.system, args.htem, args.reaction)
     elif args.reaction == 'reduction':
         cge.save_reaction_energy(args.system, args.rtem, args.reaction)
-
-
-

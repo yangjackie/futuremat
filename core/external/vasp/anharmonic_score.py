@@ -8,6 +8,7 @@
 
 # this is a demonstration
 import warnings
+
 warnings.filterwarnings("ignore")
 from core.dao.vasp import VaspReader
 from core.models.crystal import Crystal
@@ -24,6 +25,7 @@ from phonopy.phonon.band_structure import *
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
+
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
@@ -70,9 +72,9 @@ class AnharmonicScore(object):
             self.atom_masks = [id for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if
                                atom.label in atoms]
 
-        if isinstance(md_frames,list):
-            self.md_frames = md_frames # require the vasprun.xml containing the MD data
-        elif isinstance(md_frames,str):
+        if isinstance(md_frames, list):
+            self.md_frames = md_frames  # require the vasprun.xml containing the MD data
+        elif isinstance(md_frames, str):
             self.md_frames = [md_frames]
 
         self.get_dft_md_forces()
@@ -81,19 +83,19 @@ class AnharmonicScore(object):
         if isinstance(force_constants, str):
             try:
                 self.phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
-                                      primitive_matrix=primitive_matrix,
-                                      unitcell_filename=unit_cell_frame,
-                                      force_constants_filename=force_constants)
+                                           primitive_matrix=primitive_matrix,
+                                           unitcell_filename=unit_cell_frame,
+                                           force_constants_filename=force_constants)
                 print("Use supercell " + str(supercell))
                 print("Use primitive matrix " + str(primitive_matrix) + " done")
             except:
                 self.phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
-                                      primitive_matrix='auto',
-                                      unitcell_filename=unit_cell_frame,
-                                      force_constants_filename=force_constants)
+                                           primitive_matrix='auto',
+                                           unitcell_filename=unit_cell_frame,
+                                           force_constants_filename=force_constants)
             print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
 
-            #TODO - if the input supercell is not [1,1,1], then it will need to be expanded into the correct supercell shape here!
+            # TODO - if the input supercell is not [1,1,1], then it will need to be expanded into the correct supercell shape here!
 
             new_shape = np.shape(self.phonon.force_constants)[0] * np.shape(self.phonon.force_constants)[2]
             self.force_constant = np.zeros((new_shape, new_shape))
@@ -110,9 +112,12 @@ class AnharmonicScore(object):
             # as the identity matrix, making the phonopy to treat the supercell as the primitive, rather than generate them
             # automatically
             if not self.mode_resolved:
-                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename=force_sets_filename)
+                self.phonon = phonopy.load(supercell_filename=ref_frame, log_level=1,
+                                           force_sets_filename=force_sets_filename)
             else:
-                self.phonon  = phonopy.load(supercell_filename=ref_frame, log_level=1, force_sets_filename=force_sets_filename,primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+                self.phonon = phonopy.load(supercell_filename=ref_frame, log_level=1,
+                                           force_sets_filename=force_sets_filename,
+                                           primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
             self.phonon.produce_force_constants()
 
             print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
@@ -155,10 +160,9 @@ class AnharmonicScore(object):
         if self.mode_resolved:
             self.prepare_phonon_eigs()
 
-    def prepare_phonon_eigs(self,nqpoints=10):
+    def prepare_phonon_eigs(self, nqpoints=10):
         print("Need to calculate the mode resolved anharmonic scores, first get the phonon eigenvectors")
         from core.models.element import atomic_mass_dict
-
 
         from pymatgen.symmetry.bandstructure import HighSymmKpath
         from core.internal.builders.crystal import map_to_pymatgen_Structure
@@ -192,10 +196,10 @@ class AnharmonicScore(object):
             for i, eigvecs_on_path in enumerate(_eigvecs):
                 for j, eigvecs_at_q in enumerate(eigvecs_on_path):
                     for k, vec in enumerate(eigvecs_at_q.T):
-                        #vec = np.array(vec).reshape(self.ref_frame.total_num_atoms(), 3)
-                        self.eigvecs.append(self.atomic_masses*vec)
-                        eigv=_eigvals[i][j][k]
-                        self.eigvals.append(np.sqrt(abs(eigv))*np.sign(eigv)*VaspToTHz)
+                        # vec = np.array(vec).reshape(self.ref_frame.total_num_atoms(), 3)
+                        self.eigvecs.append(self.atomic_masses * vec)
+                        eigv = _eigvals[i][j][k]
+                        self.eigvals.append(np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz)
 
                         self.group_velocities.append(abs(np.mean(_group_velocities[i][j][k])))
         print('eigenvector shape ', np.shape(vec))
@@ -208,8 +212,8 @@ class AnharmonicScore(object):
         anh_dot = np.dot(self.anharmonic_forces, np.array(self.eigvecs).T).std(axis=0)
         print(np.shape(dft_dot), np.shape(anh_dot))
         print("finished dot")
-        #self.mode_sigmas = [np.dot(self.anharmonic_forces,eigvec).std()/np.dot(self.dft_forces,eigvec).std() for eigvec in self.eigvecs]
-        self.mode_sigmas = np.divide(anh_dot,dft_dot)
+        # self.mode_sigmas = [np.dot(self.anharmonic_forces,eigvec).std()/np.dot(self.dft_forces,eigvec).std() for eigvec in self.eigvecs]
+        self.mode_sigmas = np.divide(anh_dot, dft_dot)
         return self.eigvals, self.group_velocities, self.mode_sigmas
 
     def mode_resolved_sigma_band(self):
@@ -217,7 +221,6 @@ class AnharmonicScore(object):
         from core.internal.builders.crystal import map_to_pymatgen_Structure
         pmg_path = HighSymmKpath(map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3)
         self._kpath = pmg_path._kpath
-
 
         distances = self.phonon.band_structure.__dict__['_distances']
         print(np.shape(distances[0]))
@@ -232,52 +235,55 @@ class AnharmonicScore(object):
 
         f, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]})
         from phonopy.units import VaspToTHz
-        freqs=[]
-        sigmas=[]
+        freqs = []
+        sigmas = []
         for j in range(len(distances)):
 
             for i in range(len(eigvals[j].T)):
-                #now need something to calculate the sigma here along each point
-                print(str(j) + '/' + str(len(distances)-1), str(i)+'/'+str(len(eigvals[j].T)-1))
-                _sigmas=[]
+                # now need something to calculate the sigma here along each point
+                print(str(j) + '/' + str(len(distances) - 1), str(i) + '/' + str(len(eigvals[j].T) - 1))
+                _sigmas = []
                 for k in range(len(distances[j])):
-                    e=eigvecs[j][k][i]
-                    _s=np.dot(self.anharmonic_forces,e).std()/np.dot(self.dft_forces,e).std()
-                    _sigmas.append(np.exp(1.5*_s))
-                    #sigmas.append(_s)
-                    #eigv=eigvals[j][k][i]
-                    #eigv=np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz
-                    #freqs.append(eigv)
-                #print(max(sigmas),min(sigmas))
-                #sigmas=[np.dot(self.anharmonic_forces,e).std()/np.dot(self.dft_forces,e).std() for e in eigvecs[j][:][i]]
-                #print(sigmas)
-                a0.plot(distances[j],eigvals[j].T[i],'-',c='#FFBB00',alpha=0.75,linewidth=0.85)
-                a0.scatter(distances[j],eigvals[j].T[i],marker='o',s=_sigmas,fc='#3F681C',alpha=0.45)
+                    e = eigvecs[j][k][i]
+                    _s = np.dot(self.anharmonic_forces, e).std() / np.dot(self.dft_forces, e).std()
+                    _sigmas.append(np.exp(1.5 * _s))
+                    # sigmas.append(_s)
+                    # eigv=eigvals[j][k][i]
+                    # eigv=np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz
+                    # freqs.append(eigv)
+                # print(max(sigmas),min(sigmas))
+                # sigmas=[np.dot(self.anharmonic_forces,e).std()/np.dot(self.dft_forces,e).std() for e in eigvecs[j][:][i]]
+                # print(sigmas)
+                a0.plot(distances[j], eigvals[j].T[i], '-', c='#FFBB00', alpha=0.75, linewidth=0.85)
+                a0.scatter(distances[j], eigvals[j].T[i], marker='o', s=_sigmas, fc='#3F681C', alpha=0.45)
 
-        a0.set_xlim(min(distances[0]),max(distances[-1]))
+        a0.set_xlim(min(distances[0]), max(distances[-1]))
 
         unique_labels = []
         for i in range(len(sp_pt_labels)):
             for j in range(len(sp_pt_labels[i])):
-                if sp_pt_labels[i][j]=='\\Gamma': _l = "$\\Gamma$"
-                elif "_1" in sp_pt_labels[i][j]: _l = sp_pt_labels[i][j].replace("_1","")
-                else: _l = sp_pt_labels[i][j]
-                if (j==len(sp_pt_labels[i])-1) and (i!=len(sp_pt_labels)-1):
-                    unique_labels.append(_l+'$\\vert$')
-                elif (i>0) and (j==0):
-                    unique_labels[-1] = unique_labels[-1]+_l
+                if sp_pt_labels[i][j] == '\\Gamma':
+                    _l = "$\\Gamma$"
+                elif "_1" in sp_pt_labels[i][j]:
+                    _l = sp_pt_labels[i][j].replace("_1", "")
+                else:
+                    _l = sp_pt_labels[i][j]
+                if (j == len(sp_pt_labels[i]) - 1) and (i != len(sp_pt_labels) - 1):
+                    unique_labels.append(_l + '$\\vert$')
+                elif (i > 0) and (j == 0):
+                    unique_labels[-1] = unique_labels[-1] + _l
                 else:
                     unique_labels.append(_l)
 
         a0.set_xticks(sp_pts)
         a0.set_xticklabels(unique_labels)
         for i in sp_pts:
-            a0.axvline(x=i,ls=':',c='k')
+            a0.axvline(x=i, ls=':', c='k')
 
         a0.set_ylabel("Frequency (THz)")
 
-        freqs,sigmas=self.mode_resolved_sigma()
-        a1.scatter(sigmas,freqs,marker='o',fc='#3F681C',alpha=0.6, s=1)
+        freqs, sigmas = self.mode_resolved_sigma()
+        a1.scatter(sigmas, freqs, marker='o', fc='#3F681C', alpha=0.6, s=1)
         a1.set_ylim(a0.get_ylim())
         a1.set_xlabel('$\\sigma$ (300 K)')
         a1.axvline(x=1, ls=':', c='k')
@@ -317,13 +323,13 @@ class AnharmonicScore(object):
                                 for this_force in [float(_v) for _v in v.text.split()]:
                                     this_forces.append(this_force)
                         all_forces.append(np.array(this_forces))
-                        c+=1
+                        c += 1
             self.force_dimension_counter.append(c)
 
             print('MD force vector shape ', np.shape(all_forces))
         self.dft_forces = np.array(all_forces)
 
-        #for i in range(len(all_forces)):
+        # for i in range(len(all_forces)):
         #    print('FORCES ', np.std(all_forces[i]))
 
         print('All MD force vector shape ', np.shape(self.dft_forces))
@@ -332,9 +338,9 @@ class AnharmonicScore(object):
 
     def get_all_md_atomic_displacements(self):
 
-        #from pymatgen.util.coord import pbc_shortest_vectors
-        #from pymatgen.core.lattice import Lattice as PymatLattice
-        #__pymatgen_lattice = PymatLattice.from_parameters(a=self.ref_frame.lattice.a,
+        # from pymatgen.util.coord import pbc_shortest_vectors
+        # from pymatgen.core.lattice import Lattice as PymatLattice
+        # __pymatgen_lattice = PymatLattice.from_parameters(a=self.ref_frame.lattice.a,
         #                                                  b=self.ref_frame.lattice.b,
         #                                                  c=self.ref_frame.lattice.c,
         #                                                  alpha=self.ref_frame.lattice.alpha,
@@ -342,22 +348,22 @@ class AnharmonicScore(object):
         #                                                  gamma=self.ref_frame.lattice.gamma)
 
         all_positions = []
-        for fc,frame in enumerate(self.md_frames):
+        for fc, frame in enumerate(self.md_frames):
             this_position_set = []
             for event, elem in etree.iterparse(frame):
                 if elem.tag == 'varray':
                     if elem.attrib['name'] == 'positions':
                         this_positions = []
-                        for i,v in enumerate(elem):
+                        for i, v in enumerate(elem):
                             this_position = [float(_v) for _v in v.text.split()]
                             this_positions.append(this_position)
 
-                            #pbc_shortest_dist = pbc_shortest_vectors(__pymatgen_lattice,self.ref_coords[i],this_position)[0][0]
-                            #this_positions.append(pbc_shortest_dist)
+                            # pbc_shortest_dist = pbc_shortest_vectors(__pymatgen_lattice,self.ref_coords[i],this_position)[0][0]
+                            # this_positions.append(pbc_shortest_dist)
 
                         this_position_set.append(np.array(this_positions))
 
-            this_position_set = this_position_set[-1*self.force_dimension_counter[fc]:]
+            this_position_set = this_position_set[-1 * self.force_dimension_counter[fc]:]
             all_positions = all_positions + this_position_set
 
         # only need those with forces
@@ -368,20 +374,21 @@ class AnharmonicScore(object):
 
         __all_displacements = all_positions
 
-        __all_displacements_holder = np.array([all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
-        __all_displacements = __all_displacements_holder - np.round(__all_displacements_holder)  # this is how it's done in Pymatgen
+        __all_displacements_holder = np.array(
+            [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
+        __all_displacements = __all_displacements_holder - np.round(
+            __all_displacements_holder)  # this is how it's done in Pymatgen
 
         # Convert to Cartesian
         self.all_displacements = np.zeros(np.shape(__all_displacements))
 
-        #for i in range(__all_displacements.shape[0]):
+        # for i in range(__all_displacements.shape[0]):
         #    print('DISP', np.mean(__all_displacements[i]))
 
         for i in range(__all_displacements.shape[0]):
             np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self.all_displacements[i, :, :])
 
-        print('All MD displacement shape ',np.shape(self.all_displacements))
-
+        print('All MD displacement shape ', np.shape(self.all_displacements))
 
     @property
     def harmonic_forces(self):
@@ -394,7 +401,8 @@ class AnharmonicScore(object):
                         np.dot(self.force_constant, self.all_displacements[i, :, :].flatten())).reshape(
                         self.all_displacements[0, :, :].shape)
                 else:
-                    self._harmonic_force[i, :] = -1.0 * (np.dot(self.force_constant, self.all_displacements[i, :, :].flatten()))
+                    self._harmonic_force[i, :] = -1.0 * (
+                        np.dot(self.force_constant, self.all_displacements[i, :, :].flatten()))
 
         return self._harmonic_force
 
@@ -424,7 +432,7 @@ class AnharmonicScore(object):
                 self._fourth_order_forces = np.zeros(np.shape(self.dft_forces))
                 _a = self.force_constant_4
                 for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
-                    print("fourth order forces, frame "+str(i))
+                    print("fourth order forces, frame " + str(i))
                     _b = self.all_displacements[i, :, :].flatten()
                     _A = np.einsum('ijkl,l->ijk', _a, _b)
                     _B = np.einsum('ijk,k->ij', _A, _b)
@@ -439,7 +447,7 @@ class AnharmonicScore(object):
                 hasattr(self, '_anharmonic_forces') and self._anharmonic_forces is None):
             self._anharmonic_forces = self.dft_forces - self.harmonic_forces
 
-            #for i in range(self._anharmonic_forces.shape[0]):
+            # for i in range(self._anharmonic_forces.shape[0]):
             #    print('ANHF ',np.std(self._anharmonic_forces[i]))
 
             if self.include_third_oder:
@@ -595,15 +603,15 @@ class AnharmonicScore(object):
             print("Sigma for entire structure over the MD trajectory is ", str(sigma))
             return sigma, self.time_series
         else:
-            sigma = rmse.std(axis=(1,2), dtype=np.float64) / std.std(axis=(1,2), dtype=np.float64)
-            #print('sigma is ', sigma)
+            sigma = rmse.std(axis=(1, 2), dtype=np.float64) / std.std(axis=(1, 2), dtype=np.float64)
+            # print('sigma is ', sigma)
             print("=" * 100)
-            print('averaged sigma is ',sigma.mean())
+            print('averaged sigma is ', sigma.mean())
             print("=" * 100)
             return sigma, self.time_series
 
     def moving_direction(self):
-        dot_prod = np.sum(self.all_displacements * self.dft_forces,axis=(2,1))
+        dot_prod = np.sum(self.all_displacements * self.dft_forces, axis=(2, 1))
         print(np.shape(self.all_displacements))
         print(np.shape(dot_prod))
         return dot_prod
@@ -624,7 +632,7 @@ if __name__ == "__main__":
                         help="plot the joint distributions of normalized total and anharmonic forces for each atom in the structure")
     parser.add_argument("--md_time_step", type=float, default=1,
                         help="Time step for the molecular dynamic trajectory (in fs), default: 1fs")
-    parser.add_argument("--fc", type=str,  default=None,
+    parser.add_argument("--fc", type=str, default=None,
                         help='Name of the second-order force constant file')
     parser.add_argument("--third", action='store_true',
                         help='Whether to include third order contribution')
@@ -640,17 +648,19 @@ if __name__ == "__main__":
                         help='data to plot along the X-axis for the joint probability distribution, default: DFT force')
     parser.add_argument("-Y", "--Y", type=str, default='anh',
                         help='data to plot along the Y-axis for the joint probability distribution, default: anharmonic forces')
-    parser.add_argument("-mr","--mode_resolved", action='store_true',
+    parser.add_argument("-mr", "--mode_resolved", action='store_true',
                         help='Plot the anharmonic score as a function of harmonic phonon frequencies.')
     parser.add_argument("-band", "--band", action='store_true',
                         help='Plot the anharmonic score on the phonon band structure.')
-    parser.add_argument('-ymin','--ymin', type=float, help='Minimum of y to plot frequency--dependent anharmonic scores', default=None)
-    parser.add_argument('-ymax','--ymax', type=float, help='Maximum of y to plot frequency--dependent anharmonic scores', default=None)
-
+    parser.add_argument('-ymin', '--ymin', type=float,
+                        help='Minimum of y to plot frequency--dependent anharmonic scores', default=None)
+    parser.add_argument('-ymax', '--ymax', type=float,
+                        help='Maximum of y to plot frequency--dependent anharmonic scores', default=None)
 
     args = parser.parse_args()
 
-    scorer = AnharmonicScore(md_frames=args.md_xml, unit_cell_frame=args.unit_cell_frame, ref_frame=args.ref_frame, atoms=None,
+    scorer = AnharmonicScore(md_frames=args.md_xml, unit_cell_frame=args.unit_cell_frame, ref_frame=args.ref_frame,
+                             atoms=None,
                              potim=args.md_time_step, force_constants=args.fc, mode_resolved=args.mode_resolved,
                              include_third_order=args.third, third_order_fc=args.fc3)
 
@@ -667,9 +677,9 @@ if __name__ == "__main__":
 
     if args.sigma:
         sigma, time_stps = scorer.structural_sigma(return_trajectory=args.trajectory)
-        print('sigma is ',sigma)
+        print('sigma is ', sigma)
         if args.plot_trajectory:
-            #print(len(sigma))
+            # print(len(sigma))
             plt.plot(time_stps, sigma, 'b-', lw=1)
             plt.xlabel("Time (fs)", fontsize=16)
             plt.ylabel("$\\sigma(t)$", fontsize=16)
@@ -679,7 +689,7 @@ if __name__ == "__main__":
     if args.mode_resolved:
         freqs, velocity, sigmas = scorer.mode_resolved_sigma()
         print("plotting")
-        print(np.shape(velocity),np.shape(sigmas))
+        print(np.shape(velocity), np.shape(sigmas))
         plt.figure(figsize=(3, 5))
         plt.scatter(sigmas, velocity, marker='o', alpha=0.5, s=5, c='#FA6775')
         plt.xlabel('$\\sigma^{(2)}(\\mathbf{q},\\nu)$')

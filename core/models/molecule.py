@@ -1,5 +1,6 @@
 from core.models.vector3d import cVector3D
 
+
 class Molecule(object):
     def __init__(self, atoms=None, crystal=None):
         self.name = None

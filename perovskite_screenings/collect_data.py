@@ -53,7 +53,7 @@ all_elements_list = list(set(all_elements_list))
 reference_atomic_energies = {}
 
 
-def element_energy(db,C=None):
+def element_energy(db, C=None):
     logger.info("========== Collecting reference energies for constituting elements ===========")
     cwd = os.getcwd()
     os.chdir('./elements')
@@ -225,7 +225,6 @@ def full_relax_data(db):
 
 
 def all_data(db, C):
-
     if C in halide_C:
         C_site_list = [C]
         A_site_list = halide_A
@@ -453,7 +452,7 @@ def all_data(db, C):
                         md_tf.extractall()
                     except:
                         pass
-                #if os.path.isdir('./MD'):
+                # if os.path.isdir('./MD'):
                 #    os.chdir('MD')
                 #    t = 0
                 #    try:
@@ -468,7 +467,7 @@ def all_data(db, C):
                 #        md_done = True
                 #    os.chdir('..')  # step out from MD directory
 
-                if force_constant_exists and phonon_converged:# and md_done:
+                if force_constant_exists and phonon_converged:  # and md_done:
                     logger.info(system_name + '_Pm3m' + ' Valid Phonon and MD Results')
                     uid = system_name + '_Pm3m'
                     kvp['uid'] = uid
@@ -526,7 +525,6 @@ def all_data(db, C):
                 elif os.path.isfile("phono3py.tar.gz"):
                     phono3py_folder = 'phono3py'
 
-
                 if a + b + c in ['NaHgBr', 'AuGaBr', 'AuNbBr', 'AuRhBr', 'CuCoCl', 'AuHgCl', 'CsVF', 'CuNiF', 'AuBaF',
                                  'AuPbF', 'AuScF', 'AuCuF', 'NaCaI', 'CuBaI', 'AgPdI', 'AuMnI', 'BaCrO', 'BaTcO',
                                  'BaFeO', 'BaCoO', 'BaRhO', 'CaRhO', 'BeCrO', 'CrTiO', 'CrZrO', 'CrHfO', 'CrVO',
@@ -540,7 +538,6 @@ def all_data(db, C):
                                  'CoVS', 'CoMoS', 'CoWS', 'CoReS', 'CoRhS', 'CoPoS', 'NiWS']:
                     # systems that did not have phono3py converged!
                     phono3py_folder = None
-
 
                 if phono3py_folder is not None:
                     try:
@@ -596,7 +593,7 @@ def all_data(db, C):
 
                     populate_db(db, atoms, kvp, data)
 
-                ########################################
+                    ########################################
 
                     if os.path.isfile('./sigmas.dat'):
                         f = open('./sigmas.dat', 'r')
@@ -735,7 +732,7 @@ def lattice_thermal_conductivities(db):
                         pass
 
 
-def high_order_anharmonicity(db,C='Cl'):
+def high_order_anharmonicity(db, C='Cl'):
     cwd = os.getcwd()
     system_counter = 0
     for i in range(len(A_site_list)):
@@ -873,7 +870,7 @@ def high_order_anharmonicity_old(db):
                         continue
 
                     if (not os.path.isfile('./kappa-m111111.hdf5')) or (not os.path.isfile('./vasprun_md.xml')) or (
-                    not os.path.isfile('./phonon.tar.gz')):
+                            not os.path.isfile('./phonon.tar.gz')):
                         logger.info(system_name + '_Pm3m' + ' no available higher order phonon info ')
                         os.chdir("..")
                         try:
@@ -982,7 +979,7 @@ def get_temperature_dependent_second_order_fc():
     fit_structures = []
     atoms = read("./vasprun_md.xml", index=':')
     a = atoms[0].get_cell_lengths_and_angles()[0]
-    cs = ClusterSpace(reference_structure, [0.45*a])
+    cs = ClusterSpace(reference_structure, [0.45 * a])
     for i, a in enumerate(atoms[:800:2]):
         displacements = get_displacements(a, reference_structure)
         atoms_tmp = reference_structure.copy()
@@ -991,10 +988,10 @@ def get_temperature_dependent_second_order_fc():
         atoms_tmp.positions = reference_structure.positions
         fit_structures.append(atoms_tmp)
 
-    #try:
+    # try:
     #    sc = StructureContainer.read("./structure_container")
     #    logger.info("successfully loaded the structure container")
-    #except:
+    # except:
     sc = StructureContainer(cs)  # need a cluster space to instantiate the object!
     sc.delete_all_structures()
     for ii, s in enumerate(fit_structures):
@@ -1007,7 +1004,7 @@ def get_temperature_dependent_second_order_fc():
                 pass
             pass
 
-    #logger.info("Start the optimizer")
+    # logger.info("Start the optimizer")
     try:
         opt = Optimizer(sc.get_fit_data(), fit_method="ardr", train_size=0.9)
         opt.train()
@@ -1019,7 +1016,7 @@ def get_temperature_dependent_second_order_fc():
             pass
     except Exception as e:
         try:
-            logger.info('TDEP error:'+e)
+            logger.info('TDEP error:' + e)
         except:
             pass
         raise Exception()
@@ -1027,14 +1024,14 @@ def get_temperature_dependent_second_order_fc():
     return fcs.get_fc_array(2)
 
 
-def collect(db,C):
+def collect(db, C):
     errors = []
-    #steps = [element_energy, all_data]
+    # steps = [element_energy, all_data]
     steps = [high_order_anharmonicity]
 
     for step in steps:
         try:
-            step(db,C=C)
+            step(db, C=C)
         except Exception as x:
             print(x)
             error = '{}: {}'.format(x.__class__.__name__, x)
@@ -1055,4 +1052,4 @@ if __name__ == "__main__":
     logger = setup_logger(output_filename='data_collector_' + args.C + '.log')
     db = connect(dbname)
 
-    collect(db,args.C)
+    collect(db, args.C)

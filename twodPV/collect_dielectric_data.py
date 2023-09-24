@@ -4,6 +4,7 @@ from twodPV.collect_data import *
 import argparse
 from pymatgen.io.vasp.outputs import *
 
+
 def collect_dielectric_bulk(db):
     cwd = os.getcwd()
     base_dir = cwd + '/relax_Pm3m/'
@@ -14,7 +15,7 @@ def collect_dielectric_bulk(db):
                     system_name = a + b + c
                     uid = system_name + '3_pm3m'
 
-                    print("Working on "+uid)
+                    print("Working on " + uid)
                     kvp = {}
                     data = {}
                     kvp['uid'] = uid
@@ -44,13 +45,12 @@ def collect_dielectric_bulk(db):
                     os.chdir(cwd)
 
 
-
 def collect_this(info_dict):
-    import tarfile,shutil
+    import tarfile, shutil
     root_dir = os.getcwd()
     os.chdir(info_dict['base_dir'])
 
-    to_continue=False
+    to_continue = False
     system_name = info_dict['system_name']
     try:
         tf = tarfile.open(system_name + '.tar.gz', 'r')
@@ -83,8 +83,8 @@ def collect_this(info_dict):
                     try:
                         outcar = Outcar('./OUTCAR_ph')
                         outcar.read_lepsilon_ionic()
-                        #logger.info(uid + '\t' + str(outcar.dielectric_ionic_tensor))
-                        #data['dielectric_ionic_tensor'] = outcar.dielectric_ionic_tensor
+                        # logger.info(uid + '\t' + str(outcar.dielectric_ionic_tensor))
+                        # data['dielectric_ionic_tensor'] = outcar.dielectric_ionic_tensor
                         info_dict['dielectric_ionic_tensor'] = outcar.dielectric_ionic_tensor
                     except:
                         pass
@@ -92,12 +92,12 @@ def collect_this(info_dict):
                     try:
                         reader = VaspReader(input_location='./OUTCAR_ph')
                         freqs = reader.get_vibrational_eigenfrequencies_from_outcar()
-                        #logger.info('phonon frequencies :' + str(freqs))
-                        #data['gamma_phonon_freq'] = np.array(freqs)
+                        # logger.info('phonon frequencies :' + str(freqs))
+                        # data['gamma_phonon_freq'] = np.array(freqs)
                         info_dict['gamma_phonon_freq'] = np.array(freqs)
                     except:
                         pass
-                    #populate_db(db, None, kvp, data)
+                    # populate_db(db, None, kvp, data)
                     os.remove('./OUTCAR_ph')
             except:
                 pass
@@ -113,41 +113,41 @@ def collect_this(info_dict):
 
     return info_dict
 
+
 def collect_dielectric_2D(db):
-    import tarfile,shutil
+    import tarfile, shutil
     import multiprocessing
     cwd = os.getcwd()
-    terminations = [['AO','BO2'],['ABO','O2'],['AO3','B']]
+    terminations = [['AO', 'BO2'], ['ABO', 'O2'], ['AO3', 'B']]
 
-    to_process_raw=[]
+    to_process_raw = []
 
-    for orient_id, orient in enumerate(['100','110','111']):
+    for orient_id, orient in enumerate(['100', '110', '111']):
         for term in terminations[orient_id]:
-            base_dir = cwd + '/slab_'+orient+'_'+term+'_small'
-            #os.chdir(base_dir)
+            base_dir = cwd + '/slab_' + orient + '_' + term + '_small'
+            # os.chdir(base_dir)
 
             for i in range(len(A_site_list)):
                 for a in A_site_list[i]:
                     for b in B_site_list[i]:
                         for c in C_site_list[i]:
-                            for thick in [3,5,7,9]:
-
+                            for thick in [3, 5, 7, 9]:
                                 info_dict = {}
                                 info_dict['base_dir'] = base_dir
-                                system_name = a+b+c+'_'+str(thick)
+                                system_name = a + b + c + '_' + str(thick)
                                 info_dict['system_name'] = system_name
                                 uid = a + b + c + '3_' + str(orient) + "_" + str(term) + "_" + str(thick)
                                 info_dict['uid'] = uid
-                                logger.info('gather '+uid)
+                                logger.info('gather ' + uid)
                                 to_process_raw.append(info_dict)
 
     to_process = []
     num_threads = 28
-    for counter,item in enumerate(to_process_raw):
+    for counter, item in enumerate(to_process_raw):
         to_process.append(item)
-        if (len(to_process) == num_threads*2) or (counter == len(to_process_raw)-1):
+        if (len(to_process) == num_threads * 2) or (counter == len(to_process_raw) - 1):
             pool = multiprocessing.Pool(num_threads)
-            p = pool.map_async(collect_this,to_process)
+            p = pool.map_async(collect_this, to_process)
             results = p.get(999999)
             pool.terminate()
 
@@ -162,13 +162,13 @@ def collect_dielectric_2D(db):
                     pass
                 try:
                     data['gamma_phonon_freq'] = result['gamma_phonon_freq']
-                    logger.info('phonon frequencies :'+str(result['gamma_phonon_freq']))
+                    logger.info('phonon frequencies :' + str(result['gamma_phonon_freq']))
                 except:
                     pass
                 populate_db(db, None, kvp, data)
 
             to_process = []
-                #                     to_continue=False
+            #                     to_continue=False
             #                     try:
             #                         tf = tarfile.open(system_name + '.tar.gz','r')
             #
@@ -247,7 +247,8 @@ def collect_dielectric_2D(db):
             #
             # os.chdir(cwd)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     dbname = os.path.join(os.getcwd(), '2dpv.db')
     db = connect(dbname)
     logger = setup_logger(output_filename='data_collector_static_dielectric.log')

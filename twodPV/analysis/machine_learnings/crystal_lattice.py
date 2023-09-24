@@ -29,10 +29,10 @@ for i in range(len(A_site_list)):
                 lattice_const = bulk_atoms.cell[0][0]
                 lattice_constants.append(lattice_const)
 
-min_l=min(lattice_constants)
-max_l=max(lattice_constants)
-gap = max_l-min_l
-x_grid = np.linspace(min_l-0.1*gap,max_l+0.1*gap,500)
+min_l = min(lattice_constants)
+max_l = max(lattice_constants)
+gap = max_l - min_l
+x_grid = np.linspace(min_l - 0.1 * gap, max_l + 0.1 * gap, 500)
 pdf = kde_scipy(np.array(lattice_constants), x_grid, bandwidth=0.05)
 plt.plot(x_grid, pdf, '-', lw=1.5)
 plt.tight_layout()

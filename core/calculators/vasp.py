@@ -205,60 +205,98 @@ keys = [
 ]
 
 mlff_keys = [
-    'ML_AFILT2', #This tag sets the filtering parameter for the angular filtering for ML_IAFILT2 in the machine learning force field method.
-    'ML_CDOUB', # This tag controls the criterion for "enforced" DFT calculations within the machine learning force field method. If at any time, the estimated force errors are ML_CDOUB times larger than the Bayesian threshold (i.e. "critically" high), a first principles calculation is performed and a new force field is immediately generated (even if the counter for sampling is below the minimum amount of sampled structures ML_NMDINT).
-    'ML_CSIG', #  Parameter used in the automatic determination of threshold ML_CTIFOR for Bayesian error estimation in the machine learning force field method.
-    'ML_CSLOPE', # Parameter used in the automatic determination of threshold for Bayesian error estimation in the machine learning force field method.
-    'ML_CTIFOR', # This flag sets the threshold for the Bayesian error estimation on the force within the machine learning force field method.
-    'ML_CX', #The parameter determines to which value the threshold (ML_CTIFOR) is updated within the machine learning force field methods.
-    'ML_EATOM_REF', #Reference total energies of isolated atoms used in the machine learning force field method.
-    'ML_EPS_LOW', #Threshold for the CUR algorithm used in the sparsification of local reference configurations within the machine learning force fields.
-    'ML_EPS_REG', #Initial value for the threshold of the eigenvalues of the covariance matrix in the evidence approximation.
-    'ML_IAFILT2', #This tag specifies the type of angular filtering used in the machine learning force field method.
-    'ML_IALGO_LINREG', #This tag determines the algorithm that is employed to solve the system of linear equations in the ridge regression method for machine learning.
-    'ML_ICOUPLE', #This tag specifies the atoms where the coupling parameter is introduced to calculate the chemical potential within the machine learning force field method.
-    'ML_ICRITERIA', #Decides whether (ML_ICRITERIA>0) or how the Bayesian error threshold (ML_CTIFOR) is updated within the machine learning force field method. ML_CTIFOR determines whether a first principles calculations is performed.
-    'ML_IERR', #Calculation and output frequency of Bayesian error estimate.
-    'ML_IREG', #This tag specifies whether the regularization parameters are kept constant or not in the machine learning force field method.
-    'ML_ISCALE_TOTEN', #This tag specifies how to scale the energy data in the machine learning force field method.
-    'ML_ISTART', #This tag selects the mode of operation (e.g. start from scratch, prediction-only,...) of the machine learning force fields method.
-    'ML_IWEIGHT', #This tag controls which procedure is used for normalizing and weighting the energies, forces and stresses in the machine learning force field method.
-    'ML_LAFILT2', #This tag specifies whether angular filtering is applied or not within the machine learning force field method.
-    'ML_LBASIS_DISCARD', #Controls whether calculation is continued or stopped after the maximum number of local reference configurations ML_MB for a given species is reached.
-    'ML_LCOUPLE', #his tag specifies whether thermodynamic integration is activated in order to calculate the chemical potentials within the machine learning force field method.
-    'ML_LEATOM', #This term specifies whether the total atomic energy is written out or not.
-    'ML_LERR', #Decides whether the Bayesian error estimates are calculated and written out or not.
-    'ML_LFAST', #This tag switches on the descriptors for refitting in the fast execution mode within machine learning force fields.
-    'ML_LHEAT', #This tag specifies whether the heat flux is calculated or not in the machine learning force field method.
-    'ML_LMAX2', #This tag specifies the maximum angular momentum quantum number  of spherical harmonics used to expand atomic distributions within the machine learning force field method.
-    'ML_LMLFF', #Main control tag which enables/disables the use of machine learning force fields.
-    'ML_LSPARSDES', #This tag specifies whether angular descriptor sparsification is enabled within the machine learning force field method.
-    'ML_MB', # This tag sets the maximum number of local reference configurations (i.e. basis functions in the kernel) in the machine learning force field method.
-    'ML_MCONF', #This tag sets the maximum number of structures stored in memory which are used for training in the machine learning force field method.
-    'ML_MCONF_NEW', #This tag sets the number of configurations that are stored temporarily as candidates for the training data in the machine learning force field method.
-    'ML_MHIS', #This tag sets the number of estimated errors stored in memory to determine the threshold for the Bayesian error in the machine learning force field method for ML_ICRITERIA=1. For ML_ICRITERIA=2, the history length is 50 x ML_MHIS (or hard coded to 400).
-    'ML_MODE', #String based tag selecting operation mode for machine learning force fields.
-    'ML_MRB1', #Number of radial basis function
-    'ML_MRB2', #Number of radial basis function
-    'ML_NATOM_COUPLED', #This tag specifies the number of atoms for which a coupling parameter is introduced to calculate the chemical potential within the machine learning force field method.
-    'ML_NHYP', #his tag specifies the polynomial power zeta of the kernel within the machine learning force field methos
-    'ML_NMDINT', #Tag to control the minimum interval to get training samples in the machine learning force field method.
-    'ML_NRANK_SPARSDES', #This tag sets the number of highest eigenvalues to which the correlation is measured within the angular descriptor sparsification (within the machine learning force field method).
-    'ML_OUTBLOCK', #Output distance in number of steps of the molecular-dynamics results for ML_ISTART=2 within the machine learning force fields.
-    'ML_OUTPUT_MODE', #This tag decides the output verbosity of the molecular-dynamics calculation using machine learning.
-    'ML_RCOUPLE', #This tag specifies the value of the coupling parameter for the calculation of the chemical potential within the machine learning force field method.
-    'ML_RCUT1', #This flag sets the cutoff radius for radial function
-    'ML_RCUT2', #This flag sets the cutoff radius for radial function
-    'ML_RDES_SPARSDES', #This tag sets the ratio of the selected to the total number of descriptors within the angular descriptor sparsification (within the machine learning force field method).
-    'ML_SCLC_CTIFOR', # Sets fraction by which the Bayesian threshold for the maximum forces is lowered in the selection of local reference calculations.
-    'ML_SIGV0', #This flag sets the initial reversed and squared noise parameter
-    'ML_SIGW0', #This flag sets the initial reversed and squared precision parameter
-    'ML_SION1', #Gaussian width
-    'ML_SION2', #Gaussian width
-    'ML_W1', #This tag defines the weight  for the radial (and angular) descriptor within the machine learning force field method .
-    'ML_WTIFOR', #This tag sets the weight for the scaling of the forces in the training data within the machine learning force field method.
-    'ML_WTOTEN', #This tag sets the weight for the scaling of the total energy in the training data within the machine learning force field method.
-    'ML_WTSIF' #This tag sets the weight for the scaling of the stress in the training data within the machine learning force field method.
+    'ML_AFILT2',
+    # This tag sets the filtering parameter for the angular filtering for ML_IAFILT2 in the machine learning force field method.
+    'ML_CDOUB',
+    # This tag controls the criterion for "enforced" DFT calculations within the machine learning force field method. If at any time, the estimated force errors are ML_CDOUB times larger than the Bayesian threshold (i.e. "critically" high), a first principles calculation is performed and a new force field is immediately generated (even if the counter for sampling is below the minimum amount of sampled structures ML_NMDINT).
+    'ML_CSIG',
+    # Parameter used in the automatic determination of threshold ML_CTIFOR for Bayesian error estimation in the machine learning force field method.
+    'ML_CSLOPE',
+    # Parameter used in the automatic determination of threshold for Bayesian error estimation in the machine learning force field method.
+    'ML_CTIFOR',
+    # This flag sets the threshold for the Bayesian error estimation on the force within the machine learning force field method.
+    'ML_CX',
+    # The parameter determines to which value the threshold (ML_CTIFOR) is updated within the machine learning force field methods.
+    'ML_EATOM_REF',  # Reference total energies of isolated atoms used in the machine learning force field method.
+    'ML_EPS_LOW',
+    # Threshold for the CUR algorithm used in the sparsification of local reference configurations within the machine learning force fields.
+    'ML_EPS_REG',
+    # Initial value for the threshold of the eigenvalues of the covariance matrix in the evidence approximation.
+    'ML_IAFILT2',  # This tag specifies the type of angular filtering used in the machine learning force field method.
+    'ML_IALGO_LINREG',
+    # This tag determines the algorithm that is employed to solve the system of linear equations in the ridge regression method for machine learning.
+    'ML_ICOUPLE',
+    # This tag specifies the atoms where the coupling parameter is introduced to calculate the chemical potential within the machine learning force field method.
+    'ML_ICRITERIA',
+    # Decides whether (ML_ICRITERIA>0) or how the Bayesian error threshold (ML_CTIFOR) is updated within the machine learning force field method. ML_CTIFOR determines whether a first principles calculations is performed.
+    'ML_IERR',  # Calculation and output frequency of Bayesian error estimate.
+    'ML_IREG',
+    # This tag specifies whether the regularization parameters are kept constant or not in the machine learning force field method.
+    'ML_ISCALE_TOTEN',  # This tag specifies how to scale the energy data in the machine learning force field method.
+    'ML_ISTART',
+    # This tag selects the mode of operation (e.g. start from scratch, prediction-only,...) of the machine learning force fields method.
+    'ML_IWEIGHT',
+    # This tag controls which procedure is used for normalizing and weighting the energies, forces and stresses in the machine learning force field method.
+    'ML_LAFILT2',
+    # This tag specifies whether angular filtering is applied or not within the machine learning force field method.
+    'ML_LBASIS_DISCARD',
+    # Controls whether calculation is continued or stopped after the maximum number of local reference configurations ML_MB for a given species is reached.
+    'ML_LCOUPLE',
+    # his tag specifies whether thermodynamic integration is activated in order to calculate the chemical potentials within the machine learning force field method.
+    'ML_LEATOM',  # This term specifies whether the total atomic energy is written out or not.
+    'ML_LERR',  # Decides whether the Bayesian error estimates are calculated and written out or not.
+    'ML_LFAST',
+    # This tag switches on the descriptors for refitting in the fast execution mode within machine learning force fields.
+    'ML_LHEAT',
+    # This tag specifies whether the heat flux is calculated or not in the machine learning force field method.
+    'ML_LMAX2',
+    # This tag specifies the maximum angular momentum quantum number  of spherical harmonics used to expand atomic distributions within the machine learning force field method.
+    'ML_LMLFF',  # Main control tag which enables/disables the use of machine learning force fields.
+    'ML_LSPARSDES',
+    # This tag specifies whether angular descriptor sparsification is enabled within the machine learning force field method.
+    'ML_MB',
+    # This tag sets the maximum number of local reference configurations (i.e. basis functions in the kernel) in the machine learning force field method.
+    'ML_MCONF',
+    # This tag sets the maximum number of structures stored in memory which are used for training in the machine learning force field method.
+    'ML_MCONF_NEW',
+    # This tag sets the number of configurations that are stored temporarily as candidates for the training data in the machine learning force field method.
+    'ML_MHIS',
+    # This tag sets the number of estimated errors stored in memory to determine the threshold for the Bayesian error in the machine learning force field method for ML_ICRITERIA=1. For ML_ICRITERIA=2, the history length is 50 x ML_MHIS (or hard coded to 400).
+    'ML_MODE',  # String based tag selecting operation mode for machine learning force fields.
+    'ML_MRB1',  # Number of radial basis function
+    'ML_MRB2',  # Number of radial basis function
+    'ML_NATOM_COUPLED',
+    # This tag specifies the number of atoms for which a coupling parameter is introduced to calculate the chemical potential within the machine learning force field method.
+    'ML_NHYP',
+    # his tag specifies the polynomial power zeta of the kernel within the machine learning force field methos
+    'ML_NMDINT',
+    # Tag to control the minimum interval to get training samples in the machine learning force field method.
+    'ML_NRANK_SPARSDES',
+    # This tag sets the number of highest eigenvalues to which the correlation is measured within the angular descriptor sparsification (within the machine learning force field method).
+    'ML_OUTBLOCK',
+    # Output distance in number of steps of the molecular-dynamics results for ML_ISTART=2 within the machine learning force fields.
+    'ML_OUTPUT_MODE',
+    # This tag decides the output verbosity of the molecular-dynamics calculation using machine learning.
+    'ML_RCOUPLE',
+    # This tag specifies the value of the coupling parameter for the calculation of the chemical potential within the machine learning force field method.
+    'ML_RCUT1',  # This flag sets the cutoff radius for radial function
+    'ML_RCUT2',  # This flag sets the cutoff radius for radial function
+    'ML_RDES_SPARSDES',
+    # This tag sets the ratio of the selected to the total number of descriptors within the angular descriptor sparsification (within the machine learning force field method).
+    'ML_SCLC_CTIFOR',
+    # Sets fraction by which the Bayesian threshold for the maximum forces is lowered in the selection of local reference calculations.
+    'ML_SIGV0',  # This flag sets the initial reversed and squared noise parameter
+    'ML_SIGW0',  # This flag sets the initial reversed and squared precision parameter
+    'ML_SION1',  # Gaussian width
+    'ML_SION2',  # Gaussian width
+    'ML_W1',
+    # This tag defines the weight  for the radial (and angular) descriptor within the machine learning force field method .
+    'ML_WTIFOR',
+    # This tag sets the weight for the scaling of the forces in the training data within the machine learning force field method.
+    'ML_WTOTEN',
+    # This tag sets the weight for the scaling of the total energy in the training data within the machine learning force field method.
+    'ML_WTSIF'
+    # This tag sets the weight for the scaling of the stress in the training data within the machine learning force field method.
 ]
 
 all_incar_keys = dict_keys + special_keys + list_keys + bool_keys + int_keys + string_keys + exp_keys + \

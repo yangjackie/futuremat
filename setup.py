@@ -17,10 +17,11 @@ ext_modules = []
 
 if use_cython:
     ext_modules += [
-        Extension("core.models.vector3d", ["core/models/vector3d.pyx"], language='c++',include_dirs=[numpy.get_include()]),
+        Extension("core.models.vector3d", ["core/models/vector3d.pyx"], language='c++',
+                  include_dirs=[numpy.get_include()]),
         Extension("core.models.matrix3d", ["core/models/matrix3d.pyx"], language='c++'),
         Extension("core.models.lattice", ["core/models/lattice.pyx"], language='c++'),
-        #Extension("core.internal.molecule.analysis",
+        # Extension("core.internal.molecule.analysis",
         #          ["core/internal/molecule/analysis.pyx"],language='c++',include_dirs=[numpy.get_include()])
     ]
     cmdclass.update({'build_ext': build_ext})

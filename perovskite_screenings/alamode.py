@@ -53,8 +53,6 @@ else:
 
 os.chdir('alamode')
 
-
-
 if not args.calculate_kappa:
 
     no_fit = False
@@ -97,10 +95,10 @@ if not args.calculate_kappa:
             alm_output_name = 'stage_1.out'
             second_fit_prefix = 'super_harm'
             w.write_alm_in_for_fitting_second_order(prefix=second_fit_prefix, input_name=alm_input_name, cutoff=[12])
-            #os.system('source activate my-conda-env')
-            #os.system('export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LD_LIBRARY_PATH')
+            # os.system('source activate my-conda-env')
+            # os.system('export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LD_LIBRARY_PATH')
             os.system("/scratch/dy3/jy8620/alamode/_build/alm/alm " + alm_input_name + " > " + alm_output_name)
-            #os.system('conda deactivate')
+            # os.system('conda deactivate')
 
             # =======================================================================================================================
             # Use ALM to fit the higher order force constants from the MD forces
@@ -109,14 +107,16 @@ if not args.calculate_kappa:
             alm_input_name = 'stage_2.in'
             alm_output_name = 'stage_2.out'
             high_order_fix_prefix = 'perovskite_300'
-            w.write_alm_in_for_fitting_higher_order_FCs(prefix=high_order_fix_prefix, second_fit_prefix=second_fit_prefix,
+            w.write_alm_in_for_fitting_higher_order_FCs(prefix=high_order_fix_prefix,
+                                                        second_fit_prefix=second_fit_prefix,
                                                         input_name=alm_input_name)
-            #os.system("/scratch/dy3/jy8620/alamode/_build/alm/alm " + alm_input_name + " > " + alm_output_name)
-            timeout=3000
-            #os.system('source activate my-conda-env')
-            #os.system('export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LD_LIBRARY_PATH')
-            exit_status = PopenTimeout(["/scratch/dy3/jy8620/alamode/_build/alm/alm", alm_input_name], output_file=open(alm_output_name,'w')).run(timeout)
-            #os.system('conda deactivate')
+            # os.system("/scratch/dy3/jy8620/alamode/_build/alm/alm " + alm_input_name + " > " + alm_output_name)
+            timeout = 3000
+            # os.system('source activate my-conda-env')
+            # os.system('export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/lib64:$LD_LIBRARY_PATH')
+            exit_status = PopenTimeout(["/scratch/dy3/jy8620/alamode/_build/alm/alm", alm_input_name],
+                                       output_file=open(alm_output_name, 'w')).run(timeout)
+            # os.system('conda deactivate')
             try:
                 f = open('stage_2.out', 'r')
                 for l in f.readlines():
@@ -124,7 +124,7 @@ if not args.calculate_kappa:
                         print(system + ' ' + l)
             except:
                 pass
-            #else:
+            # else:
             #    print("Problem with alm terminating on time in "+str(timeout)+" sec!")
 
 else:

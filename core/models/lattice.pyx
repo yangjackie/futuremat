@@ -1,5 +1,5 @@
 from libc.math cimport sin, cos
-from math import pi,pow
+from math import pi, pow
 from vector3d cimport cVector3D
 from matrix3d cimport cMatrix3D
 
@@ -34,7 +34,6 @@ cdef class Lattice:
 
         self.vecs = False
         self.ivecs = False
-
 
     cpdef copy(self):
         return self.__class__(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)
@@ -162,37 +161,37 @@ cdef class Lattice:
 
     @classmethod
     def from_lattice_vectors(cls, lattice_vectors):
-        a=lattice_vectors.get_row(0)
-        b=lattice_vectors.get_row(1)
-        c=lattice_vectors.get_row(2)
-        a_norm=a.l2_norm()
-        b_norm=b.l2_norm()
-        c_norm=c.l2_norm()
-        alpha=b.angle(c)
-        beta=c.angle(a)
-        gamma=a.angle(b)
-        return cls(a_norm,b_norm,c_norm,alpha,beta,gamma)
+        a = lattice_vectors.get_row(0)
+        b = lattice_vectors.get_row(1)
+        c = lattice_vectors.get_row(2)
+        a_norm = a.l2_norm()
+        b_norm = b.l2_norm()
+        c_norm = c.l2_norm()
+        alpha = b.angle(c)
+        beta = c.angle(a)
+        gamma = a.angle(b)
+        return cls(a_norm, b_norm, c_norm, alpha, beta, gamma)
 
-    def scale_by_volume_fraction(self,vol_fraction):
+    def scale_by_volume_fraction(self, vol_fraction):
         #work out how much each component of the lattice vector needs to be scaled.
-        frac = pow(1.0+vol_fraction,1.0/6.0)
-        v1 = self.lattice_vectors.get_row(0)#[0],self._vectors[0][1],self._vectors[0][2])
-        v2 = self.lattice_vectors.get_row(1)#[0],self._vectors[1][1],self._vectors[1][2])
-        v3 = self.lattice_vectors.get_row(2)#[0],self._vectors[2][1],self._vectors[2][2])
+        frac = pow(1.0 + vol_fraction, 1.0 / 6.0)
+        v1 = self.lattice_vectors.get_row(0)  #[0],self._vectors[0][1],self._vectors[0][2])
+        v2 = self.lattice_vectors.get_row(1)  #[0],self._vectors[1][1],self._vectors[1][2])
+        v3 = self.lattice_vectors.get_row(2)  #[0],self._vectors[2][1],self._vectors[2][2])
         v1 = v1.vec_scale(frac)
         v2 = v2.vec_scale(frac)
         v3 = v3.vec_scale(frac)
-        new_latt_mat = cMatrix3D(v1,v2,v3)
+        new_latt_mat = cMatrix3D(v1, v2, v3)
         return Lattice.from_lattice_vectors(new_latt_mat)
 
-    def scale_by_lattice_expansion_coefficients(self,def_fraction):
-        v1 = self.lattice_vectors.get_row(0)#[0],self._vectors[0][1],self._vectors[0][2])
-        v2 = self.lattice_vectors.get_row(1)#[0],self._vectors[1][1],self._vectors[1][2])
-        v3 = self.lattice_vectors.get_row(2)#[0],self._vectors[2][1],self._vectors[2][2])
-        v1 = v1.vec_scale(1+def_fraction[0])
-        v2 = v2.vec_scale(1+def_fraction[1])
-        v3 = v3.vec_scale(1+def_fraction[2])
-        new_latt_mat = cMatrix3D(v1,v2,v3)
+    def scale_by_lattice_expansion_coefficients(self, def_fraction):
+        v1 = self.lattice_vectors.get_row(0)  #[0],self._vectors[0][1],self._vectors[0][2])
+        v2 = self.lattice_vectors.get_row(1)  #[0],self._vectors[1][1],self._vectors[1][2])
+        v3 = self.lattice_vectors.get_row(2)  #[0],self._vectors[2][1],self._vectors[2][2])
+        v1 = v1.vec_scale(1 + def_fraction[0])
+        v2 = v2.vec_scale(1 + def_fraction[1])
+        v3 = v3.vec_scale(1 + def_fraction[2])
+        new_latt_mat = cMatrix3D(v1, v2, v3)
         return Lattice.from_lattice_vectors(new_latt_mat)
 
     property parameter_dict:
@@ -285,7 +284,7 @@ cdef class Lattice:
         def __set__(self, lv):
             if lv is None:
                 pass
-            elif isinstance(lv,cMatrix3D):
+            elif isinstance(lv, cMatrix3D):
                 self.__lattice_vectors = lv
 
     property vectors:
@@ -314,7 +313,7 @@ cdef class Lattice:
             self._vectors[2][2] = C.z
             self.vecs = cMatrix3D(A, B, C)
             return self.vecs
-        def __set__(self,vecs):
+        def __set__(self, vecs):
             self.vecs = vecs
 
     property inv_lattice_vectors:
@@ -371,4 +370,3 @@ cdef class Lattice:
         :return: A nested list of all the translation vectors in fractional sapce.
         """
         return Lattice.anisotropic_grid(n, n, n)
-

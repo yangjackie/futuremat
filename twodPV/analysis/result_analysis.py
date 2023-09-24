@@ -1019,11 +1019,11 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
     # get the bulk data
 
     epsilon_SrTiO = trace(db.get(selection=[('uid', '=', 'SrTiO3_pm3m')]).data['dielectric_ionic_tensor'])
-    print("SrTiO",epsilon_SrTiO)
+    print("SrTiO", epsilon_SrTiO)
     epsilon_BaTiO = trace(db.get(selection=[('uid', '=', 'BaTiO3_pm3m')]).data['dielectric_ionic_tensor'])
-    print("BaTiO",epsilon_BaTiO)
+    print("BaTiO", epsilon_BaTiO)
     epsilon_BaZrO = trace(db.get(selection=[('uid', '=', 'BaZrO3_pm3m')]).data['dielectric_ionic_tensor'])
-    print("BaZrO",epsilon_BaZrO)
+    print("BaZrO", epsilon_BaZrO)
     epsilon_CsSnF = trace(db.get(selection=[('uid', '=', 'CsSnF3_pm3m')]).data['dielectric_ionic_tensor'])
     print("CsSnF", epsilon_CsSnF)
 
@@ -1103,11 +1103,11 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                                     if non_zero(twod_dielectric_tensor):
                                         twod_epsilon_inplane = trace_inplane(twod_dielectric_tensor)
                                         twod_epsilon_inplane = (supercell_c / slab_thick) * (
-                                                    twod_epsilon_inplane - 1.0) + 1.0
+                                                twod_epsilon_inplane - 1.0) + 1.0
 
                                         twod_epsilon_outplane = trace_outplane(twod_dielectric_tensor)
                                         twod_epsilon_outplane = 1.0 / ((supercell_c / slab_thick) * (
-                                                    1.0 / twod_epsilon_outplane - 1.0) + 1.0)
+                                                1.0 / twod_epsilon_outplane - 1.0) + 1.0)
 
                                     if (bulk_epsilon is not None) and (twod_epsilon_inplane is not None) and (
                                             twod_epsilon_outplane is not None):
@@ -1145,7 +1145,8 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                     plt.text(epsilon_SrTiO, 5e4, 'SrTiO$_3$', rotation=90, verticalalignment='center', c='r',
                              fontsize=13)
                     plt.axvline(epsilon_CsSnF, ls=':', c='r')
-                    plt.text(epsilon_CsSnF, 5e4, 'CsSnF$_3$', rotation=90, verticalalignment='center', c='r', fontsize=13)
+                    plt.text(epsilon_CsSnF, 5e4, 'CsSnF$_3$', rotation=90, verticalalignment='center', c='r',
+                             fontsize=13)
 
                     plt.ylim([0.1, 3e6])
                 else:
@@ -1201,8 +1202,9 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                                     [corrected_trace_inplane('BaZrO3_100_AO_' + str(t)) for t
                                      in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
-                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_100_AO_' + str(t)) for t
-                                                                         in thicknesses], s=[t * 7.5 for t in thicknesses],
+                        plt.scatter([epsilon_CsSnF for _ in range(4)],
+                                    [corrected_trace_inplane('CsSnF3_100_AO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
                     if slot == 2:
                         plt.scatter([epsilon_BaTiO for _ in range(4)],
@@ -1217,8 +1219,9 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                                     [corrected_trace_inplane('BaZrO3_110_ABO_' + str(t)) for t
                                      in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
-                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_110_ABO_' + str(t)) for t
-                            in thicknesses], s=[t * 7.5 for t in thicknesses],
+                        plt.scatter([epsilon_CsSnF for _ in range(4)],
+                                    [corrected_trace_inplane('CsSnF3_110_ABO_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
                     if slot == 3:
                         plt.scatter([epsilon_BaTiO for _ in range(4)],
@@ -1233,8 +1236,9 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                                     [corrected_trace_inplane('BaZrO3_111_AO3_' + str(t)) for t
                                      in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
-                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_111_AO3_' + str(t)) for t
-                                                                         in thicknesses], s=[t * 7.5 for t in thicknesses],
+                        plt.scatter([epsilon_CsSnF for _ in range(4)],
+                                    [corrected_trace_inplane('CsSnF3_111_AO3_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
                     if slot == 4:
                         plt.scatter([epsilon_BaTiO for _ in range(4)],
@@ -1276,8 +1280,9 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                                     [corrected_trace_inplane('BaZrO3_110_O2_' + str(t)) for t
                                      in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
-                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_110_O2_' + str(t)) for t
-                            in thicknesses], s=[t * 7.5 for t in thicknesses],
+                        plt.scatter([epsilon_CsSnF for _ in range(4)],
+                                    [corrected_trace_inplane('CsSnF3_110_O2_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
                     if slot == 6:
                         plt.scatter([epsilon_BaTiO for _ in range(4)],
@@ -1292,8 +1297,9 @@ def plot_bulk_and_2D_ionic_dielectric_constants(db, output=None, stable_structur
                                     [corrected_trace_inplane('BaZrO3_111_B_' + str(t)) for t
                                      in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
-                        plt.scatter([epsilon_CsSnF for _ in range(4)], [corrected_trace_inplane('CsSnF3_111_B_' + str(t)) for t
-                            in thicknesses], s=[t * 7.5 for t in thicknesses],
+                        plt.scatter([epsilon_CsSnF for _ in range(4)],
+                                    [corrected_trace_inplane('CsSnF3_111_B_' + str(t)) for t
+                                     in thicknesses], s=[t * 7.5 for t in thicknesses],
                                     facecolor='None', edgecolor='r')
 
                 plt.title(textstr)

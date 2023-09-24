@@ -6,7 +6,7 @@ from dscribe.kernels import REMatchKernel
 
 import argparse
 from pymatgen.core.trajectory import Trajectory
-from ase.io.vasp import read_vasp_xdatcar,read_vasp
+from ase.io.vasp import read_vasp_xdatcar, read_vasp
 from ase.io import read
 from sklearn.preprocessing import normalize
 from core.external.vasp.anharmonic_score import AnharmonicScore
@@ -29,30 +29,30 @@ pylab.rcParams.update(params)
 
 trajectory = Trajectory.from_file("./MD/vasprun_prod.xml")
 trajectory.write_Xdatcar(filename='XDATCAR_temp')
-images = read_vasp_xdatcar('XDATCAR_temp',index=None)
-print("total number of frames: "+str(len(images)))
+images = read_vasp_xdatcar('XDATCAR_temp', index=None)
+print("total number of frames: " + str(len(images)))
 os.remove('./XDATCAR_temp')
 
-
 reference_frame = read_vasp('./SPOSCAR')
-desc = SOAP(species=[19,39,47,53], rcut=6.0, nmax=9, lmax=9, sigma=0.3, periodic=True, crossover=True, sparse=False)
+desc = SOAP(species=[19, 39, 47, 53], rcut=6.0, nmax=9, lmax=9, sigma=0.3, periodic=True, crossover=True, sparse=False)
 ref_features = desc.create(reference_frame)
 ref_features = normalize(ref_features)
 
 re = REMatchKernel(metric="linear", alpha=2, threshold=1e-6, gamma=1)
 
 similarities = []
-for i,image in enumerate(images):
+for i, image in enumerate(images):
     image_features = desc.create(image)
     image_features = normalize(image_features)
     re_kernel = re.create([image_features, ref_features])
-    print(i,re_kernel[0][1])
+    print(i, re_kernel[0][1])
     similarities.append(re_kernel[0][1])
 
-scorer = AnharmonicScore(md_frames='./MD/vasprun_prod.xml', ref_frame='./SPOSCAR',unit_cell_frame='./SPOSCAR',force_constants='force_constants.hdf5')
+scorer = AnharmonicScore(md_frames='./MD/vasprun_prod.xml', ref_frame='./SPOSCAR', unit_cell_frame='./SPOSCAR',
+                         force_constants='force_constants.hdf5')
 sigmas, _ = scorer.structural_sigma(return_trajectory=True)
 
-fig, ax1 = plt.subplots(figsize=(7,5))
+fig, ax1 = plt.subplots(figsize=(7, 5))
 
 color = '#1fbfb8'
 ax1.set_xlabel('$t$ (fs)')

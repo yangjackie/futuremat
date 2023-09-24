@@ -103,7 +103,7 @@ class Puc:
         [0.0, 0.0, 0.0],
         [0.0, 0.0, 0.0]])
                    ):
-        #disp is a 5*3 matrix
+        # disp is a 5*3 matrix
         for i in range(5):
             self.atoms[i]['pos'] += disp[i]
             # print atoms positions

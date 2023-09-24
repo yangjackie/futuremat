@@ -69,7 +69,6 @@ def polarisation(db, a, b, c, orientation, termination, thickness):
     return pol
 
 
-
 def polarisation_out_distributions(db):
     termination_types = {'100': ['AO', 'BO2'], '110': ['ABO', 'O2'], '111': ['AO3', 'B']}
     two_d_out_of_plane_vec = cVector3D(0.0, 0.0, 1.0)
@@ -77,8 +76,6 @@ def polarisation_out_distributions(db):
     polarisations = []
     colors = []
     sizes = []
-
-
 
     in_plane_statistics = {'100': {3: [], 5: [], 7: [], 9: []},
                            '110': {3: [], 5: [], 7: [], 9: []},
@@ -162,15 +159,15 @@ def polarisation_out_distributions(db):
                                     colors.append(color_dict[orientation])
                                     sizes.append(thick * 15)
 
-                                if (a=='Sr') and (b=='Ti') and (c=='O'):
+                                if (a == 'Sr') and (b == 'Ti') and (c == 'O'):
                                     sto_pol.append(_pol)
                                     sto_s.append(_S_out)
                                     sto_sizes.append(thick * 15)
-                                if (a=='Ba') and (b=='Ti') and (c=='O'):
+                                if (a == 'Ba') and (b == 'Ti') and (c == 'O'):
                                     bto_pol.append(_pol)
                                     bto_s.append(_S_out)
                                     bto_sizes.append(thick * 15)
-                                if (a=='Cs') and (b=='Pb') and (c=='Br'):
+                                if (a == 'Cs') and (b == 'Pb') and (c == 'Br'):
                                     cpb_pol.append(_pol)
                                     cpb_s.append(_S_out)
                                     cpb_sizes.append(thick * 15)
@@ -179,7 +176,7 @@ def polarisation_out_distributions(db):
             plt.subplot(2, 3, slot)
             if term_id == 0:
                 plt.scatter(S_out_of_plane, polarisations, marker='o', alpha=0.2, edgecolor='None',
-                           facecolor=color_dict[orientation], s=sizes)
+                            facecolor=color_dict[orientation], s=sizes)
                 plt.scatter(sto_s, sto_pol, marker='o', edgecolor='k',
                             facecolor='None', s=sto_sizes, alpha=0.8)
                 plt.scatter(bto_s, bto_pol, marker='s', edgecolor='k',
@@ -188,7 +185,7 @@ def polarisation_out_distributions(db):
                             facecolor='None', s=cpb_sizes, alpha=0.8)
             else:
                 plt.scatter(S_out_of_plane, polarisations, marker='s', alpha=0.2, edgecolor='None',
-                           facecolor=color_dict[orientation], s=sizes)
+                            facecolor=color_dict[orientation], s=sizes)
                 plt.scatter(sto_s, sto_pol, marker='o', edgecolor='k',
                             facecolor='None', s=sto_sizes, alpha=0.8)
                 plt.scatter(bto_s, bto_pol, marker='s', edgecolor='k',
@@ -209,8 +206,8 @@ def polarisation_out_distributions(db):
                 plt.legend(handles=legend_elements, loc=4, fontsize=13, ncol=1)
             plt.xlabel("$\Delta S_{\perp}$")
             plt.ylabel("$P_{z}$")
-            plt.ylim([-40,40])
-            #plt.xlim([-1.2,0.55])
+            plt.ylim([-40, 40])
+            # plt.xlim([-1.2,0.55])
 
             if slot == 1: textstr = "AX-termination"
             if slot == 2: textstr = 'ABX-termination'
@@ -465,4 +462,4 @@ if __name__ == "__main__":
 
     bond_lengths_distributions(args.db, direction=args.direction)
 
-    #polarisation_out_distributions(args.db)
+    # polarisation_out_distributions(args.db)

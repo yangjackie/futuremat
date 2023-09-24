@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 """
 .. module:: class to define a mode.
 
@@ -11,13 +12,15 @@ This module provides the definition of a particular mode.
 import numpy as np
 from ase.spacegroup import *
 from ase.build import bulk
-from ase.io import read,write
+from ase.io import read, write
 import numpy as np
 import unittest
 
 import sys
 import os
+
 sys.path.append("../src/")
+
 
 class Mode(object):
     """

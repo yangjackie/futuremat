@@ -44,6 +44,7 @@ label_dict = {0: "Cl",
               1: "Br",
               2: "I"}
 
+
 def plot_all_reactions_for_one_system(db, output=None, all_keys=None, X='Cl3'):
     funcs = [composition_dependent_demixing_energies,
              composition_dependent_binary_halide_decomposition_energies,
@@ -823,7 +824,7 @@ def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None,
                                                                                                    800,
                                                                                                    total_energy_dict)
     plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], 'o-',
-             label='With $F_{vib}$',c=color[-1])
+             label='With $F_{vib}$', c=color[-1])
 
     new_color = plt.cm.coolwarm(np.linspace(0, 1, 8))
     pylab.rcParams['axes.prop_cycle'] = cycler('color', new_color)
@@ -840,7 +841,7 @@ def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None,
                                                                                     800,
                                                                                     total_energy_dict)
     plt.plot(compositions, [demixing_free_energy_dict[k] for k in compositions], '--',
-             label='Without $F_{vib}$',c=new_color[-1])
+             label='Without $F_{vib}$', c=new_color[-1])
 
     x_label = '$x$ in '
     if len(a) == 1:
@@ -856,14 +857,14 @@ def plot_demixing_free_energies_with_configurational_entropy(db, a=None, b=None,
         x_label += str(mixed_site[1]) + '$_{1-x}$'
         x_label += ')'
     if len(c) == 1:
-        x_label += fix_string(c[0])+'$_{3}$'
+        x_label += fix_string(c[0]) + '$_{3}$'
     else:
         raise NotImplementedError()
 
     plt.xlabel(x_label)
     plt.ylabel('$\Delta G_{mix}(x)$ (eV/atom)')
-    plt.ylim([-0.3,0.025])
-    #plt.legend(loc=4)
+    plt.ylim([-0.3, 0.025])
+    # plt.legend(loc=4)
     plt.tight_layout()
     plt.savefig(output)
 

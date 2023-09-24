@@ -82,7 +82,7 @@ class RadialDistributionFunction(object):
             self.coordination_number += np.cumsum(hist)
         self.rdf = self.rdf / ff / sum(weights) / float(len(indices_j))
         self.coordination_number = self.coordination_number / \
-            sum(weights) / float(len(self.indices_j))
+                                   sum(weights) / float(len(self.indices_j))
 
     def smeared_rdf(self,
                     sigma: float = 0.1) -> np.ndarray:
@@ -226,9 +226,9 @@ class VanHoveAnalysis(object):
                                 range=(0.0, r_max), density=False)[0]
             self.gsrt += hist / rho
         self.gdrt = self.gdrt / ff / \
-            (len(structures) - d_steps) / float(len(indices))
+                    (len(structures) - d_steps) / float(len(indices))
         self.gsrt = self.gsrt / \
-            (len(structures) - d_steps) / float(len(indices))
+                    (len(structures) - d_steps) / float(len(indices))
 
     def self(self,
              sigma: Optional[float] = None) -> np.ndarray:
@@ -285,4 +285,4 @@ def shell_volumes(intervals: np.ndarray) -> np.ndarray:
         np.array: Volumes of each shell.
 
     """
-    return 4.0 / 3.0 * np.pi * (intervals[1:]**3 - intervals[:-1]**3)
+    return 4.0 / 3.0 * np.pi * (intervals[1:] ** 3 - intervals[:-1] ** 3)

@@ -3,9 +3,8 @@ from ase.build import cut, add_vacuum
 from ase.io.vasp import *
 
 import numpy as np
-import os,tarfile,shutil,argparse,glob,zipfile,sqlite3
+import os, tarfile, shutil, argparse, glob, zipfile, sqlite3
 from pymatgen.io.vasp.outputs import *
-
 
 from ase.io.vasp import write_vasp
 
@@ -29,7 +28,6 @@ params = {'legend.fontsize': '12',
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
-
 orientation_dict = {'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
                             'origio': {'AO': (0, 0, 0), 'BO2': (0, 0, 0.25)}},
                     '111': {'a': (1, 1, 0), 'b': (-1, 0, 1),
@@ -37,9 +35,10 @@ orientation_dict = {'100': {'a': (1, 0, 0), 'b': (0, 1, 0),
                     '110': {'a': (1, 1, 0), 'b': (0, 0, 1),
                             'origio': {'O2': (0.05, 0, 0), 'ABO': (0, 0, 0)}}}
 
+
 def setup_models(a='Sr', b='Ti', c='O', orientation='100', termination='AO', thick=3, db=None):
     for strain in np.arange(-2.0, 3.0, 0.1):
-        lattice_constant = 3.9429 * (1.0+strain/100.0)
+        lattice_constant = 3.9429 * (1.0 + strain / 100.0)
         atoms = ase_crystal((a, b, c),
                             basis=[(0, 0, 0), (0.5, 0.5, 0.5), (0.5, 0.5, 0)],
                             spacegroup=221,
@@ -55,8 +54,8 @@ def setup_models(a='Sr', b='Ti', c='O', orientation='100', termination='AO', thi
 
         cwd = os.getcwd()
 
-        wd_name = 'strained_'+str(round(strain,2)).replace('.','_')
-        wd = cwd+'/'+wd_name
+        wd_name = 'strained_' + str(round(strain, 2)).replace('.', '_')
+        wd = cwd + '/' + wd_name
         if not os.path.exists(wd):
             os.makedirs(wd)
 
@@ -64,31 +63,32 @@ def setup_models(a='Sr', b='Ti', c='O', orientation='100', termination='AO', thi
         write_vasp('POSCAR', slab, vasp5=True, sort=True)
         os.chdir(cwd)
 
-        with tarfile.open(wd_name+'.tar.gz', mode='w:gz') as archive:
-            archive.add('./'+wd_name, recursive=True)
+        with tarfile.open(wd_name + '.tar.gz', mode='w:gz') as archive:
+            archive.add('./' + wd_name, recursive=True)
 
         try:
-            shutil.rmtree('./'+wd_name)
+            shutil.rmtree('./' + wd_name)
         except:
             pass
         try:
-            os.rmtree('./'+wd_name)
+            os.rmtree('./' + wd_name)
         except:
             pass
+
 
 def collect_data(db):
     all_files = glob.glob("*.tar.gz")
     cwd = os.getcwd()
 
     for f in all_files:
-        system_name=f.replace('.tar.gz','')
-        strain_level=float(system_name.split('_')[-2]+'.'+system_name.split('_')[-1])
+        system_name = f.replace('.tar.gz', '')
+        strain_level = float(system_name.split('_')[-2] + '.' + system_name.split('_')[-1])
 
         tf = tarfile.open(f)
         tf.extractall()
 
-        data={}
-        kvp={}
+        data = {}
+        kvp = {}
         kvp['uid'] = system_name
         kvp['strain'] = strain_level
 
@@ -122,8 +122,8 @@ def collect_data(db):
             print('dielectric ionic tensor')
             print(outcar.dielectric_ionic_tensor)
             data['dielectric_ionic_tensor'] = outcar.dielectric_ionic_tensor
-            #print('Born Effective Charge')
-            #print(outcar.born)
+            # print('Born Effective Charge')
+            # print(outcar.born)
             populate_db(db, atoms, kvp, data)
             os.remove('./OUTCAR_ph')
         os.chdir(cwd)
@@ -137,8 +137,9 @@ def collect_data(db):
         except:
             pass
 
-def strain_dielectric_constant_plot(db,all_uids):
-    data_dict={}
+
+def strain_dielectric_constant_plot(db, all_uids):
+    data_dict = {}
     for uid in all_uids:
         row = None
         try:
@@ -146,7 +147,7 @@ def strain_dielectric_constant_plot(db,all_uids):
         except:
             pass
 
-        #Getting the structural information for the asymptotic correction of 2D dielectric constants
+        # Getting the structural information for the asymptotic correction of 2D dielectric constants
         structure_2d = row.toatoms()
         supercell_c = structure_2d.get_cell_lengths_and_angles()[2]
         structure = map_ase_atoms_to_crystal(structure_2d)
@@ -156,7 +157,7 @@ def strain_dielectric_constant_plot(db,all_uids):
         all_z_positions = [z * supercell_c for z in all_z_positions]
         slab_thick = max(all_z_positions) - min(all_z_positions)
 
-        #getting the information for dielectric tensors
+        # getting the information for dielectric tensors
         try:
             twod_dielectric_tensor = row.data['dielectric_ionic_tensor']
         except:
@@ -164,54 +165,58 @@ def strain_dielectric_constant_plot(db,all_uids):
 
         strain = row.key_value_pairs['strain']
 
-        #correct the dielectric tensor to 2D limit
+        # correct the dielectric tensor to 2D limit
         twod_epsilon_inplane = None
         twod_epsilon_outplane = None
-        from analysis.result_analysis import non_zero,trace_inplane,trace_outplane
+        from analysis.result_analysis import non_zero, trace_inplane, trace_outplane
         if non_zero(twod_dielectric_tensor):
             twod_epsilon_inplane = trace_inplane(twod_dielectric_tensor)
-            #twod_epsilon_inplane = (supercell_c / slab_thick) * (
+            # twod_epsilon_inplane = (supercell_c / slab_thick) * (
             #        twod_epsilon_inplane - 1.0) + 1.0
 
             twod_epsilon_outplane = trace_outplane(twod_dielectric_tensor)
-            #wod_epsilon_outplane = 1.0 / ((supercell_c / slab_thick) * (
+            # wod_epsilon_outplane = 1.0 / ((supercell_c / slab_thick) * (
             #        1.0 / twod_epsilon_outplane - 1.0) + 1.0)
 
-            data_dict[strain]={'inplane':twod_epsilon_inplane,'outplane':twod_epsilon_outplane}
+            data_dict[strain] = {'inplane': twod_epsilon_inplane, 'outplane': twod_epsilon_outplane}
 
-    x=list(sorted(data_dict.keys()))
+    x = list(sorted(data_dict.keys()))
 
-    inplane=[data_dict[_x]['inplane'] for _x in x]
-    outplane=[data_dict[_x]['outplane'] for _x in x]
+    inplane = [data_dict[_x]['inplane'] for _x in x]
+    outplane = [data_dict[_x]['outplane'] for _x in x]
 
-    plt.plot(x,inplane,'s-',c='#CB0000',label='in-plane',ms=4,markerfacecolor='none')
-    #plt.plot(x,outplane,'s-',c='#102A49',label='out-of-plane',ms=4,markerfacecolor='none')
+    plt.plot(x, inplane, 's-', c='#CB0000', label='in-plane', ms=4, markerfacecolor='none')
+    # plt.plot(x,outplane,'s-',c='#102A49',label='out-of-plane',ms=4,markerfacecolor='none')
 
     plt.xlabel("In-Plane Strain $\Delta \epsilon$ (\%)")
     plt.ylabel("Static Ionic Dielectric Constants")
-    #plt.legend()
+    # plt.legend()
     plt.tight_layout()
     plt.savefig("strain_dielectric.pdf")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Scan of 2D properties with in-plane strain deformations',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-prep","--prepare",    action="store_true",help="build the deformed structures and prepare the relevant calculation folder")
-    parser.add_argument("-collect","--collect", action="store_true",help='Collect the calculation results')
-    parser.add_argument("-plot","--plot",action='store_true', help="Make plots for data analysis")
+    parser.add_argument("-prep", "--prepare", action="store_true",
+                        help="build the deformed structures and prepare the relevant calculation folder")
+    parser.add_argument("-collect", "--collect", action="store_true", help='Collect the calculation results')
+    parser.add_argument("-plot", "--plot", action='store_true', help="Make plots for data analysis")
 
-    parser.add_argument("-a",   "--a", type=str, default='Sr', help="A site cation")
-    parser.add_argument("-b",   "--b", type=str, default='Ti', help="B site cation")
-    parser.add_argument("-c",   "--c", type=str, default='O', help="C site anion")
-    parser.add_argument("--db", type=str, default='strain.db',help="Name of the database that contains the results of the screenings.")
-    parser.add_argument("--orient", type=str, default='100',help='Orientations of the two-d perovskite slabs')
-    parser.add_argument("--terminations", type=str, default='AO',help='Surface termination type of the two-d slab')
+    parser.add_argument("-a", "--a", type=str, default='Sr', help="A site cation")
+    parser.add_argument("-b", "--b", type=str, default='Ti', help="B site cation")
+    parser.add_argument("-c", "--c", type=str, default='O', help="C site anion")
+    parser.add_argument("--db", type=str, default='strain.db',
+                        help="Name of the database that contains the results of the screenings.")
+    parser.add_argument("--orient", type=str, default='100', help='Orientations of the two-d perovskite slabs')
+    parser.add_argument("--terminations", type=str, default='AO', help='Surface termination type of the two-d slab')
     parser.add_argument("--thick", type=int, default=3, help='thickness of the 2D structures')
 
     args = parser.parse_args()
-    db=connect(args.db)
+    db = connect(args.db)
     if args.prepare:
-        setup_models(a=args.a,b=args.b,c=args.c,orientation=args.orient,thick=args.thick,termination=args.terminations,db=db)
+        setup_models(a=args.a, b=args.b, c=args.c, orientation=args.orient, thick=args.thick,
+                     termination=args.terminations, db=db)
     if args.collect:
         collect_data(db)
     if args.plot:
@@ -227,4 +232,4 @@ if __name__ == "__main__":
                     this_dict = json.loads(str(i))
                     this_uid = this_dict['uid']
                     all_uids.append(this_uid)
-        strain_dielectric_constant_plot(db,all_uids)
+        strain_dielectric_constant_plot(db, all_uids)

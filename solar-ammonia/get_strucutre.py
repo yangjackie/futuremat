@@ -125,6 +125,7 @@ def get_dataset(key, anion, cation_number, stable=None, number=None):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description='get the structures for solar thermal ammonia synthesis calculations')
     parser.add_argument('key', action='store', type=str, help='API key')
     parser.add_argument('anion', action='store', choices=['N', 'O'], type=str, help='define the anion in the compound')

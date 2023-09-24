@@ -72,18 +72,17 @@ def parseModes(outcar, nat, vesta_front, vesta_end, scaling_factor):
         line = outcar.readline()
         if not line:
             break
-        #if "Eigenvectors after division by SQRT(mass)" in line:
+        # if "Eigenvectors after division by SQRT(mass)" in line:
         if "Eigenvectors and eigenvalues of the dynamical matrix" in line:
             outcar.readline()  # empty line
             outcar.readline()  # Eigenvectors and eigenvalues of the dynamical matrix
-            #outcar.readline()  # ----------------------------------------------------
-            #outcar.readline()  # empty line
+            # outcar.readline()  # ----------------------------------------------------
+            # outcar.readline()  # empty line
             print("Mode    Freq (cm-1)")
             for i in range(nat * 3):
                 outcar.readline()  # empty line
                 p = re.search(r'^\s*(\d+).+?([\.\d]+) cm-1', outcar.readline())
-                #p = re.search(r"(\s+)(\d+)(\s+)f(\D+)=(\s+)(\d+).(\d+)(\s+)THz",outcar.readline())
-
+                # p = re.search(r"(\s+)(\d+)(\s+)f(\D+)=(\s+)(\d+).(\d+)(\s+)THz",outcar.readline())
 
                 eigvals[i] = float(p.group(2))
 
@@ -181,4 +180,3 @@ if __name__ == '__main__':
     print("  %d      %4.2f       %d" % (nat, vol, nat * 3))
 
     parseModes(outcar, nat, vesta_front, vesta_end, scaling_factor)
-

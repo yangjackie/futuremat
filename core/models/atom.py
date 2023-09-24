@@ -10,7 +10,7 @@ from core.models.vector3d import cVector3D
 
 
 class Atom(object):
-    def __init__(self, label=None, position=None, scaled_position=None,crystal=None, magmom=None):
+    def __init__(self, label=None, position=None, scaled_position=None, crystal=None, magmom=None):
         """
         Initialise an atom
         """

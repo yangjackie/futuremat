@@ -37,7 +37,7 @@ parser.add_argument('-F', '--F', type=int, default=32)
 parser.add_argument('-n_layer', '--n_layer', type=int, default=6)
 
 # wandb arguments
-parser.add_argument('-p','--project',type=str,help='name of the wandb project',default=None)
+parser.add_argument('-p', '--project', type=str, help='name of the wandb project', default=None)
 args = parser.parse_args()
 
 # =================== Main part of the script =========================
@@ -151,7 +151,7 @@ save_dict(path=ckpt_dir, filename='hyperparameters.json', data=h, exists_ok=True
 
 if args.project is None:
     raise Exception("Please specify the project name for wandb")
-wandb.init(config=h,project=args.project)
+wandb.init(config=h, project=args.project)
 coach.run(train_state=train_state,
           train_ds=train_ds,
           valid_ds=valid_ds,

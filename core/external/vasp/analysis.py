@@ -18,10 +18,10 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 params = {'legend.fontsize': '10',
           'figure.figsize': (6, 5),
-         'axes.labelsize': 20,
-         'axes.titlesize':20,
-         'xtick.labelsize':12,
-         'ytick.labelsize':12}
+          'axes.labelsize': 20,
+          'axes.titlesize': 20,
+          'xtick.labelsize': 12,
+          'ytick.labelsize': 12}
 #         'axes.prop_cycle':cycler.cycler('color',color)}
 pylab.rcParams.update(params)
 
@@ -119,6 +119,7 @@ def plot_simple_smoothed_band_structure(ylim=[-1.5, 3.5], filename=None):
     else:
         BSPlotter(bs).save_plot(filename)
 
+
 def plot_total_density_of_states(xlim=None, ylim=None, filename=None):
     vasprun = Vasprun('./vasprun.xml')
     if not vasprun.is_spin:
@@ -130,32 +131,33 @@ def plot_total_density_of_states(xlim=None, ylim=None, filename=None):
                        max(vasprun.tdos.energies - vasprun.tdos.efermi), 100 * len(vasprun.tdos.energies))
     power_smooth = interp1d(vasprun.tdos.energies - vasprun.tdos.efermi, dos)
 
-    #from scipy import signal
-    #dydx = signal.savgol_filter(power_smooth(xnew), window_length=11, polyorder=2, deriv=1)
+    # from scipy import signal
+    # dydx = signal.savgol_filter(power_smooth(xnew), window_length=11, polyorder=2, deriv=1)
 
     plt.plot(xnew, power_smooth(xnew), 'b')
-    #plt.plot(xnew, dydx, 'r')
+    # plt.plot(xnew, dydx, 'r')
 
-    #plt.plot(vasprun.tdos.energies - vasprun.tdos.efermi, dos, 'b')
+    # plt.plot(vasprun.tdos.energies - vasprun.tdos.efermi, dos, 'b')
 
     if xlim is not None:
         plt.xlim(xlim)
 
     if ylim is not None:
         plt.ylim(ylim)
-    #xelse:
-        #plt.ylim([0,max(dos)+0.05*max(dos)])
+    # xelse:
+    # plt.ylim([0,max(dos)+0.05*max(dos)])
 
     plt.ylabel("Density-of-states (states/eV/cell)", fontsize=12)
     plt.xlabel("$E-E_{F}$ (eV)", fontsize=12)
     plt.tight_layout()
 
-    plt.xlim([-5,5])
+    plt.xlim([-5, 5])
 
     if filename is None:
         plt.show()
     else:
         plt.savefig(filename)
+
 
 def get_dos_gap():
     vasprun = Vasprun("vasprun.xml")
@@ -166,55 +168,57 @@ def get_dos_gap():
     from scipy import signal
     dydx = signal.savgol_filter(_new_dos(xnew), window_length=11, polyorder=2, deriv=1)
 
-    vbm=vasprun.tdos.efermi
-    cbm=vasprun.tdos.efermi
+    vbm = vasprun.tdos.efermi
+    cbm = vasprun.tdos.efermi
 
-    for i,x in enumerate(xnew):
+    for i, x in enumerate(xnew):
         this_dos = _new_dos(x)
         this_diff = dydx[i]
-        if x<vasprun.tdos.efermi: continue
-        if (abs(this_diff)<0.01):
+        if x < vasprun.tdos.efermi: continue
+        if (abs(this_diff) < 0.01):
             vbm = x
             break
 
-    for i,x in enumerate(xnew):
+    for i, x in enumerate(xnew):
         this_dos = _new_dos(x)
         this_diff = dydx[i]
-        if x<=vbm: continue
-        if (abs(this_diff)<0.01):
+        if x <= vbm: continue
+        if (abs(this_diff) < 0.01):
             cbm = x
         else:
             break
 
     print('vbm is ', vbm)
     print('cbm is ', cbm)
-    gap = cbm-vbm
+    gap = cbm - vbm
     return gap
 
-def get_cb(dos,fermi=None,tol=0.2):
+
+def get_cb(dos, fermi=None, tol=0.2):
     cb = None
     _dos = dos(fermi)
     for pp in range(5000):
-        e = fermi+5/5000*pp
-        if dos(e)>_dos:
+        e = fermi + 5 / 5000 * pp
+        if dos(e) > _dos:
             cb = e
             break
-        _dos=dos(e)
-        #if (dos(e)-dos(fermi))/dos(fermi) > tol:
+        _dos = dos(e)
+        # if (dos(e)-dos(fermi))/dos(fermi) > tol:
         #    cb = e
         #    break
     return cb
 
-def get_vb(dos,fermi=None,tol=0.2):
+
+def get_vb(dos, fermi=None, tol=0.2):
     vb = None
     _dos = dos(fermi)
     for pp in range(5000):
-        e = fermi-5/5000*pp
-        if dos(e)>_dos:
+        e = fermi - 5 / 5000 * pp
+        if dos(e) > _dos:
             vb = e
             break
-        _dos=dos(e)
-        #if (dos(e)-dos(fermi))/dos(fermi) > tol:
+        _dos = dos(e)
+        # if (dos(e)-dos(fermi))/dos(fermi) > tol:
         #    vb = e
         #    break
     return vb
@@ -230,17 +234,18 @@ def plot_MD_energies_and_temperature_evolution(time_step=0.001):
             temp.append(float(line.split()[2]))
             energies.append(float(line.split()[4]))
     plt.subplot(2, 1, 1)
-    plt.plot([x * time_step for x in range(len(temp))], temp, 'b-',lw=1)
+    plt.plot([x * time_step for x in range(len(temp))], temp, 'b-', lw=1)
     plt.xlabel('Time (ps)')
     plt.ylabel('Temperature (K)')
 
     plt.subplot(2, 1, 2)
-    plt.plot([x * time_step for x in range(len(energies))], energies, 'r-',lw=1)
+    plt.plot([x * time_step for x in range(len(energies))], energies, 'r-', lw=1)
     plt.xlabel('Time (ps)')
     plt.ylabel('Energy (eV)')
     plt.tight_layout()
     plt.savefig('energy_and_temp_trajectory.pdf')
-    #plt.show()
+    # plt.show()
+
 
 def pair_correlation_function_averaged(frames, bins=50, A='', B='', cross_term=False):
     if not A:
@@ -357,8 +362,6 @@ def velocity_autocorrelation_function(frames, potim=8):
     return VAF2
 
 
-
-
 def atomic_displacement_from_ref_frame(frames, ref_frame, ref_atomic_label, direction='x'):
     if direction == 'x':
         direction = 0
@@ -394,6 +397,7 @@ def atomic_displacement_from_ref_frame(frames, ref_frame, ref_atomic_label, dire
 
     return all_diff
 
+
 def plot_atomic_displacement_trajectories(frames, ref_frame, ref_atomic_label, direction='x', potim=8, nblock=10,
                                           filename=None):
     all_diff = atomic_displacement_from_ref_frame(frames, ref_frame, ref_atomic_label, direction=direction)
@@ -412,23 +416,25 @@ def plot_atomic_displacement_trajectories(frames, ref_frame, ref_atomic_label, d
     plt.ylabel("$\\Delta " + str(direction) + "$ $(\\mbox{\AA})$")
     plt.xlabel('Time (ps)')
 
-    label=''
+    label = ''
     for i in ref_atomic_label:
-        label+=str(i)+' '
+        label += str(i) + ' '
 
-    #plt.annotate(label, xy=(0.85,0.85), xycoords='axes fraction',fontsize=16)
-    plt.ylim([-2,2])
+    # plt.annotate(label, xy=(0.85,0.85), xycoords='axes fraction',fontsize=16)
+    plt.ylim([-2, 2])
     plt.legend()
     plt.tight_layout()
     if filename:
         plt.savefig(filename)
     plt.show()
 
+
 def plot_atomic_displacement_statistics(frames, ref_frame, ref_atomic_label, direction='x', potim=8, nblock=10,
-                                          filename=None):
+                                        filename=None):
     all_diff = atomic_displacement_from_ref_frame(frames, ref_frame, ref_atomic_label, direction=direction)
-    val, b = np.histogram(all_diff[abs(all_diff)<0.2], bins=int(0.4/0.01), density=False)
+    val, b = np.histogram(all_diff[abs(all_diff) < 0.2], bins=int(0.4 / 0.01), density=False)
     val = val / max(val)
+
     def gaus(x, a, x0, sigma):
         return a * scipy.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
@@ -437,20 +443,20 @@ def plot_atomic_displacement_statistics(frames, ref_frame, ref_atomic_label, dir
     mean = sum(b[1:] * val) / len(val)
     sigma = sum(val * (b[1:] - mean) ** 2) / len(val)
 
-    popt=None
+    popt = None
     try:
         popt, pcov = curve_fit(gaus, b[1:], val, p0=[1, mean, sigma])
     except:
         print("Gaussian fit to the histogram failed!!")
         pass
 
-    val, b = np.histogram(all_diff, bins=int((all_diff.max()-all_diff.min())/0.01), density=False)
+    val, b = np.histogram(all_diff, bins=int((all_diff.max() - all_diff.min()) / 0.01), density=False)
 
     if popt is not None:
         plt.plot(gaus(b[1:], *popt), b[1:], 'r-', label="$\\mathcal{G}(\\Delta " + str(direction) + ")$")
 
     val = val / max(val)
-    plt.plot(val/max(val),b[1:],'b-',label="$\\mathcal{P}(\\Delta " + str(direction) + ")$",alpha=0.6)
+    plt.plot(val / max(val), b[1:], 'b-', label="$\\mathcal{P}(\\Delta " + str(direction) + ")$", alpha=0.6)
 
     plt.xlabel('Probability Density')
     plt.ylabel("$\\Delta " + str(direction) + "$ $(\\mbox{\AA})$")
@@ -459,13 +465,14 @@ def plot_atomic_displacement_statistics(frames, ref_frame, ref_atomic_label, dir
     for i in ref_atomic_label:
         label += str(i) + ' '
 
-    plt.annotate(label, xy=(0.85,0.15), xycoords='axes fraction',fontsize=16)
+    plt.annotate(label, xy=(0.85, 0.15), xycoords='axes fraction', fontsize=16)
     plt.legend()
-    plt.ylim([-2,2])
+    plt.ylim([-2, 2])
     plt.tight_layout()
     if filename:
         plt.savefig(filename)
     plt.show()
+
 
 def get_phonon_dos(frames, potim=8, nblock=10, unit='THz'):
     potim = potim * nblock
@@ -553,9 +560,9 @@ if __name__ == "__main__":
         from core.dao.vasp import VaspReader
 
         print(args.ref_atoms)
-        args.md_frames=['XDATCAR_'+str(i+1) for i in range(len(args.md_frames))]
+        args.md_frames = ['XDATCAR_' + str(i + 1) for i in range(len(args.md_frames))]
         print(args.md_frames)
-        all_frames=[]
+        all_frames = []
         for f in args.md_frames:
             if 'equ' not in f:
                 all_frames += VaspReader(input_location=f).read_XDATCAR()
@@ -568,10 +575,10 @@ if __name__ == "__main__":
                                                   filename=args.output)
         if args.displacement_histograms:
             plot_atomic_displacement_statistics(frames=all_frames, ref_frame=ref_frame,
-                                                  ref_atomic_label=args.ref_atoms,
-                                                  direction=args.direction, potim=args.md_potim, nblock=args.md_nblock,
-                                                  filename=args.output)
+                                                ref_atomic_label=args.ref_atoms,
+                                                direction=args.direction, potim=args.md_potim, nblock=args.md_nblock,
+                                                filename=args.output)
 
     if args.dos_gap:
         gap = get_dos_gap()
-        print('The DOS gap is '+str(gap)+" eV.")
+        print('The DOS gap is ' + str(gap) + " eV.")

@@ -15,7 +15,7 @@ import os
 
 from twodPV.elements import A_site_list, B_site_list, C_site_list
 
-#thicknesses = [3, 5, 7, 9]
+# thicknesses = [3, 5, 7, 9]
 thicknesses = [3]
 orientation_dict = {'100': {'a': (1, 1, 0), 'b': (-1, 1, 0),
                             'origio': {'AO': (0.25, 0.25, 0), 'BO2': (0, 0, 0.25)}},
@@ -28,10 +28,10 @@ orientation_dict = {'100': {'a': (1, 1, 0), 'b': (-1, 1, 0),
 def setup_two_d_structure_folders(orientation=None, termination=None, db=None):
     cwd = os.getcwd()
     print(cwd)
-    A_site_list=[['Sr']]
-    B_site_list=[['Ti']]
-    C_site_list=[['O']]
-    thicknesses = [11,13,15,17,19,21]
+    A_site_list = [['Sr']]
+    B_site_list = [['Ti']]
+    C_site_list = [['O']]
+    thicknesses = [11, 13, 15, 17, 19, 21]
 
     for i in range(len(A_site_list)):
         for a in A_site_list[i]:

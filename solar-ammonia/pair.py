@@ -35,8 +35,8 @@ def match_binary(path_to_nitride_file, path_to_oxide_file):
             m_oxide = oxide_element_list[0]
             c = nitride_element_number_list[0]
             d = nitride_element_number_list[1]
-            hydrogen_index = a*d/b/c
-            if m_nitride == m_oxide and hydrogen_index >= 3/2:
+            hydrogen_index = a * d / b / c
+            if m_nitride == m_oxide and hydrogen_index >= 3 / 2:
                 nitride_oxide_pair_properties['nitride_id'] = i['material_id']
                 nitride_oxide_pair_properties['nitride_formula'] = i['formula']
                 nitride_oxide_pair_properties['nitride_formation_energy_0K'] = i['formation_energy']
@@ -123,6 +123,7 @@ def match_ternary(path_to_nitride_file, path_to_oxide_file):
 if __name__ == "__main__":
     import argparse
     from pathlib import Path
+
     parser = argparse.ArgumentParser(description='pair the compounds for solar thermal ammonia synthesis calculations')
     parser.add_argument('system', action='store', choices=['binary', 'ternary'],
                         type=str, help='choose the system to match the pairs.')

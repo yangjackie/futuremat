@@ -1,12 +1,13 @@
-from core.dao.vasp import VaspReader,VaspWriter
+from core.dao.vasp import VaspReader, VaspWriter
 from core.models import Crystal, cVector3D, Atom, Molecule
 import numpy as np
 import xml.etree.cElementTree as etree
 import copy
 
+
 class MDAveragedStructure(object):
 
-    def __init__(self,ref_frame=None,md_frames=None):
+    def __init__(self, ref_frame=None, md_frames=None):
         if isinstance(ref_frame, Crystal):
             self.ref_frame = ref_frame
         elif ('POSCAR' in ref_frame) or ('CONTCAR' in ref_frame):
@@ -49,7 +50,7 @@ class MDAveragedStructure(object):
         all_positions = np.array(
             [__all_displacements[i, :] + self.ref_coords for i in range(__all_displacements.shape[0])])
 
-        averaged_position = np.average(all_positions,axis=0)
+        averaged_position = np.average(all_positions, axis=0)
         print(np.shape(averaged_position))
 
         all_atoms = []
@@ -57,14 +58,15 @@ class MDAveragedStructure(object):
             for j in range(len(self.ref_frame.asymmetric_unit[i].atoms)):
                 this_atom = self.ref_frame.asymmetric_unit[i].atoms[j]
                 p = averaged_position[j]
-                #p = np.dot(averaged_position[j],self.ref_frame.lattice.lattice_vectors)
-                a = Atom(label=this_atom.label,scaled_position=cVector3D(p[0],p[1],p[2]))
-                #new_cystal.asymmetric_unit[i].atoms.position = cVector3D(p[0],p[1],p[2])
+                # p = np.dot(averaged_position[j],self.ref_frame.lattice.lattice_vectors)
+                a = Atom(label=this_atom.label, scaled_position=cVector3D(p[0], p[1], p[2]))
+                # new_cystal.asymmetric_unit[i].atoms.position = cVector3D(p[0],p[1],p[2])
                 all_atoms.append(a)
         molecule = Molecule(atoms=all_atoms)
-        new_cystal = Crystal(self.ref_frame.lattice,[molecule],1)
+        new_cystal = Crystal(self.ref_frame.lattice, [molecule], 1)
 
-        VaspWriter().write_structure(new_cystal,filename='POSCAR_averaged')
+        VaspWriter().write_structure(new_cystal, filename='POSCAR_averaged')
 
-if __name__=="__main__":
-    MDAveragedStructure(ref_frame='../SPOSCAR',md_frames='vasprun.xml').compute_averaged_structure()
+
+if __name__ == "__main__":
+    MDAveragedStructure(ref_frame='../SPOSCAR', md_frames='vasprun.xml').compute_averaged_structure()

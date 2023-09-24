@@ -22,23 +22,26 @@ parser.add_argument("--save", action='store_true', help='whether to store the va
 # parser.add_argument("--output", type=str, default='gap_dynamics.dat', help='name of the outputfile storing the band positions for each frame')
 args = parser.parse_args()
 
-def get_cb(dos,fermi=None,tol=2):
+
+def get_cb(dos, fermi=None, tol=2):
     cb = None
     for pp in range(5000):
-        e = fermi+5/5000*pp
-        if (abs(dos(e))-abs(dos(fermi)))/abs(dos(fermi)) > tol:
+        e = fermi + 5 / 5000 * pp
+        if (abs(dos(e)) - abs(dos(fermi))) / abs(dos(fermi)) > tol:
             cb = e
             break
     return cb
 
-def get_vb(dos,fermi=None,tol=2):
+
+def get_vb(dos, fermi=None, tol=2):
     vb = None
     for pp in range(5000):
-        e = fermi-5/5000*pp
-        if (abs(dos(e))-abs(dos(fermi)))/abs(dos(fermi)) > tol:
+        e = fermi - 5 / 5000 * pp
+        if (abs(dos(e)) - abs(dos(fermi))) / abs(dos(fermi)) > tol:
             vb = e
             break
     return vb
+
 
 # default options for doing DOS calculations
 incar_dict = {'EDIFF': 1e-05,
@@ -83,7 +86,7 @@ else:
         last = int(last)
     except:
         last = 0
-    print('Last frame is '+str(last))
+    print('Last frame is ' + str(last))
     o.close()
 
 for i, frame in enumerate(all_frames):

@@ -32,38 +32,38 @@ atomic_numbers = {'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7, 'O'
                   'No': 102, 'Lr': 103, 'Rf': 104, 'Db': 105, 'Sg': 106, 'Bh': 107, 'Hs': 108, 'Mt': 109, 'Ds': 110,
                   'Rg': 111, 'Cn': 112, 'Nh': 113, 'Fl': 114, 'Mc': 115, 'Lv': 116, 'Ts': 117, 'Og': 118}
 
-atomic_mass_dict = {'H' : 1.008,'HE' : 4.003, 'LI' : 6.941, 'BE' : 9.012,\
-                 'B' : 10.811, 'C' : 12.011, 'N' : 14.007, 'O' : 15.999,\
-                 'F' : 18.998, 'NE' : 20.180, 'NA' : 22.990, 'MG' : 24.305,\
-                 'AL' : 26.982, 'SI' : 28.086, 'P' : 30.974, 'S' : 32.066,\
-                 'CL' : 35.453, 'AR' : 39.948, 'K' : 39.098, 'CA' : 40.078,\
-                 'SC' : 44.956, 'TI' : 47.867, 'V' : 50.942, 'CR' : 51.996,\
-                 'MN' : 54.938, 'FE' : 55.845, 'CO' : 58.933, 'NI' : 58.693,\
-                 'CU' : 63.546, 'ZN' : 65.38, 'GA' : 69.723, 'GE' : 72.631,\
-                 'AS' : 74.922, 'SE' : 78.971, 'BR' : 79.904, 'KR' : 84.798,\
-                 'RB' : 84.468, 'SR' : 87.62, 'Y' : 88.906, 'ZR' : 91.224,\
-                 'NB' : 92.906, 'MO' : 95.95, 'TC' : 98.907, 'RU' : 101.07,\
-                 'RH' : 102.906, 'PD' : 106.42, 'AG' : 107.868, 'CD' : 112.414,\
-                 'IN' : 114.818, 'SN' : 118.711, 'SB' : 121.760, 'TE' : 126.7,\
-                 'I' : 126.904, 'XE' : 131.294, 'CS' : 132.905, 'BA' : 137.328,\
-                 'LA' : 138.905, 'CE' : 140.116, 'PR' : 140.908, 'ND' : 144.243,\
-                 'PM' : 144.913, 'SM' : 150.36, 'EU' : 151.964, 'GD' : 157.25,\
-                 'TB' : 158.925, 'DY': 162.500, 'HO' : 164.930, 'ER' : 167.259,\
-                 'TM' : 168.934, 'YB' : 173.055, 'LU' : 174.967, 'HF' : 178.49,\
-                 'TA' : 180.948, 'W' : 183.84, 'RE' : 186.207, 'OS' : 190.23,\
-                 'IR' : 192.217, 'PT' : 195.085, 'AU' : 196.967, 'HG' : 200.592,\
-                 'TL' : 204.383, 'PB' : 207.2, 'BI' : 208.980, 'PO' : 208.982,\
-                 'AT' : 209.987, 'RN' : 222.081, 'FR' : 223.020, 'RA' : 226.025,\
-                 'AC' : 227.028, 'TH' : 232.038, 'PA' : 231.036, 'U' : 238.029,\
-                 'NP' : 237, 'PU' : 244, 'AM' : 243, 'CM' : 247, 'BK' : 247,\
-                 'CT' : 251, 'ES' : 252, 'FM' : 257, 'MD' : 258, 'NO' : 259,\
-                 'LR' : 262, 'RF' : 261, 'DB' : 262, 'SG' : 266, 'BH' : 264,\
-                 'HS' : 269, 'MT' : 268, 'DS' : 271, 'RG' : 272, 'CN' : 285,\
-                 'NH' : 284, 'FL' : 289, 'MC' : 288, 'LV' : 292, 'TS' : 294,\
-                 'OG' : 294}
+atomic_mass_dict = {'H': 1.008, 'HE': 4.003, 'LI': 6.941, 'BE': 9.012, \
+                    'B': 10.811, 'C': 12.011, 'N': 14.007, 'O': 15.999, \
+                    'F': 18.998, 'NE': 20.180, 'NA': 22.990, 'MG': 24.305, \
+                    'AL': 26.982, 'SI': 28.086, 'P': 30.974, 'S': 32.066, \
+                    'CL': 35.453, 'AR': 39.948, 'K': 39.098, 'CA': 40.078, \
+                    'SC': 44.956, 'TI': 47.867, 'V': 50.942, 'CR': 51.996, \
+                    'MN': 54.938, 'FE': 55.845, 'CO': 58.933, 'NI': 58.693, \
+                    'CU': 63.546, 'ZN': 65.38, 'GA': 69.723, 'GE': 72.631, \
+                    'AS': 74.922, 'SE': 78.971, 'BR': 79.904, 'KR': 84.798, \
+                    'RB': 84.468, 'SR': 87.62, 'Y': 88.906, 'ZR': 91.224, \
+                    'NB': 92.906, 'MO': 95.95, 'TC': 98.907, 'RU': 101.07, \
+                    'RH': 102.906, 'PD': 106.42, 'AG': 107.868, 'CD': 112.414, \
+                    'IN': 114.818, 'SN': 118.711, 'SB': 121.760, 'TE': 126.7, \
+                    'I': 126.904, 'XE': 131.294, 'CS': 132.905, 'BA': 137.328, \
+                    'LA': 138.905, 'CE': 140.116, 'PR': 140.908, 'ND': 144.243, \
+                    'PM': 144.913, 'SM': 150.36, 'EU': 151.964, 'GD': 157.25, \
+                    'TB': 158.925, 'DY': 162.500, 'HO': 164.930, 'ER': 167.259, \
+                    'TM': 168.934, 'YB': 173.055, 'LU': 174.967, 'HF': 178.49, \
+                    'TA': 180.948, 'W': 183.84, 'RE': 186.207, 'OS': 190.23, \
+                    'IR': 192.217, 'PT': 195.085, 'AU': 196.967, 'HG': 200.592, \
+                    'TL': 204.383, 'PB': 207.2, 'BI': 208.980, 'PO': 208.982, \
+                    'AT': 209.987, 'RN': 222.081, 'FR': 223.020, 'RA': 226.025, \
+                    'AC': 227.028, 'TH': 232.038, 'PA': 231.036, 'U': 238.029, \
+                    'NP': 237, 'PU': 244, 'AM': 243, 'CM': 247, 'BK': 247, \
+                    'CT': 251, 'ES': 252, 'FM': 257, 'MD': 258, 'NO': 259, \
+                    'LR': 262, 'RF': 261, 'DB': 262, 'SG': 266, 'BH': 264, \
+                    'HS': 269, 'MT': 268, 'DS': 271, 'RG': 272, 'CN': 285, \
+                    'NH': 284, 'FL': 289, 'MC': 288, 'LV': 292, 'TS': 294, \
+                    'OG': 294}
 
-
-U_corrections = {'Ti': {'d': 5.0}, 'Mn': {'d': 3.0}, 'La': {'f': 9.0}, 'Zr': {'d': 5.79}, 'Co': {'d': 5.0}, 'Fe':{'d':5.3}}
+U_corrections = {'Ti': {'d': 5.0}, 'Mn': {'d': 3.0}, 'La': {'f': 9.0}, 'Zr': {'d': 5.79}, 'Co': {'d': 5.0},
+                 'Fe': {'d': 5.3}}
 
 orbital_index = {'d': 2, 'f': 3}
 
@@ -177,7 +177,7 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                         "5": {"VI": {"r_crystal": 0.705, "remark": "ER", "spin": "", "r_ionic": 0.565}},
                         "4": {"VI": {"r_crystal": 0.76, "remark": "RM", "spin": "", "r_ionic": 0.62}},
                         "7": {"IV": {"r_crystal": 0.52, "remark": "", "spin": "", "r_ionic": 0.38}},
-                        "2": {"VI": {"r_crystal": "", "remark": "", "spin": "", "r_ionic": 0.7}}}, #extrapolated
+                        "2": {"VI": {"r_crystal": "", "remark": "", "spin": "", "r_ionic": 0.7}}},  # extrapolated
                  "Re": {"2": {"VI": {"r_crystal": 0.72, "remark": "E", "spin": "", "r_ionic": 0.8}},
                         "5": {"VI": {"r_crystal": 0.72, "remark": "E", "spin": "", "r_ionic": 0.58}},
                         "4": {"VI": {"r_crystal": 0.77, "remark": "RM", "spin": "", "r_ionic": 0.63}},
@@ -185,7 +185,7 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                               "IV": {"r_crystal": 0.52, "remark": "", "spin": "", "r_ionic": 0.38}},
                         "6": {"VI": {"r_crystal": 0.69, "remark": "E", "spin": "", "r_ionic": 0.55}}},
                  "Ra": {"2": {"XII": {"r_crystal": 1.84, "remark": "R", "spin": "", "r_ionic": 1.7},
-                                "VI": {"r_crystal": 1.84, "remark": "R", "spin": "", "r_ionic": 1.6},
+                              "VI": {"r_crystal": 1.84, "remark": "R", "spin": "", "r_ionic": 1.6},
                               "VIII": {"r_crystal": 1.62, "remark": "R", "spin": "", "r_ionic": 1.48}}},
                  "Rb": {"1": {"IX": {"r_crystal": 1.77, "remark": "E", "spin": "", "r_ionic": 1.63},
                               "XI": {"r_crystal": 1.83, "remark": "", "spin": "", "r_ionic": 1.69},
@@ -195,7 +195,7 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                               "XIV": {"r_crystal": 1.97, "remark": "", "spin": "", "r_ionic": 1.83},
                               "XII": {"r_crystal": 1.86, "remark": "", "spin": "", "r_ionic": 1.72},
                               "X": {"r_crystal": 1.8, "remark": "", "spin": "", "r_ionic": 1.66}}},
-                 "Rh": {"2":  {"VI": {"r_crystal": "", "remark": "E", "spin": "", "r_ionic": 0.7}},
+                 "Rh": {"2": {"VI": {"r_crystal": "", "remark": "E", "spin": "", "r_ionic": 0.7}},
                         "3": {"VI": {"r_crystal": 0.805, "remark": "R", "spin": "", "r_ionic": 0.665}},
                         "5": {"VI": {"r_crystal": 0.69, "remark": "", "spin": "", "r_ionic": 0.55}},
                         "4": {"VI": {"r_crystal": 0.74, "remark": "RM", "spin": "", "r_ionic": 0.6}}},
@@ -249,8 +249,10 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                  "Ga": {"3": {"VI": {"r_crystal": 0.76, "remark": "R*", "spin": "", "r_ionic": 0.62},
                               "V": {"r_crystal": 0.69, "remark": "", "spin": "", "r_ionic": 0.55},
                               "IV": {"r_crystal": 0.61, "remark": "*", "spin": "", "r_ionic": 0.47}},
-                        "2": {"VI": {"r_crystal": 0.87, "remark": "A", "spin": "", "r_ionic": 0.71}}, #extrapolate between +1 and +3 states
-                        "1": {"VI": {"r_crystal": 0.87, "remark": "A", "spin": "", "r_ionic": 0.81}}},# https://www.webelements.com/gallium/atom_sizes.html
+                        "2": {"VI": {"r_crystal": 0.87, "remark": "A", "spin": "", "r_ionic": 0.71}},
+                        # extrapolate between +1 and +3 states
+                        "1": {"VI": {"r_crystal": 0.87, "remark": "A", "spin": "", "r_ionic": 0.81}}},
+                 # https://www.webelements.com/gallium/atom_sizes.html
                  "Pr": {"3": {"VI": {"r_crystal": 1.13, "remark": "R", "spin": "", "r_ionic": 0.99},
                               "VIII": {"r_crystal": 1.266, "remark": "R", "spin": "", "r_ionic": 1.126},
                               "IX": {"r_crystal": 1.319, "remark": "R", "spin": "", "r_ionic": 1.179}},
@@ -303,7 +305,8 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                               "VIII": {"r_crystal": 1.155, "remark": "R", "spin": "", "r_ionic": 1.015},
                               "X": {"r_crystal": 1.26, "remark": "", "spin": "", "r_ionic": 1.12},
                               "IX": {"r_crystal": 1.212, "remark": "R", "spin": "", "r_ionic": 1.072}}},
-                 "Hf": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.80}}, #this is just a rough guess
+                 "Hf": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.80}},
+                        # this is just a rough guess
                         "4": {"VI": {"r_crystal": 0.85, "remark": "R", "spin": "", "r_ionic": 0.71},
                               "VII": {"r_crystal": 0.9, "remark": "", "spin": "", "r_ionic": 0.76},
                               "VIII": {"r_crystal": 0.97, "remark": "", "spin": "", "r_ionic": 0.83},
@@ -349,8 +352,9 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                              "IV": {"r_crystal": 0.26, "remark": "*", "spin": "", "r_ionic": 0.12}},
                        "4": {"VI": {"r_crystal": 0.51, "remark": "A", "spin": "", "r_ionic": 0.37}},
                        "-2": {"VI": {"r_crystal": 1.7, "remark": "P", "spin": "", "r_ionic": 1.84}}},
-                 "W": {"2": {"VI": {"r_crystal": "", "remark": "R*", "spin": "", "r_ionic": 0.68}}, #extrapolate from 4+ and 6+
-                        "5": {"VI": {"r_crystal": 0.76, "remark": "R", "spin": "", "r_ionic": 0.62}},
+                 "W": {"2": {"VI": {"r_crystal": "", "remark": "R*", "spin": "", "r_ionic": 0.68}},
+                       # extrapolate from 4+ and 6+
+                       "5": {"VI": {"r_crystal": 0.76, "remark": "R", "spin": "", "r_ionic": 0.62}},
                        "4": {"VI": {"r_crystal": 0.8, "remark": "RM", "spin": "", "r_ionic": 0.66}},
                        "6": {"VI": {"r_crystal": 0.74, "remark": "*", "spin": "", "r_ionic": 0.6},
                              "V": {"r_crystal": 0.65, "remark": "", "spin": "", "r_ionic": 0.51},
@@ -395,7 +399,8 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                               "VIII": {"r_crystal": 1.32, "remark": "", "spin": "", "r_ionic": 1.18},
                               "XII": {"r_crystal": 1.53, "remark": "", "spin": "", "r_ionic": 1.39},
                               "V": {"r_crystal": 1.14, "remark": "", "spin": "", "r_ionic": 1}}},
-                 "Nb": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.72}}, #dont know, assume similar to Nb3+
+                 "Nb": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.72}},
+                        # dont know, assume similar to Nb3+
                         "3": {"VI": {"r_crystal": 0.86, "remark": "", "spin": "", "r_ionic": 0.72}},
                         "5": {"VI": {"r_crystal": 0.78, "remark": "", "spin": "", "r_ionic": 0.64},
                               "VII": {"r_crystal": 0.83, "remark": "C", "spin": "", "r_ionic": 0.69},
@@ -449,13 +454,15 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                        "-3": {"IV": {"r_crystal": 1.32, "remark": "", "spin": "", "r_ionic": 1.46}}},
                  "Si": {"4": {"VI": {"r_crystal": 0.54, "remark": "R*", "spin": "", "r_ionic": 0.4},
                               "IV": {"r_crystal": 0.4, "remark": "*", "spin": "", "r_ionic": 0.26}},
-                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.5}}}, # Si+ is about 0.6, so extrapolate between the two
+                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.5}}},
+                 # Si+ is about 0.6, so extrapolate between the two
                  "Sn": {"4": {"VI": {"r_crystal": 0.83, "remark": "R*", "spin": "", "r_ionic": 0.69},
                               "V": {"r_crystal": 0.76, "remark": "C", "spin": "", "r_ionic": 0.62},
                               "VIII": {"r_crystal": 0.95, "remark": "C", "spin": "", "r_ionic": 0.81},
                               "VII": {"r_crystal": 0.89, "remark": "", "spin": "", "r_ionic": 0.75},
                               "IV": {"r_crystal": 0.69, "remark": "R", "spin": "", "r_ionic": 0.55}},
-                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 1.18}}}, #http://www.wiredchemist.com/chemistry/data/metallic-radii
+                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 1.18}}},
+                 # http://www.wiredchemist.com/chemistry/data/metallic-radii
                  "Sm": {"3": {"VI": {"r_crystal": 1.098, "remark": "R", "spin": "", "r_ionic": 0.958},
                               "VII": {"r_crystal": 1.16, "remark": "E", "spin": "", "r_ionic": 1.02},
                               "VIII": {"r_crystal": 1.219, "remark": "R", "spin": "", "r_ionic": 1.079},
@@ -474,7 +481,8 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                              "V": {"r_crystal": 0.67, "remark": "", "spin": "", "r_ionic": 0.53}}},
                  "Sc": {"3": {"VI": {"r_crystal": 0.885, "remark": "R*", "spin": "", "r_ionic": 0.745},
                               "VIII": {"r_crystal": 1.01, "remark": "R*", "spin": "", "r_ionic": 0.87}},
-                        "2": {"VI": {"r_crystal": 0.94, "remark": "R*", "spin": "", "r_ionic": 0.9}}}, #rough estimate from 3+ and 1+ https://www.webelements.com/scandium/atom_sizes.html
+                        "2": {"VI": {"r_crystal": 0.94, "remark": "R*", "spin": "", "r_ionic": 0.9}}},
+                 # rough estimate from 3+ and 1+ https://www.webelements.com/scandium/atom_sizes.html
                  "Sb": {"3": {"IVPY": {"r_crystal": 0.9, "remark": "", "spin": "", "r_ionic": 0.76},
                               "VI": {"r_crystal": 0.9, "remark": "A", "spin": "", "r_ionic": 0.76},
                               "V": {"r_crystal": 0.94, "remark": "", "spin": "", "r_ionic": 0.8}},
@@ -482,7 +490,8 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                  "Se": {"6": {"VI": {"r_crystal": 0.56, "remark": "C", "spin": "", "r_ionic": 0.42},
                               "IV": {"r_crystal": 0.42, "remark": "*", "spin": "", "r_ionic": 0.28}},
                         "4": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.5}},
-                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.4}}, # this is an extrapolated value from 6+ and 4+ states
+                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.4}},
+                        # this is an extrapolated value from 6+ and 4+ states
                         "-2": {"VI": {"r_crystal": 1.84, "remark": "P", "spin": "", "r_ionic": 1.98}}},
                  "Co": {"3": {"": {"r_crystal": 0.685, "remark": "R*", "spin": "Low Spin", "r_ionic": 0.545},
                               "VI": {"r_crystal": 0.75, "remark": "", "spin": "High Spin", "r_ionic": 0.61}},
@@ -598,12 +607,14 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                               "IX": {"r_crystal": 1.235, "remark": "R", "spin": "", "r_ionic": 1.095}},
                         "4": {"VI": {"r_crystal": 0.9, "remark": "R", "spin": "", "r_ionic": 0.76},
                               "VIII": {"r_crystal": 1.02, "remark": "", "spin": "", "r_ionic": 0.88}}},
-                 "Tc": {"2": {"VI": {"r_crystal": "", "remark": "R*", "spin": "", "r_ionic": 0.8}}, #extrapolate from 5+ and 4+ state
+                 "Tc": {"2": {"VI": {"r_crystal": "", "remark": "R*", "spin": "", "r_ionic": 0.8}},
+                        # extrapolate from 5+ and 4+ state
                         "5": {"VI": {"r_crystal": 0.74, "remark": "ER", "spin": "", "r_ionic": 0.6}},
                         "4": {"VI": {"r_crystal": 0.785, "remark": "RM", "spin": "", "r_ionic": 0.645}},
                         "7": {"VI": {"r_crystal": 0.7, "remark": "A", "spin": "", "r_ionic": 0.56},
                               "IV": {"r_crystal": 0.51, "remark": "", "spin": "", "r_ionic": 0.37}}},
-                 "Ta": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.88}}, #extrapolate from III and IV
+                 "Ta": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.88}},
+                        # extrapolate from III and IV
                         "3": {"VI": {"r_crystal": 0.86, "remark": "E", "spin": "", "r_ionic": 0.72}},
                         "5": {"VI": {"r_crystal": 0.78, "remark": "", "spin": "", "r_ionic": 0.64},
                               "VII": {"r_crystal": 0.83, "remark": "", "spin": "", "r_ionic": 0.69},
@@ -642,7 +653,7 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                              "VIII": {"r_crystal": 1, "remark": "", "spin": "", "r_ionic": 0.86},
                              "IV": {"r_crystal": 0.66, "remark": "", "spin": "", "r_ionic": 0.52}}},
                  "Y": {"2": {"VI": {"r_crystal": 1.04, "remark": "R*", "spin": "", "r_ionic": 1.065}},
-                        "3": {"VI": {"r_crystal": 1.04, "remark": "R*", "spin": "", "r_ionic": 0.9},
+                       "3": {"VI": {"r_crystal": 1.04, "remark": "R*", "spin": "", "r_ionic": 0.9},
                              "VII": {"r_crystal": 1.1, "remark": "", "spin": "", "r_ionic": 0.96},
                              "VIII": {"r_crystal": 1.159, "remark": "R*", "spin": "", "r_ionic": 1.019},
                              "IX": {"r_crystal": 1.215, "remark": "R", "spin": "", "r_ionic": 1.075}}},
@@ -675,8 +686,8 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                  "As": {"3": {"VI": {"r_crystal": 0.72, "remark": "A", "spin": "", "r_ionic": 0.58}},
                         "5": {"VI": {"r_crystal": 0.6, "remark": "C*", "spin": "", "r_ionic": 0.46},
                               "IV": {"r_crystal": 0.475, "remark": "R*", "spin": "", "r_ionic": 0.335}},
-                         "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.6}}},
-                         # this is an extrapolated value
+                        "2": {"VI": {"r_crystal": 0.64, "remark": "A", "spin": "", "r_ionic": 0.6}}},
+                 # this is an extrapolated value
 
                  "Au": {"1": {"VI": {"r_crystal": 1.51, "remark": "A", "spin": "", "r_ionic": 1.37}},
                         "3": {"IVSQ": {"r_crystal": 0.82, "remark": "", "spin": "", "r_ionic": 0.68},
@@ -689,7 +700,8 @@ shannon_radii = {"Ru": {"8": {"IV": {"r_crystal": 0.5, "remark": "", "spin": "",
                         "3": {"VI": {"r_crystal": 0.94, "remark": "R*", "spin": "", "r_ionic": 0.8},
                               "VIII": {"r_crystal": 1.06, "remark": "RC", "spin": "", "r_ionic": 0.92},
                               "IV": {"r_crystal": 0.76, "remark": "", "spin": "", "r_ionic": 0.62}}},
-                 "Mo": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.85}}, #extrapolate from 1+ and 3+ https://www.webelements.com/molybdenum/atom_sizes.html
+                 "Mo": {"2": {"VI": {"r_crystal": "", "remark": "R", "spin": "", "r_ionic": 0.85}},
+                        # extrapolate from 1+ and 3+ https://www.webelements.com/molybdenum/atom_sizes.html
                         "3": {"VI": {"r_crystal": 0.83, "remark": "E", "spin": "", "r_ionic": 0.69}},
                         "5": {"VI": {"r_crystal": 0.75, "remark": "R", "spin": "", "r_ionic": 0.61},
                               "IV": {"r_crystal": 0.6, "remark": "R", "spin": "", "r_ionic": 0.46}},

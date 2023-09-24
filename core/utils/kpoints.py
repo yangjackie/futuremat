@@ -1,5 +1,6 @@
 import math
 
+
 def kpoints_from_grid(crystal, grid=0.04, molecular=False):
     """
     Based on the length of lattice vectors and a desired k-point spacing, the number of k points per direction to full filled the requiremente is given as :math:`1/(\mbox{grid}\cdot a)`.
@@ -14,11 +15,13 @@ def kpoints_from_grid(crystal, grid=0.04, molecular=False):
             aux = math.ceil(1.0 / (grid * length))
             k_points.append(aux)
     else:
-        k_points=[1.0,1.0,1.0]
+        k_points = [1.0, 1.0, 1.0]
 
     return k_points
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     from core.dao.vasp import VaspReader
+
     crystal = VaspReader(input_location="./POSCAR").read_POSCAR()
-    print(kpoints_from_grid(crystal,grid=0.025))
+    print(kpoints_from_grid(crystal, grid=0.025))

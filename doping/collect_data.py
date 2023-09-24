@@ -16,7 +16,7 @@ def get_total_energies(db, dir=None):
 
         kvp['uid'] = zip.replace(".zip", '').replace('/', '_')
 
-        #if 'element' in dir:
+        # if 'element' in dir:
         #    kvp['uid'] = 'element_'+kvp['uid']
 
         archive = zipfile.ZipFile(zip)
@@ -35,8 +35,8 @@ def get_total_energies(db, dir=None):
             if 'CONTCAR' in name:
                 with open('CONTCAR_temp', 'w') as f:
                     for l in str(archive.read(name)).split('\\n'):
-                        f.write(l+'\n')
-                has_contcar=True
+                        f.write(l + '\n')
+                has_contcar = True
 
         if not has_contcar:
             for name in archive.namelist():
@@ -45,7 +45,7 @@ def get_total_energies(db, dir=None):
                         for l in str(archive.read(name)).split('\\n'):
                             f.write(l + '\n')
 
-        crystal = ase.io.read('CONTCAR_temp',format='vasp')
+        crystal = ase.io.read('CONTCAR_temp', format='vasp')
         f.close()
         os.remove('CONTCAR_temp')
 
@@ -56,7 +56,6 @@ def get_total_energies(db, dir=None):
 
 def pure_total_energies(db):
     get_total_energies(db, dir='pure')
-
 
 
 """
@@ -94,15 +93,17 @@ def binaries(db):
     get_total_energies(db, dir='binaries')
 """
 
+
 def elements(db):
-    get_total_energies(db,dir='elements')
+    get_total_energies(db, dir='elements')
+
 
 def collect(db):
     errors = []
     steps = [elements]
-             #pure_total_energies,
-             #zero_d_CsCs3Sb2X9,
-             #two_d_CsCs3Sb2X9]
+    # pure_total_energies,
+    # zero_d_CsCs3Sb2X9,
+    # two_d_CsCs3Sb2X9]
 
     for step in steps:
         try:

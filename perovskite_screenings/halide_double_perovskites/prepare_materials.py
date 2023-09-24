@@ -24,7 +24,7 @@ for t in text.split():
             os.makedirs(wd)
 
         os.chdir(wd)
-        
+
         structure.to(fmt='poscar',filename='POSCAR')
         os.chdir(cwd)
 

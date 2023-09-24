@@ -87,7 +87,7 @@ cdef class cVector3D:
     def __getitem__(self, item):
         return self.xyz[item]
 
-    def angle(self,other):
+    def angle(self, other):
         return self._c_angle(other)
 
     def normalise(self):
@@ -182,25 +182,24 @@ cdef class cVector3D:
             t18 = t7 ** 5.e-1
             t30 = t19 * t3
             self.xyz[0] = (t10 * (t10 * t7 * t15 * t16 - 4. * t18 * (-t21 * t3 + t19 * t5)) + t9 * (
-            t16 * t2 + 2.e0 * t1 * (t30 + t21 * t5) - t16 * (t4 + t6))) * t8
+                    t16 * t2 + 2.e0 * t1 * (t30 + t21 * t5) - t16 * (t4 + t6))) * t8
             self.xyz[1] = (t9 * (-t19 * t2 + 2.e0 * t1 * t16 * t3 + t19 * (t4 - t6) + 2. * t21 * t3 * t5) + t10 * (
-            t10 * t7 * t15 * t19 + 4.e0 * t18 * (-t1 * t21 + t16 * t5))) * t8
+                    t10 * t7 * t15 * t19 + 4.e0 * t18 * (-t1 * t21 + t16 * t5))) * t8
             self.xyz[2] = (t10 * (t10 * t7 * t15 * t21 - 4. * t18 * (-t1 * t19 + t16 * t3)) + t9 * (
-            -t21 * (t2 + t4 - t6) + 2.e0 * (t1 * t16 + t30) * t5)) * t8
+                    -t21 * (t2 + t4 - t6) + 2.e0 * (t1 * t16 + t30) * t5)) * t8
         except ZeroDivisionError:
             pass
         return self
 
     cdef double _c_angle(cVector3D self, cVector3D other):
         cdef double dot_product
-        cdef cVector3D norm1,norm2
+        cdef cVector3D norm1, norm2
         norm1 = self._c_normalise()
         norm2 = other._c_normalise()
         dot_product = norm1._c_dot(norm2)
-        return c_acos(dot_product) * 57.2958 #radian to degree
-
+        return c_acos(dot_product) * 57.2958  #radian to degree
 
     cdef cVector3D _c_normalise(cVector3D self):
         cdef double norm
         norm = self._c_l2_norm()
-        return self._c_vec_scale(1.0/norm)
+        return self._c_vec_scale(1.0 / norm)

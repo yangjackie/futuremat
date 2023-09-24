@@ -18,6 +18,7 @@ from phonopy import Phonopy
 import phonopy
 import random
 
+
 def randomise_crystal(crystal):
     a = crystal.lattice.a
     b = crystal.lattice.b
@@ -25,23 +26,23 @@ def randomise_crystal(crystal):
     alpha = crystal.lattice.alpha
     beta = crystal.lattice.beta
     gamma = crystal.lattice.gamma
-    lattice = Lattice(a,b,c,alpha,beta,gamma)
+    lattice = Lattice(a, b, c, alpha, beta, gamma)
     asymmetric_unit = crystal.asymmetric_unit
     for _i in range(len(crystal.asymmetric_unit)):
         for _j in range(len(crystal.asymmetric_unit[_i].atoms)):
             asymmetric_unit[_i].atoms[_j].scaled_position.x = crystal.asymmetric_unit[_i].atoms[
-                                                                          _j].scaled_position.x * (
-                                                                              1 + random.randrange(
-                                                                          -5, 5) / 900)
+                                                                  _j].scaled_position.x * (
+                                                                      1 + random.randrange(
+                                                                  -5, 5) / 900)
             asymmetric_unit[_i].atoms[_j].scaled_position.y = crystal.asymmetric_unit[_i].atoms[
-                                                                          _j].scaled_position.y * (
-                                                                              1 + random.randrange(
-                                                                          -5, 5) / 900)
+                                                                  _j].scaled_position.y * (
+                                                                      1 + random.randrange(
+                                                                  -5, 5) / 900)
             asymmetric_unit[_i].atoms[_j].scaled_position.z = crystal.asymmetric_unit[_i].atoms[
-                                                                          _j].scaled_position.z * (
-                                                                              1 + random.randrange(
-                                                                          -5, 5) / 900)
-    new_crystal = Crystal(lattice,asymmetric_unit,space_group=CrystallographicSpaceGroups.get(1))
+                                                                  _j].scaled_position.z * (
+                                                                      1 + random.randrange(
+                                                                  -5, 5) / 900)
+    new_crystal = Crystal(lattice, asymmetric_unit, space_group=CrystallographicSpaceGroups.get(1))
     return new_crystal
 
 
@@ -50,11 +51,11 @@ def ionic_optmisation():
 
     logger = setup_logger(output_filename='ionic_relax.log')
 
-    #if os.path.exists('CONTCAR_ion_opt'):
+    # if os.path.exists('CONTCAR_ion_opt'):
     #    logger.info('Previous ionic relaxation done, skip')
     #    return
 
-    #if not os.path.exists('CONTCAR'):
+    # if not os.path.exists('CONTCAR'):
     #    raise Exception("No optimised structure, skip!")
 
     if os.path.exists('ionic_opt.tar.gz'):
@@ -65,14 +66,14 @@ def ionic_optmisation():
             os.mkdir('ionic_opt')
 
     os.chdir('ionic_opt')
-    #if not os.path.exists('../CONTCAR_ion_opt'):
+    # if not os.path.exists('../CONTCAR_ion_opt'):
     shutil.copyfile('../POSCAR', 'CONTCAR')
-    #else:
+    # else:
     #    shutil.copyfile('../CONTCAR_ion_opt', 'CONTCAR')
 
     crystal = VaspReader(input_location='CONTCAR').read_POSCAR()
-    #new_crystal = randomise_crystal(crystal)
-    VaspWriter().write_structure(crystal,'POSCAR')
+    # new_crystal = randomise_crystal(crystal)
+    VaspWriter().write_structure(crystal, 'POSCAR')
     os.remove('./CONTCAR')
     try:
         os.remove('./KPOINTS')
@@ -80,8 +81,9 @@ def ionic_optmisation():
         pass
     structure = load_structure(logger)
     default_bulk_optimisation_set.update(
-        {'ISIF': 1, 'ibrion':2, 'Gamma_centered': True, 'NCORE': 28, 'ENCUT': 400, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38,
-         'use_gw': True,'EDIFF':1e-8,'NELM':100})
+        {'ISIF': 1, 'ibrion': 2, 'Gamma_centered': True, 'NCORE': 28, 'ENCUT': 400, 'PREC': "ACCURATE", 'ispin': 1,
+         'IALGO': 38,
+         'use_gw': True, 'EDIFF': 1e-8, 'NELM': 100})
 
     try:
         vasp = Vasp(**default_bulk_optimisation_set)
@@ -114,38 +116,39 @@ def default_symmetry_preserving_optimisation():
     # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
     # structure.
     default_bulk_optimisation_set.update(
-        {'ISIF': 7, 'Gamma_centered': True, 'NCORE':28, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38, 'EDIFF':1e-5,
-         'use_gw': True, 'MP_points':[4,4,4],'ENCUT': 520, 'GGA':'PS'})
+        {'ISIF': 7, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "ACCURATE", 'ispin': 1, 'IALGO': 38, 'EDIFF': 1e-5,
+         'use_gw': True, 'MP_points': [4, 4, 4], 'ENCUT': 520, 'GGA': 'PS'})
 
-    #try:
+    # try:
     #    del default_bulk_optimisation_set['ENCUT']
-    #except:
+    # except:
     #    pass
-    #try:
+    # try:
     #    del default_bulk_optimisation_set['encut']
-    #except:
+    # except:
     #    pass
     structural_optimization()
 
+
 def staged_full_optimisation():
-    #try:
+    # try:
     #    os.remove('KPOINTS')
-    #except:
+    # except:
     #    pass
-    #try:
+    # try:
     #    os.remove('INCAR')
-    #except:
+    # except:
     #    pass
-    #try:
+    # try:
     #    os.remove('POTCAR')
-    #except:
+    # except:
     #    pass
 
-    #default_bulk_optimisation_set.update(
+    # default_bulk_optimisation_set.update(
     #    {'ISIF': 3, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "NORMAL", 'ispin': 1, 'IALGO': 38,
     #     'use_gw': True, 'ENCUT': 400, 'EDIFF':1e-5, 'MP_points': [1, 1, 1],'SIGMA':0.15})#, 'symprec':1e-3})
 
-    #structural_optimization(gamma_only=True)
+    # structural_optimization(gamma_only=True)
 
     try:
         os.remove('KPOINTS')
@@ -162,15 +165,16 @@ def staged_full_optimisation():
 
     default_bulk_optimisation_set.update(
         {'ISIF': 3, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "NORMAL", 'ispin': 1, 'IALGO': 38,
-         'use_gw': True, 'ENCUT': 400, 'EDIFF': 1e-5, 'SIGMA':0.15, 'MP_points': [2, 2, 1],})#,'symprec':1e-3})
+         'use_gw': True, 'ENCUT': 400, 'EDIFF': 1e-5, 'SIGMA': 0.15, 'MP_points': [2, 2, 1], })  # ,'symprec':1e-3})
 
-    #try:
+    # try:
     #    del default_bulk_optimisation_set['MP_points']
-    #except:
+    # except:
     #    pass
 
     structural_optimization(gamma_only=False)
     exit(0)
+
 
 def full_optimisation():
     # optimise the unit cell parameters whilst preserving the space and point group symmetry of the starting
@@ -181,7 +185,7 @@ def full_optimisation():
 
     default_bulk_optimisation_set.update(
         {'ISIF': 3, 'Gamma_centered': True, 'NCORE': 28, 'PREC': "NORMAL", 'ispin': 1, 'IALGO': 38,
-         'use_gw': True, 'ENCUT': 400, 'EDIFF': 1e-5, 'KPAR':7})
+         'use_gw': True, 'ENCUT': 400, 'EDIFF': 1e-5, 'KPAR': 7})
 
     structural_optimization(gamma_only=False)
 
@@ -207,9 +211,9 @@ def structural_optimization(retried=None, gamma_only=False):
         pass
 
     structure = load_structure(logger)
-    #structure.gamma_only = gamma_only
+    # structure.gamma_only = gamma_only
 
-    #default_bulk_optimisation_set['magmom'] = magmom_string_builder(structure)
+    # default_bulk_optimisation_set['magmom'] = magmom_string_builder(structure)
 
     logger.info("incar options" + str(default_bulk_optimisation_set))
 
@@ -223,7 +227,7 @@ def structural_optimization(retried=None, gamma_only=False):
 
     logger.info("VASP terminated?: " + str(vasp.completed))
 
-    #if (vasp.completed is not True) and (retried<MAX_RETRY):
+    # if (vasp.completed is not True) and (retried<MAX_RETRY):
     #    retried+=1
     #    structural_optimization_with_initial_magmom(retried=retried)
 
@@ -242,14 +246,13 @@ def magmom_string_builder(structure):
 
 
 def phonopy_workflow(force_rerun=False):
-
-    mp_points = [2,2,1]
+    mp_points = [2, 2, 1]
     gamma_centered = True
     force_no_spin = False
     use_default_encut = False
     supercell_matrix = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
     ialgo = 48
-    use_gw = True #only for vanadium compounds
+    use_gw = True  # only for vanadium compounds
     ncore = 28
 
     if mp_points != [1, 1, 1]:
@@ -257,13 +260,11 @@ def phonopy_workflow(force_rerun=False):
     else:
         gamma_only = True
 
-    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'EDIFF':1e-7, 'ismear': 0, 'ialgo': ialgo,
+    phonopy_set = {'prec': 'Accurate', 'ibrion': -1, 'EDIFF': 1e-7, 'ismear': 0, 'ialgo': ialgo,
                    'lreal': False, 'lwave': False, 'lcharg': False, 'sigma': 0.05, 'isym': 0, 'ncore': ncore,
                    'ismear': 0, 'MP_points': mp_points, 'nelm': 250, 'lreal': False, 'use_gw': use_gw,
-                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'encut':400}
+                   'Gamma_centered': gamma_centered, 'LMAXMIX': 6, 'encut': 400}
     # 'amix': 0.2, 'amix_mag':0.8, 'bmix':0.0001, 'bmix_mag':0.0001}
-
-
 
     logger = setup_logger(output_filename='phonopy.log')
     cwd = os.getcwd()
@@ -272,7 +273,6 @@ def phonopy_workflow(force_rerun=False):
     if not vasp.completed:
         logger.exception("Initial structure optimimization failed, will not proceed!")
         raise Exception("Initial structure optimimization failed, will not proceed!")
-
 
     if os.path.isfile('./force_constants_222.hdf5') and os.path.isfile('./FORCE_SETS_222'):
         logger.info("previous phonopy calculations completed, check if previous calculations all converged")
@@ -284,15 +284,16 @@ def phonopy_workflow(force_rerun=False):
             all_converged = [False, False, False]
             if os.path.isdir('phonon_2_2_2'):
                 os.chdir('phonon_2_2_2')
-                for counter in [1,2,3]:
-                    if os.path.isdir('ph-POSCAR-00'+str(counter)):
-                        os.chdir('ph-POSCAR-00'+str(counter))
+                for counter in [1, 2, 3]:
+                    if os.path.isdir('ph-POSCAR-00' + str(counter)):
+                        os.chdir('ph-POSCAR-00' + str(counter))
                         vasp = Vasp()
                         vasp.check_convergence()
                         if vasp.completed:
-                            all_converged[counter-1] = True
+                            all_converged[counter - 1] = True
                         os.chdir('..')
-                    logger.info("structure " + str(counter) + '/3, VASP calculation completed successfully? -:' + str(all_converged[counter - 1]))
+                    logger.info("structure " + str(counter) + '/3, VASP calculation completed successfully? -:' + str(
+                        all_converged[counter - 1]))
                 os.chdir("..")
                 try:
                     shutil.rmtree('phonon_2_2_2')
@@ -306,23 +307,22 @@ def phonopy_workflow(force_rerun=False):
             if (all_converged[0] is True) and (all_converged[1] is True) and (all_converged[2] is True):
                 return
 
-
-#    if os.path.isfile('phonopy.log'):
-#        success = []
-#        for l in open('phonopy.log', 'r').readlines():
-#            if 'VASP calculation completed successfully? ' in l:
-#                if l.split()[-1] == "True":
-#                    success.append(True)
-#                elif l.split()[-1] == 'False':
-#                    success.append(False)
-#        if len(success) != 0:
-#            if not all(success):
-#                if not force_rerun:
-#                    logger.exception("Encounter convergence problems with VASP before, will not attempt again.")
-#                    raise Exception("Encounter convergence problems with VASP before, will not attempt again.")
-#                else:
-#                    logger.info("try to rerun all VASP calculations")
-#                    print("try to rerun all VASP calculations with RMM for ialgo")
+    #    if os.path.isfile('phonopy.log'):
+    #        success = []
+    #        for l in open('phonopy.log', 'r').readlines():
+    #            if 'VASP calculation completed successfully? ' in l:
+    #                if l.split()[-1] == "True":
+    #                    success.append(True)
+    #                elif l.split()[-1] == 'False':
+    #                    success.append(False)
+    #        if len(success) != 0:
+    #            if not all(success):
+    #                if not force_rerun:
+    #                    logger.exception("Encounter convergence problems with VASP before, will not attempt again.")
+    #                    raise Exception("Encounter convergence problems with VASP before, will not attempt again.")
+    #                else:
+    #                    logger.info("try to rerun all VASP calculations")
+    #                    print("try to rerun all VASP calculations with RMM for ialgo")
 
     try:
         unitcell, _ = read_crystal_structure('./CONTCAR', interface_mode='vasp')
@@ -359,10 +359,9 @@ def phonopy_workflow(force_rerun=False):
     else:
         phonon.generate_displacements(distance=0.0005)
 
-
     supercells = phonon.supercells_with_displacements
 
-    write_disp_yaml(displacements=phonon.displacements,supercell=phonon.supercell,filename='disp.yaml')
+    write_disp_yaml(displacements=phonon.displacements, supercell=phonon.supercell, filename='disp.yaml')
 
     logger.info(
         "PHONOPY - generate (2x2x2) displaced supercells, total number of configurations " + str(len(supercells)))
@@ -372,7 +371,7 @@ def phonopy_workflow(force_rerun=False):
 
     calculate_next = True
     for i, sc in enumerate(supercells):
-        i = i+1
+        i = i + 1
         proceed = True
         if calculate_next:
             dir = 'ph-POSCAR-00' + str(i)
@@ -402,10 +401,10 @@ def phonopy_workflow(force_rerun=False):
                 write_crystal_structure('POSCAR', sc, interface_mode='vasp')
                 structure = load_structure(logger)
                 structure.gamma_only = gamma_only
-                #phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
+                # phonopy_set['magmom'], all_zeros = magmom_string_builder(structure)
                 phonopy_set['ispin'] = 1
 
-                #if not force_rerun:
+                # if not force_rerun:
 
                 try:
                     vasp = Vasp(**phonopy_set)
@@ -481,15 +480,16 @@ def molecular_dynamics_workflow(force_rerun=False):
             all_converged = [False, False, False]
             if os.path.isdir('phonon_2_2_2'):
                 os.chdir('phonon_2_2_2')
-                for counter in [1,2,3]:
-                    if os.path.isdir('ph-POSCAR-00'+str(counter)):
-                        os.chdir('ph-POSCAR-00'+str(counter))
+                for counter in [1, 2, 3]:
+                    if os.path.isdir('ph-POSCAR-00' + str(counter)):
+                        os.chdir('ph-POSCAR-00' + str(counter))
                         vasp = Vasp()
                         vasp.check_convergence()
                         if vasp.completed:
-                            all_converged[counter-1] = True
+                            all_converged[counter - 1] = True
                         os.chdir('..')
-                    logger.info("structure " + str(counter) + '/3, VASP calculation completed successfully? -:' + str(all_converged[counter - 1]))
+                    logger.info("structure " + str(counter) + '/3, VASP calculation completed successfully? -:' + str(
+                        all_converged[counter - 1]))
                 os.chdir("..")
                 try:
                     shutil.rmtree('phonon_2_2_2')
@@ -508,21 +508,22 @@ def molecular_dynamics_workflow(force_rerun=False):
     logger.info(
         "Setting up the room temperature molecular dynamics calculations, check if we have previous phonon data")
 
-
     structure = load_supercell_structure()
     structure.gamma_only = False
 
-    equilibrium_set = {'prec': 'Normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
+    equilibrium_set = {'prec': 'Normal', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+                       'maxmix': 40,
                        'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 100, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 2, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
-                       'iwavpr': 11, 'encut': 300, 'Gamma_centered': True, 'MP_points': [1,1,1], 'use_gw': True,
-                       'write_poscar': True, 'EDIFF':1e-7}
+                       'iwavpr': 11, 'encut': 300, 'Gamma_centered': True, 'MP_points': [1, 1, 1], 'use_gw': True,
+                       'write_poscar': True, 'EDIFF': 1e-7}
 
-    production_set = {'prec': 'Normal','algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0, 'maxmix': 40,
+    production_set = {'prec': 'Normal', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+                      'maxmix': 40,
                       'lmaxmix': 6, 'ncore': 28, 'nelmin': 4, 'nsw': 2000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 2, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
-                      'encut': 300, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1,1,1],
-                      'use_gw': True, 'write_poscar': False, 'EDIFF':1e-7}
+                      'encut': 300, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
+                      'use_gw': True, 'write_poscar': False, 'EDIFF': 1e-7}
 
     equilibrium_set['ispin'] = 1
     production_set['ispin'] = 1
@@ -700,11 +701,13 @@ def load_supercell_structure(supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]])
     os.remove('./POSCAR_super')
     return supercell
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='workflow control for double perovskite ',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--opt", action='store_true', help='perform initial structural optimization')
-    parser.add_argument("--full_opt", action='store_true', help='perform initial structural optimization without symmetry constraints')
+    parser.add_argument("--full_opt", action='store_true',
+                        help='perform initial structural optimization without symmetry constraints')
     parser.add_argument("--staged", action='store_true', help='')
 
     parser.add_argument("--phonopy", action='store_true', help='run phonopy calculations')
