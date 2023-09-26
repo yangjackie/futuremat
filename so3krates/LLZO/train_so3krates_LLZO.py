@@ -1,3 +1,9 @@
+"""
+Module adapted from the MLFF package (https://github.com/thorben-frank/mlff/blob/main/examples/train_so3krates.py)
+to control and perform the training of the SO3krates neural network forcefield, that is to be tested on the
+garnet-like (e.g. LLZO) solid electrolyte dataset.
+"""
+
 import argparse
 import portpicker
 import jax
@@ -13,13 +19,19 @@ from mlff.nn import So3krates
 from mlff.nn.stacknet import get_obs_and_force_fn, get_observable_fn, get_energy_force_stress_fn
 from mlff.training import Coach, Optimizer, get_loss_fn, create_train_state
 
-from core.utils.gadi_nodes import number_of_processors
+"""
+Monitoring the training outcomes with different choices of the hyperparameters using the weight and loss
+web application. Note that if this is to be run on a compute node in the HPC, which does not have an internet
+connection to the outside world, the option
+       wandb offline
+must be specified in the job submission script. The results can be regularly uploaded to the portal by using
+       wandb sync --sync-all
+"""
 import wandb
 
 parser = argparse.ArgumentParser(description='Controls for running the SO3 neural networks for the LLZO data',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('-node', '--node', type=str, help='Gadi nodes on which the calculations will be run',
-                    default='head')
+
 parser.add_argument('-dp', '--data_path', type=str, help='the .npz file that stores the training and test data')
 parser.add_argument('-cp', '--checkpoint_path', type=str,
                     help='path to save the checkpoint output from training the n.n.', default='ckpt_dir')
@@ -31,6 +43,7 @@ parser.add_argument('-w_en', '--energy_weight', type=float, help='weight for the
                     default=0.95)
 parser.add_argument('-w_f', '--force_weight', type=float, help='weight for the force component in the loss function',
                     default=0.05)
+parser.add_argument('-ep', '--epochs', type=int, help='Number of epochs to train', default=500)
 
 # arguments controlling the network structures
 parser.add_argument('-F', '--F', type=int, default=32)
@@ -44,12 +57,11 @@ args = parser.parse_args()
 
 port = portpicker.pick_unused_port()
 
-# Set up the architecture for the parallel computing, needed for the jax library for doing linear algebra in parallel?
-# Take the choice of the Gadi node and automatically get the number of available cores from an internal dictionary
-jax.distributed.initialize(f'localhost:{port}', num_processes=number_of_processors(args.node), process_id=0)
+# this wont work for parallelisations on CPUs, only for GPU and TPU
+jax.distributed.initialize(f'localhost:{port}', num_processes=1, process_id=0)
 
 # Set up the filesystem for this calculation
-args.checkpoint_path = os.getcwd()+'/'+args.checkpoint_path
+args.checkpoint_path = os.getcwd() + '/' + args.checkpoint_path
 ckpt_dir = os.path.join(args.checkpoint_path, 'module')
 ckpt_dir = create_directory(ckpt_dir, exists_ok=False)
 
@@ -95,7 +107,7 @@ net = So3krates(F=args.F,
                 n_layer=args.n_layer,
                 prop_keys=prop_keys,
                 geometry_embed_kwargs={'degrees': [1, 2],
-                                       'r_cut': r_cut
+                                       'r_cut': r_cut,
                                        },
                 so3krates_layer_kwargs={'n_heads': 2,
                                         'degrees': [1, 2]})
@@ -109,7 +121,7 @@ tx = opt.get(learning_rate=1e-3)
 
 coach = Coach(inputs=[atomic_position, atomic_type, idx_i, idx_j, node_mask],
               targets=[energy, force],
-              epochs=1000,
+              epochs=args.epochs,
               training_batch_size=5,
               validation_batch_size=5,
               loss_weights={energy: args.energy_weight, force: args.force_weight},
