@@ -40,7 +40,6 @@ params = {'legend.fontsize': '14',
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
-
 class AnharmonicScore(object):
 
     def __init__(self, ref_frame=None,
