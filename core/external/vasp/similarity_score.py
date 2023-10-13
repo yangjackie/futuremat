@@ -4,12 +4,10 @@ Module containing functions to measure the structrual similarities among MD traj
 from dscribe.descriptors import SOAP
 from dscribe.kernels import REMatchKernel
 
-import argparse
 from pymatgen.core.trajectory import Trajectory
 from ase.io.vasp import read_vasp_xdatcar, read_vasp
-from ase.io import read
 from sklearn.preprocessing import normalize
-from core.external.vasp.anharmonic_score import AnharmonicScore
+from core.phonon.anharmonic_score import AnharmonicScore
 import matplotlib.pyplot as plt
 import os
 

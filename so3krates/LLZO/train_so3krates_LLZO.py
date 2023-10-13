@@ -39,6 +39,8 @@ parser.add_argument('-cp', '--checkpoint_path', type=str,
 # arguments controlling model trainings
 parser.add_argument('-n_train', '--n_train', type=int, help='number of training data to use', default=200)
 parser.add_argument('-n_valid', '--n_valid', type=int, help='number of valid data to use', default=200)
+parser.add_argument('-n_batch_train', '--n_batch_train', type=int, help='batch size for training', default=5)
+parser.add_argument('-n_batch_valid', '--n_batch_valid', type=int, help='batch size for validation', default=5)
 parser.add_argument('-w_en', '--energy_weight', type=float, help='weight for the energy component in the loss function',
                     default=0.95)
 parser.add_argument('-w_f', '--force_weight', type=float, help='weight for the force component in the loss function',
@@ -48,6 +50,7 @@ parser.add_argument('-ep', '--epochs', type=int, help='Number of epochs to train
 # arguments controlling the network structures
 parser.add_argument('-F', '--F', type=int, default=32)
 parser.add_argument('-n_layer', '--n_layer', type=int, default=3)
+parser.add_argument('-rcut', '--rcut', type=float, help='Cutoff radius to find neighboring atoms', default=5)
 
 # wandb arguments
 parser.add_argument('-p', '--project', type=str, help='name of the wandb project', default=None)
@@ -56,7 +59,7 @@ args = parser.parse_args()
 # =================== Main part of the script =========================
 
 port = portpicker.pick_unused_port()
-
+print(port)
 # this wont work for parallelisations on CPUs, only for GPU and TPU
 jax.distributed.initialize(f'localhost:{port}', num_processes=1, process_id=0)
 
@@ -85,8 +88,9 @@ prop_keys = {
 }
 
 # set up the dataset
-r_cut = 5
+r_cut = args.rcut
 data_set = DataSet(data=data, prop_keys=prop_keys)
+
 data_set.random_split(n_train=args.n_train,
                       n_valid=args.n_valid,
                       n_test=None,
@@ -94,6 +98,19 @@ data_set.random_split(n_train=args.n_train,
                       r_cut=r_cut,
                       training=True,
                       seed=0)
+
+
+#print("start splitting")
+#data_idx_train=list(range(0,1000))+list(range(2000,3000))+list(range(4000,5000))+list(range(6000,7000))+list(range(8000,9000))+list(range(10000,11000)),
+                     #data_idx_valid=list(range(1000,2000))+list(range(3000,4000))+list(range(5000,6000))+list(range(7000,8000))+list(range(9000,10000))+list(range(11000,11900)),
+#data_set.index_split(data_idx_train=list(range(0,1000))+list(range(2000,3000))+list(range(4000,5000))+list(range(6000,7000))+list(range(8000,9000))+list(range(10000,11000)),
+#                     data_idx_valid=list(range(1000,2000))+list(range(3000,4000))+list(range(5000,6000))+list(range(7000,8000))+list(range(9000,10000))+list(range(11000,11900)),
+#                     data_idx_test=[],
+#                     r_cut=r_cut,
+#                     mic=True,
+#                     training=True)
+
+#print("finish splitting")
 
 data_set.shift_x_by_mean_x(x=energy)
 # persisting this particular set (good idea for back tracking what's going on!
@@ -122,8 +139,8 @@ tx = opt.get(learning_rate=1e-3)
 coach = Coach(inputs=[atomic_position, atomic_type, idx_i, idx_j, node_mask],
               targets=[energy, force],
               epochs=args.epochs,
-              training_batch_size=5,
-              validation_batch_size=5,
+              training_batch_size=args.n_batch_train,
+              validation_batch_size=args.n_batch_valid,
               loss_weights={energy: args.energy_weight, force: args.force_weight},
               ckpt_dir=ckpt_dir,
               data_path=args.data_path,
@@ -173,3 +190,4 @@ coach.run(train_state=train_state,
           log_every_t=1,
           restart_by_nan=True,
           use_wandb=True)
+

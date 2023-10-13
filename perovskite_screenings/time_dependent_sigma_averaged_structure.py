@@ -1,5 +1,3 @@
-import os
-import matplotlib.pyplot as plt
 from matplotlib import rc
 import matplotlib.pylab as pylab
 
@@ -13,7 +11,7 @@ params = {'legend.fontsize': '14',
 pylab.rcParams.update(params)
 colors =  ['#085f63', '#49beb7','#fccf4d', '#ef255f']
 
-from core.external.vasp.anharmonic_score import *
+from core.phonon.anharmonic_score import *
 
 scorer_perfect_cubic = AnharmonicScore(md_frames='./vasprun_md.xml', ref_frame='./SPOSCAR', force_constants=None, potim=2,
                                force_sets_filename='FORCE_SETS_222')

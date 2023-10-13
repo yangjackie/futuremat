@@ -25,6 +25,7 @@ from phonopy.phonon.band_structure import *
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
+import h5py
 
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
@@ -56,111 +57,168 @@ class AnharmonicScore(object):
                  fourth_order_fc=None,
                  force_sets_filename='FORCE_SETS',
                  mode_resolved=False):
+
+        self.ref_frame = ref_frame
+        self.md_frames = md_frames
+        self.atom_masks = atoms
         self.mode_resolved = mode_resolved
-
-        if isinstance(ref_frame, Crystal):
-            self.ref_frame = ref_frame
-        elif ('POSCAR' in ref_frame) or ('CONTCAR' in ref_frame):
-            print(ref_frame)
-            print("initialising reference frame from POSCAR ")
-            self.ref_frame = VaspReader(input_location=ref_frame).read_POSCAR()
-            self.ref_coords = np.array([[a.scaled_position.x, a.scaled_position.y, a.scaled_position.z] for a in
-                                        self.ref_frame.asymmetric_unit[0].atoms])
-
-        self.atom_masks = None
-        if atoms is not None:
-            self.atom_masks = [id for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if
-                               atom.label in atoms]
-
-        if isinstance(md_frames, list):
-            self.md_frames = md_frames  # require the vasprun.xml containing the MD data
-        elif isinstance(md_frames, str):
-            self.md_frames = [md_frames]
-
-        self.get_dft_md_forces()
-        self.get_all_md_atomic_displacements()
-
-        if isinstance(force_constants, str):
-            try:
-                self.phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
-                                           primitive_matrix=primitive_matrix,
-                                           unitcell_filename=unit_cell_frame,
-                                           force_constants_filename=force_constants)
-                print("Use supercell " + str(supercell))
-                print("Use primitive matrix " + str(primitive_matrix) + " done")
-            except:
-                self.phonon = phonopy.load(supercell_matrix=supercell,  # WARNING - hard coded!
-                                           primitive_matrix='auto',
-                                           unitcell_filename=unit_cell_frame,
-                                           force_constants_filename=force_constants)
-            print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
-
-            # TODO - if the input supercell is not [1,1,1], then it will need to be expanded into the correct supercell shape here!
-
-            new_shape = np.shape(self.phonon.force_constants)[0] * np.shape(self.phonon.force_constants)[2]
-            self.force_constant = np.zeros((new_shape, new_shape))
-            self.force_constant = self.phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
-
-        elif (force_constants is None):
-            """
-            Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
-            reconstructing the force constants for supercells from primitive cells
-            """
-            print("Here try to use FORCE_SETS")
-
-            # if we want to get the eigenvector on all atoms in the supercell, we need to specify the primitive matrix
-            # as the identity matrix, making the phonopy to treat the supercell as the primitive, rather than generate them
-            # automatically
-            if not self.mode_resolved:
-                self.phonon = phonopy.load(supercell_filename=ref_frame, log_level=1,
-                                           force_sets_filename=force_sets_filename)
-            else:
-                self.phonon = phonopy.load(supercell_filename=ref_frame, log_level=1,
-                                           force_sets_filename=force_sets_filename,
-                                           primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            self.phonon.produce_force_constants()
-
-            print("INPUT PHONOPY force constant shape ", np.shape(self.phonon.force_constants))
-            new_shape = np.shape(self.phonon.force_constants)[0] * np.shape(self.phonon.force_constants)[2]
-            self.force_constant = np.zeros((new_shape, new_shape))
-            self.force_constant = self.phonon.force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
-        elif isinstance(force_constants, np.ndarray):
-            new_shape = np.shape(force_constants)[0] * np.shape(force_constants)[2]
-            self.force_constant = np.zeros((new_shape, new_shape))
-            self.force_constant = force_constants.transpose(0, 2, 1, 3).reshape(new_shape, new_shape)
-
-        print("force constant reshape ", np.shape(self.force_constant))
-        print("Force constants ready")
-        self.time_series = [t * potim for t in range(len(self.all_displacements))]
-
-        self.force_constant_3 = None
+        self.potim = potim
         self.include_third_oder = include_third_order
-        if self.include_third_oder:
-            if isinstance(third_order_fc, str):
-                if os.path.isfile(third_order_fc):
-                    print("Found third order force constants")
-                    import h5py
-                    f = h5py.File(third_order_fc)  # './phono3py/fc3.hdf5'
-                    raw_force_constant_3 = np.array(f['fc3'])
-            elif isinstance(third_order_fc, np.ndarray):
-                raw_force_constant_3 = third_order_fc
+        self.force_constant_3 = third_order_fc
+        self.include_fourth_order = include_fourth_order
+        self.force_constant_4 = fourth_order_fc
+        self.force_sets_file_name = force_sets_filename
+        self._supercell = supercell
+        self._primitive_matrix = primitive_matrix
+        self._unit_cell_frame = unit_cell_frame
+        self._fc_input = force_constants
+        self.prepare_phonon_eigs()
 
+    @property
+    def ref_frame(self) -> Crystal:
+        return self._ref_frame
+
+    @ref_frame.setter
+    def ref_frame(self, val):
+        if not hasattr(self, '_ref_frame'):
+            if isinstance(val, Crystal):
+                self._ref_frame = val
+            elif ('POSCAR' in val) or ('CONTCAR' in val):
+                print("initialising reference frame from POSCAR ")
+                self.ref_frame = VaspReader(input_location=val).read_POSCAR()
+
+    @property
+    def ref_coords(self) -> np.array:
+        if not hasattr(self, '_ref_coords'):
+            self._ref_coords = np.array([[a.scaled_position.x, a.scaled_position.y, a.scaled_position.z] for a in
+                                         self._ref_frame.asymmetric_unit[0].atoms])
+        return self._ref_coords
+
+    @property
+    def atom_masks(self) -> list:
+        return self._atom_masks
+
+    @atom_masks.setter
+    def atom_masks(self, val: list):
+        if not hasattr(self, '_atom_masks'):
+            if val is not None:
+                self._atom_masks = [id for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if
+                                    atom.label in val]
+            else:
+                self._atom_masks = None
+
+    @property
+    def md_frames(self) -> list:
+        return self._md_frames
+
+    @md_frames.setter
+    def md_frames(self, val):
+        if isinstance(val, list):
+            self._md_frames = val  # require the vasprun.xml containing the MD data
+        elif isinstance(val, str):
+            self._md_frames = [val]
+
+    @property
+    def phonon(self):
+        if hasattr(self, '_phonon'):
+            return self._phonon
+        elif isinstance(self._fc_input, str) and 'hdf5' in self._fc_input:
+            self.__make_phonopy_object_from_hdf5()
+        elif self._fc_input is None:
+            self.__make_phonopy_object_from_forcesets()
+        return self._phonon
+
+    def __make_phonopy_object_from_forcesets(self):
+        """
+                Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
+                reconstructing the force constants for supercells from primitive cells
+                This is hard coded in as a hack, not often used
+                """
+        if not self.mode_resolved:
+            self._phonon = phonopy.load(supercell_filename='SPOSCAR', log_level=1,
+                                        force_sets_filename='FORCE_SETS')
+        else:
+            self._phonon = phonopy.load(supercell_filename='SPOSCAR', log_level=1,
+                                        force_sets_filename='FORCE_SETS',
+                                        primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        self._phonon.produce_force_constants()
+
+    def __make_phonopy_object_from_hdf5(self):
+        try:
+            self._phonon = phonopy.load(supercell_matrix=self._supercell,  # WARNING - hard coded!
+                                        primitive_matrix=self._primitive_matrix,
+                                        unitcell_filename=self._unit_cell_frame,
+                                        force_constants_filename=self._fc_input)
+            print("Use supercell " + str(self._supercell))
+            print("Use primitive matrix " + str(self._primitive_matrix) + " done")
+        except:
+            self._phonon = phonopy.load(supercell_matrix=self._supercell,  # WARNING - hard coded!
+                                        primitive_matrix='auto',
+                                        unitcell_filename=self._unit_cell_frame,
+                                        force_constants_filename=self._fc_input)
+        print("INPUT PHONOPY force constant shape ", np.shape(self._phonon.force_constants))
+
+    @property
+    def force_constants(self):
+        if not hasattr(self, '_force_constants'):
+            if isinstance(self._fc_input, np.ndarray):
+                __fc = self._fc_input
+            else:
+                __fc = self.phonon.force_constants
+
+            __new_shape = np.shape(__fc)[0] * np.shape(__fc)[2]
+            self._force_constants = np.zeros((__new_shape, __new_shape))
+            self._force_constants = __fc.transpose(0, 2, 1, 3).reshape(__new_shape, __new_shape)
+            print("force constant reshape ", np.shape(self.force_constants))
+            print("Force constants ready")
+        return self._force_constants
+
+    @property
+    def force_constant_3(self) -> np.ndarray:
+        return self._force_constant_3
+
+    @force_constant_3.setter
+    def force_constant_3(self, val):
+        if not hasattr(self, '_force_constant_3') and self.include_third_oder:
+            if isinstance(val, str):
+                if os.path.isfile(val):
+                    print("Found third order force constants")
+                    f = h5py.File(val)  # './phono3py/fc3.hdf5'
+                    raw_force_constant_3 = np.array(f['fc3'])
+            elif isinstance(val, np.ndarray):
+                raw_force_constant_3 = val
             s = np.shape(raw_force_constant_3)[0] * 3
-            self.force_constant_3 = raw_force_constant_3.transpose([0, 3, 1, 4, 2, 5]).reshape(s, s, s)
+            self._force_constant_3 = raw_force_constant_3.transpose([0, 3, 1, 4, 2, 5]).reshape(s, s, s)
             print("Reshaped 3rd order force constant is ", np.shape(self.force_constant_3))
 
-        self.force_constant_4 = None
-        self.include_fourth_order = include_fourth_order
-        if self.include_fourth_order:
-            if isinstance(fourth_order_fc, np.ndarray):
-                raw_force_constant_4 = fourth_order_fc
-            s = np.shape(raw_force_constant_4)[0] * 3
-            self.force_constant_4 = raw_force_constant_4.transpose([0, 4, 1, 5, 2, 6, 3, 7]).reshape(s, s, s, s)
+    @property
+    def force_constant_4(self) -> np.ndarray:
+        return self._force_constant_4
 
-        if self.mode_resolved:
-            self.prepare_phonon_eigs()
+    @force_constant_4.setter
+    def force_constant_4(self, val):
+        if not hasattr(self, '_force_constant_4') and self.include_fourth_order:
+            if isinstance(val, np.ndarray):
+                raw_force_constant_4 = val
+            s = np.shape(raw_force_constant_4)[0] * 3
+            self._force_constant_4 = raw_force_constant_4.transpose([0, 4, 1, 5, 2, 6, 3, 7]).reshape(s, s, s, s)
+
+    @property
+    def mode_resolved(self):
+        return self._mode_resolved
+
+    @mode_resolved.setter
+    def mode_resolved(self, val: bool):
+        self._mode_resolved = val
+
+    @property
+    def time_series(self):
+        return [t * self.potim for t in range(len(self.all_displacements))]
 
     def prepare_phonon_eigs(self, nqpoints=10):
+        if not self.mode_resolved:
+            return
+
         print("Need to calculate the mode resolved anharmonic scores, first get the phonon eigenvectors")
         from core.models.element import atomic_mass_dict
 
@@ -200,7 +258,6 @@ class AnharmonicScore(object):
                         self.eigvecs.append(self.atomic_masses * vec)
                         eigv = _eigvals[i][j][k]
                         self.eigvals.append(np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz)
-
                         self.group_velocities.append(abs(np.mean(_group_velocities[i][j][k])))
         print('eigenvector shape ', np.shape(vec))
         print('Total number of eigenstates ' + str(len(self.eigvals)))
@@ -292,12 +349,12 @@ class AnharmonicScore(object):
         plt.savefig('phonon_band_sigma.pdf')
 
     def plot_fc(self):
-        plt.matshow(self.force_constant)
+        plt.matshow(self.force_constants)
         plt.colorbar()
         plt.savefig('fc.pdf')
 
     @property
-    def lattice_vectors(self):
+    def lattice_vectors(self) -> np.array:
         """
         :return: A numpy array representation of the lattice vector
         """
@@ -305,90 +362,83 @@ class AnharmonicScore(object):
         return np.array(
             [[_lv[0][0], _lv[0][1], _lv[0][2]], [_lv[1][0], _lv[1][1], _lv[1][2]], [_lv[2][0], _lv[2][1], _lv[2][2]]])
 
-    def get_dft_md_forces(self):
-        all_forces = []
-        self.force_dimension_counter = []
-        for frame in self.md_frames:
-            c = 0
-            for event, elem in etree.iterparse(frame):
-                if elem.tag == 'varray':
-                    if elem.attrib['name'] == 'forces':
-                        this_forces = []
-                        if not self.mode_resolved:
-                            for v in elem:
-                                this_force = [float(_v) for _v in v.text.split()]
-                                this_forces.append(this_force)
-                        else:
-                            for v in elem:
-                                for this_force in [float(_v) for _v in v.text.split()]:
-                                    this_forces.append(this_force)
-                        all_forces.append(np.array(this_forces))
-                        c += 1
-            self.force_dimension_counter.append(c)
+    @property
+    def dft_forces(self) -> np.array:
+        if not hasattr(self, '_dft_forces'):
+            all_forces = []
+            for frame in self.md_frames:
+                try:
+                    c = 0
+                    for event, elem in etree.iterparse(frame):
+                        if elem.tag == 'varray':
+                            if elem.attrib['name'] == 'forces':
+                                this_forces = []
+                                if not self.mode_resolved:
+                                    for v in elem:
+                                        this_force = [float(_v) for _v in v.text.split()]
+                                        this_forces.append(this_force)
+                                else:
+                                    for v in elem:
+                                        for this_force in [float(_v) for _v in v.text.split()]:
+                                            this_forces.append(this_force)
+                                all_forces.append(np.array(this_forces))
+                                c += 1
+                except:
+                    pass
 
-            print('MD force vector shape ', np.shape(all_forces))
-        self.dft_forces = np.array(all_forces)
+                print('MD force vector shape ', np.shape(all_forces))
+            self._dft_forces = np.array(all_forces)
+            print('All MD force vector shape ', np.shape(self._dft_forces))
+            print("Atomic forces along the MD trajectory loaded\n")
+        return self._dft_forces
 
-        # for i in range(len(all_forces)):
-        #    print('FORCES ', np.std(all_forces[i]))
+    @property
+    def all_displacements(self) -> np.array:
+        if not hasattr(self, '_all_displacements'):
+            force_dimension_counter = [1 for _ in range(len(self.dft_forces))]
+            all_positions = []
+            for fc, frame in enumerate(self.md_frames):
+                try:
+                    this_position_set = []
+                    for event, elem in etree.iterparse(frame):
+                        if elem.tag == 'varray':
+                            if elem.attrib['name'] == 'positions':
+                                this_positions = []
+                                for i, v in enumerate(elem):
+                                    this_position = [float(_v) for _v in v.text.split()]
+                                    this_positions.append(this_position)
 
-        print('All MD force vector shape ', np.shape(self.dft_forces))
-        print("Atomic forces along the MD trajectory loaded\n")
-        print(self.force_dimension_counter)
+                                    # pbc_shortest_dist = pbc_shortest_vectors(__pymatgen_lattice,self.ref_coords[i],this_position)[0][0]
+                                    # this_positions.append(pbc_shortest_dist)
 
-    def get_all_md_atomic_displacements(self):
+                                this_position_set.append(np.array(this_positions))
 
-        # from pymatgen.util.coord import pbc_shortest_vectors
-        # from pymatgen.core.lattice import Lattice as PymatLattice
-        # __pymatgen_lattice = PymatLattice.from_parameters(a=self.ref_frame.lattice.a,
-        #                                                  b=self.ref_frame.lattice.b,
-        #                                                  c=self.ref_frame.lattice.c,
-        #                                                  alpha=self.ref_frame.lattice.alpha,
-        #                                                  beta=self.ref_frame.lattice.beta,
-        #                                                  gamma=self.ref_frame.lattice.gamma)
+                    this_position_set = this_position_set[-1 * force_dimension_counter[fc]:]
+                    all_positions = all_positions + this_position_set
+                except:
+                    pass
 
-        all_positions = []
-        for fc, frame in enumerate(self.md_frames):
-            this_position_set = []
-            for event, elem in etree.iterparse(frame):
-                if elem.tag == 'varray':
-                    if elem.attrib['name'] == 'positions':
-                        this_positions = []
-                        for i, v in enumerate(elem):
-                            this_position = [float(_v) for _v in v.text.split()]
-                            this_positions.append(this_position)
+            # only need those with forces
+            all_positions = all_positions[-len(self.dft_forces):]
+            all_positions = np.array(all_positions)
+            print(
+                "Atomic positions along the MD trajectory loaded, converting to displacement, taking into account PBC")
+            print("Atomic positions, shape ", np.shape(all_positions))
 
-                            # pbc_shortest_dist = pbc_shortest_vectors(__pymatgen_lattice,self.ref_coords[i],this_position)[0][0]
-                            # this_positions.append(pbc_shortest_dist)
+            __all_displacements = all_positions
 
-                        this_position_set.append(np.array(this_positions))
+            __all_displacements_holder = np.array(
+                [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
+            __all_displacements = __all_displacements_holder - np.round(
+                __all_displacements_holder)  # this is how it's done in Pymatgen
 
-            this_position_set = this_position_set[-1 * self.force_dimension_counter[fc]:]
-            all_positions = all_positions + this_position_set
+            # Convert to Cartesian
+            self._all_displacements = np.zeros(np.shape(__all_displacements))
+            for i in range(__all_displacements.shape[0]):
+                np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self._all_displacements[i, :, :])
 
-        # only need those with forces
-        all_positions = all_positions[-len(self.dft_forces):]
-        all_positions = np.array(all_positions)
-        print("Atomic positions along the MD trajectory loaded, converting to displacement, taking into account PBC")
-        print("Atomic positions, shape ", np.shape(all_positions))
-
-        __all_displacements = all_positions
-
-        __all_displacements_holder = np.array(
-            [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
-        __all_displacements = __all_displacements_holder - np.round(
-            __all_displacements_holder)  # this is how it's done in Pymatgen
-
-        # Convert to Cartesian
-        self.all_displacements = np.zeros(np.shape(__all_displacements))
-
-        # for i in range(__all_displacements.shape[0]):
-        #    print('DISP', np.mean(__all_displacements[i]))
-
-        for i in range(__all_displacements.shape[0]):
-            np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self.all_displacements[i, :, :])
-
-        print('All MD displacement shape ', np.shape(self.all_displacements))
+            print('All MD displacement shape ', np.shape(self._all_displacements))
+        return self._all_displacements
 
     @property
     def harmonic_forces(self):
@@ -398,11 +448,11 @@ class AnharmonicScore(object):
             for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
                 if not self.mode_resolved:
                     self._harmonic_force[i, :, :] = -1.0 * (
-                        np.dot(self.force_constant, self.all_displacements[i, :, :].flatten())).reshape(
+                        np.dot(self.force_constants, self.all_displacements[i, :, :].flatten())).reshape(
                         self.all_displacements[0, :, :].shape)
                 else:
                     self._harmonic_force[i, :] = -1.0 * (
-                        np.dot(self.force_constant, self.all_displacements[i, :, :].flatten()))
+                        np.dot(self.force_constants, self.all_displacements[i, :, :].flatten()))
 
         return self._harmonic_force
 
