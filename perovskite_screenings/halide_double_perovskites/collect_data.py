@@ -1,5 +1,5 @@
 import copy
-import os, glob, tarfile, shutil
+import tarfile, shutil
 from ase.db import connect
 from ase.io.vasp import *
 from core.utils.loggings import setup_logger
@@ -8,12 +8,10 @@ from perovskite_screenings.collect_data import _atom_dict, populate_db
 import phonopy
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 
-from core.external.vasp.anharmonic_score import *
+from core.phonon.anharmonic_score import *
 import glob
 
 from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
-from phonopy.interface.vasp import parse_set_of_forces
-from phonopy.file_IO import write_force_constants_to_hdf5, write_FORCE_SETS, parse_disp_yaml, write_disp_yaml
 from phonopy import Phonopy
 
 reference_atomic_energies = {}

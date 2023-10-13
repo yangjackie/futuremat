@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import matplotlib.pylab as pylab
 
-from core.external.vasp.anharmonic_score import AnharmonicScore
+from core.phonon.anharmonic_score import AnharmonicScore
 
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)

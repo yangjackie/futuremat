@@ -1,11 +1,9 @@
 def calculate_high_order_phi():
     from ase.io import read
-    import numpy as np
     from hiphive import ClusterSpace, StructureContainer
     from hiphive.utilities import get_displacements
     from hiphive import ForceConstantPotential
     from hiphive.fitting import Optimizer
-    from hiphive.calculators import ForceConstantCalculator
     import os
 
     if os.path.exists('SPOSCAR'):
@@ -59,7 +57,7 @@ def calculate_high_order_phi():
           print(e)
           return None
 
-       from core.external.vasp.anharmonic_score import AnharmonicScore
+       from core.phonon.anharmonic_score import AnharmonicScore
        sigmas_2=None
        sigmas_3=None
        sigmas_4=None
@@ -105,10 +103,9 @@ def calculate_high_order_phi():
        #f.close()
 
 if __name__=="__main__":
-    from core.external.vasp.anharmonic_score import *
-    import phonopy
-    from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
-    from phonopy import Phonopy
+    from core.phonon.anharmonic_score import *
+    from phonopy.interface.calculator import read_crystal_structure
+
     sigma = None
 
 

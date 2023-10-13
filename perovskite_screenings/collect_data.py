@@ -1,9 +1,6 @@
-import os, glob, tarfile, math, time, h5py
+import glob, tarfile, h5py
 from core.calculators.vasp import Vasp
-from core.dao.vasp import VaspReader, VaspWriter
 from twodPV.collect_data import populate_db, _atom_dict
-from pymatgen.io.vasp.outputs import Vasprun, BSVasprun
-from pymatgen.electronic_structure.core import Spin
 
 try:
     from sumo.electronic_structure.bandstructure import get_reconstructed_band_structure
@@ -13,14 +10,12 @@ from ase.db import connect
 import shutil
 from ase.io.vasp import *
 import itertools
-from core.external.vasp.anharmonic_score import *
+from core.phonon.anharmonic_score import *
 from core.utils.loggings import setup_logger
 import phonopy
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 
 from phonopy.interface.calculator import read_crystal_structure, write_crystal_structure
-from phonopy.interface.vasp import parse_set_of_forces
-from phonopy.file_IO import write_force_constants_to_hdf5, write_FORCE_SETS, parse_disp_yaml, write_disp_yaml
 from phonopy import Phonopy
 
 # logger = setup_logger(output_filename='data_collector.log')
@@ -962,12 +957,10 @@ def high_order_anharmonicity_old(db):
 
 def get_temperature_dependent_second_order_fc():
     from ase.io import read
-    import numpy as np
     from hiphive import ClusterSpace, StructureContainer
     from hiphive.utilities import get_displacements
     from hiphive import ForceConstantPotential
     from hiphive.fitting import Optimizer
-    from hiphive.calculators import ForceConstantCalculator
 
     if os.path.exists('./POSCAR-md'):
         reference_structure = read('./POSCAR-md')

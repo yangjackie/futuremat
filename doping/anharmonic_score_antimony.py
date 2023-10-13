@@ -1,8 +1,4 @@
-import glob
-import os
-import matplotlib.pyplot as plt
-from core.external.vasp.anharmonic_score import *
-from core.dao.vasp import VaspReader
+from core.phonon.anharmonic_score import *
 from matplotlib import rc
 from ase.db import connect
 import sqlite3

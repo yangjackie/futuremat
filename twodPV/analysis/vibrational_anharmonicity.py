@@ -1,8 +1,5 @@
-import os
-import argparse
-import numpy as np
 import pickle
-from core.external.vasp.anharmonic_score import *
+from core.phonon.anharmonic_score import *
 from core.calculators.vasp import *
 
 import matplotlib.pylab as pylab

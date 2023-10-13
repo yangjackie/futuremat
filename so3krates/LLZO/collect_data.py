@@ -22,8 +22,13 @@ root_dir = "/scratch/dy3/jy8620/LLZO/pure/"
 
 # Iterate through the folders, in this case, each folder corresponding to results from sampling the thermally displaced
 # structures at a chosen temperature
+mix_all=False
+
+if mix_all:
+    R, F, E, z, pbc, unit_cell, idx_i, idx_j, node_mask = [[] for _ in range(9)]
+
 for folder_name in list(sorted(os.listdir(root_dir))):
-    if folder_name.startswith("disp_") and os.path.isdir(os.path.join(root_dir, folder_name)): #e.g. disp_200K
+    if folder_name.startswith("disp_u") and os.path.isdir(os.path.join(root_dir, folder_name)): #e.g. disp_200K
         # Construct the full path to the folder
         folder_path = os.path.join(root_dir, folder_name)
 
@@ -31,7 +36,8 @@ for folder_name in list(sorted(os.listdir(root_dir))):
         tar_files = [file_name for file_name in os.listdir(folder_path) if file_name.endswith(".tar.gz")]
 
         # These are the information that we need to gather, initialising an empty placeholder here.
-        R, F, E, z, pbc, unit_cell, idx_i, idx_j, node_mask = [[] for _ in range(9)]
+        if not mix_all:
+            R, F, E, z, pbc, unit_cell, idx_i, idx_j, node_mask = [[] for _ in range(9)]
 
         #looping through the dataset to collect result from individual structure
         for tar_count, tar_file in enumerate(tar_files):
@@ -74,7 +80,12 @@ for folder_name in list(sorted(os.listdir(root_dir))):
             print(f"Finished processing {tar_file_path}")
 
         #everything needs to be in numpy array!
-        R, F, E, z, pbc, unit_cell, node_mask = np.array(R), np.array(F), np.array(E), np.array(z), np.array(
-            pbc), np.array(unit_cell), np.array(node_mask)
+        if not mix_all:
+            R, F, E, z, pbc, unit_cell, node_mask = np.array(R), np.array(F), np.array(E), np.array(z), np.array(
+                pbc), np.array(unit_cell), np.array(node_mask)
 
-        np.savez(folder_name, R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)
+            np.savez(folder_name+'_en_norm', R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)
+
+if mix_all:
+    R, F, E, z, pbc, unit_cell, node_mask = np.array(R), np.array(F), np.array(E), np.array(z), np.array(pbc), np.array(unit_cell), np.array(node_mask)
+    np.savez('all_data', R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)

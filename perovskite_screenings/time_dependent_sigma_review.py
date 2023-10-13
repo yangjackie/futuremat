@@ -1,5 +1,3 @@
-import os
-import matplotlib.pyplot as plt
 from matplotlib import rc
 import matplotlib.pylab as pylab
 
@@ -12,7 +10,7 @@ params = {'legend.fontsize': '14',
           'ytick.labelsize': 16}
 pylab.rcParams.update(params)
 
-from core.external.vasp.anharmonic_score import *
+from core.phonon.anharmonic_score import *
 
 systems = ['CsPbI','CsSnI','CsPbBr','CsSnBr']
 systems = ['SrTiO','SrSnO','BaTiO','BaSnO']

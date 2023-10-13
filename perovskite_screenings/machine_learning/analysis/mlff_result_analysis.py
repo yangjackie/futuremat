@@ -1,8 +1,6 @@
 from matplotlib import gridspec
 
-from matplotlib import rc
-
-from core.external.vasp.anharmonic_score import *
+from core.phonon.anharmonic_score import *
 
 rc('text', usetex=True)
 import matplotlib.pylab as pylab
