@@ -7,7 +7,7 @@ from __future__ import division, absolute_import, print_function
 import re
 from core.models.element import *
 from core.models.vector3d import cVector3D
-
+import numpy as np
 
 class Atom(object):
     def __init__(self, label=None, position=None, scaled_position=None, crystal=None, magmom=None):
@@ -30,7 +30,7 @@ class Atom(object):
 
     @position.setter
     def position(self, position):
-        if isinstance(position, list):
+        if isinstance(position, list) or isinstance(position,np.ndarray):
             self.__position = cVector3D(*position)
         else:
             self.__position = position
@@ -38,7 +38,7 @@ class Atom(object):
     @property
     def scaled_position(self):
         if not self.__scaled_position:
-            if self.__position and self.crystal:
+            if (self.__position is not None) and (self.crystal is not None):
                 self.__scaled_position = self.position.vec_mat_mul(self.get_lattice().inv_vectors)
         return self.__scaled_position
 

@@ -82,15 +82,19 @@ def map_pymatgen_IStructure_to_crystal(structure):
     """
 
     lattice = fLattice(0, 0, 0, 0, 0, 0)
-    lv = structure.lattice.__dict__['_matrix']
+    try:
+        lv = structure.lattice.__dict__['_matrix']
+    except:
+        lv = structure.cell # new pymatgen changed the api
 
     lattice.lattice_vectors = cMatrix3D(cVector3D(lv[0][0], lv[0][1], lv[0][2]),
                                         cVector3D(lv[1][0], lv[1][1], lv[1][2]),
                                         cVector3D(lv[2][0], lv[2][1], lv[2][2]))
+
     return Crystal(lattice=lattice,
                    asymmetric_unit=[Molecule(atoms=[
-                       Atom(label=element_name_dict[structure.atomic_numbers[i]], position=structure.cart_coords[i]) for
-                       i in range(len(structure.atomic_numbers))])],
+                       Atom(label=element_name_dict[structure.get_atomic_numbers()[i]], position=structure.positions[i]) for
+                       i in range(len(structure.get_atomic_numbers()))])],
                    space_group=CrystallographicSpaceGroups.get(1))
 
 
