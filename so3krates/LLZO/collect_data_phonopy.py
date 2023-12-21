@@ -28,7 +28,7 @@ if mix_all:
     R, F, E, z, pbc, unit_cell, idx_i, idx_j, node_mask = [[] for _ in range(9)]
 
 for folder_name in list(sorted(os.listdir(root_dir))):
-    if folder_name.startswith("disp_u") and os.path.isdir(os.path.join(root_dir, folder_name)): #e.g. disp_200K
+    if folder_name.startswith("disp_") and os.path.isdir(os.path.join(root_dir, folder_name)): #e.g. disp_200K
         # Construct the full path to the folder
         folder_path = os.path.join(root_dir, folder_name)
 
@@ -57,17 +57,22 @@ for folder_name in list(sorted(os.listdir(root_dir))):
                 if os.path.exists(outcar_file):
                     atoms = ase.io.read(os.path.join(_path, 'OUTCAR'), format='vasp-out')
                     # Process the contents of OUTCAR as needed
-                    R.append(atoms.get_positions())
-                    F.append(atoms.get_forces())
-                    E.append(atoms.get_potential_energy())
-                    z.append(atoms.get_atomic_numbers())
-                    pbc.append(atoms.get_pbc())
-                    unit_cell.append(atoms.get_cell())
 
-                    #not quite sure about what this mask mean, but this works for the moment.
-                    node_mask.append([True for _ in range(len(R[-1]))])
+                    all_forces = np.ndarray.flatten(atoms.get_forces())
 
-                    print(E[-1])
+                    if max(all_forces)<20:
+                        R.append(atoms.get_positions())
+                        F.append(atoms.get_forces())
+                        E.append(atoms.get_potential_energy())
+                        z.append(atoms.get_atomic_numbers())
+                        pbc.append(atoms.get_pbc())
+                        unit_cell.append(atoms.get_cell())
+
+                        #not quite sure about what this mask mean, but this works for the moment.
+                        node_mask.append([True for _ in range(len(R[-1]))])
+                        print(f"Finished processing {tar_file_path}")
+                    else:
+                        print('skipp this, force too large!')
             except:
                 print('Error parsing OUTCAR, skipped')
 
@@ -77,15 +82,14 @@ for folder_name in list(sorted(os.listdir(root_dir))):
             except:
                 pass
 
-            print(f"Finished processing {tar_file_path}")
+
 
         #everything needs to be in numpy array!
         if not mix_all:
+            print("Total number of valid data: "+str(len(R)))
             R, F, E, z, pbc, unit_cell, node_mask = np.array(R), np.array(F), np.array(E), np.array(z), np.array(
                 pbc), np.array(unit_cell), np.array(node_mask)
 
-            np.savez(folder_name+'_en_norm', R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)
-
 if mix_all:
     R, F, E, z, pbc, unit_cell, node_mask = np.array(R), np.array(F), np.array(E), np.array(z), np.array(pbc), np.array(unit_cell), np.array(node_mask)
-    np.savez('all_data', R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)
+    np.savez('all_data_2_3_4', R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)
