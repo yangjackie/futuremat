@@ -18,6 +18,7 @@ from mlff.properties.property_names import *
 from mlff.nn import So3krates
 from mlff.nn.stacknet import get_obs_and_force_fn, get_observable_fn, get_energy_force_stress_fn
 from mlff.training import Coach, Optimizer, get_loss_fn, create_train_state
+from mlff.cAPI.process_argparse import StoreDictKeyPair
 
 """
 Monitoring the training outcomes with different choices of the hyperparameters using the weight and loss
@@ -28,7 +29,7 @@ must be specified in the job submission script. The results can be regularly upl
        wandb sync --sync-all
 """
 import wandb
-
+import random
 parser = argparse.ArgumentParser(description='Controls for running the SO3 neural networks for the LLZO data',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -39,8 +40,8 @@ parser.add_argument('-cp', '--checkpoint_path', type=str,
 # arguments controlling model trainings
 parser.add_argument('-n_train', '--n_train', type=int, help='number of training data to use', default=200)
 parser.add_argument('-n_valid', '--n_valid', type=int, help='number of valid data to use', default=200)
-parser.add_argument('-n_batch_train', '--n_batch_train', type=int, help='batch size for training', default=5)
-parser.add_argument('-n_batch_valid', '--n_batch_valid', type=int, help='batch size for validation', default=5)
+parser.add_argument('-n_batch_train', '--n_batch_train', type=int, help='batch size for training', default=20)
+parser.add_argument('-n_batch_valid', '--n_batch_valid', type=int, help='batch size for validation', default=20)
 parser.add_argument('-w_en', '--energy_weight', type=float, help='weight for the energy component in the loss function',
                     default=0.95)
 parser.add_argument('-w_f', '--force_weight', type=float, help='weight for the force component in the loss function',
@@ -51,29 +52,27 @@ parser.add_argument('-ep', '--epochs', type=int, help='Number of epochs to train
 parser.add_argument('-F', '--F', type=int, default=32)
 parser.add_argument('-n_layer', '--n_layer', type=int, default=3)
 parser.add_argument('-rcut', '--rcut', type=float, help='Cutoff radius to find neighboring atoms', default=5)
-
+parser.add_argument('--H', type=int, required=False, default=2, help='Number of heads.')
+#parser.add_argument('--degrees',  type=int, required=False, default=3,
+#                        help='Degrees for the spherical harmonic coordinates.')
 # wandb arguments
 parser.add_argument('-p', '--project', type=str, help='name of the wandb project', default=None)
+parser.add_argument('--lr', type=float, required=False, default=1e-3)
+parser.add_argument('--lr_decay_plateau', action=StoreDictKeyPair, required=False, default=None)
+
+lr_decay_exp_default = {'transition_steps': 10_000, 'decay_factor': 0.9}
+parser.add_argument('--lr_decay_exp', action=StoreDictKeyPair, required=False, default=lr_decay_exp_default)
+parser.add_argument('--lr_decay_exp_df', type=float, default=0.9)
+
+parser.add_argument('--lr_warmup', action=StoreDictKeyPair, required=False, default=None)
+
 args = parser.parse_args()
 
 # =================== Main part of the script =========================
-
 port = portpicker.pick_unused_port()
 print(port)
 # this wont work for parallelisations on CPUs, only for GPU and TPU
 jax.distributed.initialize(f'localhost:{port}', num_processes=1, process_id=0)
-
-# Set up the filesystem for this calculation
-args.checkpoint_path = os.getcwd() + '/' + args.checkpoint_path
-ckpt_dir = os.path.join(args.checkpoint_path, 'module')
-ckpt_dir = create_directory(ckpt_dir, exists_ok=False)
-
-# Loading the data for training
-if not os.path.isfile(args.data_path):
-    raise Exception(f"Data file {args.data_path} does not exist!")
-data = dict(np.load(args.data_path))
-
-# set up the property keys for this set
 
 prop_keys = {
     energy: 'E',
@@ -86,18 +85,28 @@ prop_keys = {
     idx_j: 'idx_j',
     node_mask: 'node_mask'
 }
+# Set up the filesystem for this calculation
+args.checkpoint_path = os.getcwd() + '/' + args.checkpoint_path
+ckpt_dir = os.path.join(args.checkpoint_path, 'module')
+ckpt_dir = create_directory(ckpt_dir, exists_ok=False)
+
+# Loading the data for training
+if not os.path.isfile(args.data_path):
+    raise Exception(f"Data file {args.data_path} does not exist!")
+data = dict(np.load(args.data_path))
+
+# set up the property keys for this set
 
 # set up the dataset
-r_cut = args.rcut
-data_set = DataSet(data=data, prop_keys=prop_keys)
 
+data_set = DataSet(data=data, prop_keys=prop_keys)
 data_set.random_split(n_train=args.n_train,
                       n_valid=args.n_valid,
                       n_test=None,
                       mic=True,
-                      r_cut=r_cut,
+                      r_cut=args.rcut,
                       training=True,
-                      seed=0)
+                      seed=random.randint(1,1000))
 
 
 #print("start splitting")
@@ -124,17 +133,16 @@ net = So3krates(F=args.F,
                 n_layer=args.n_layer,
                 prop_keys=prop_keys,
                 geometry_embed_kwargs={'degrees': [1, 2],
-                                       'r_cut': r_cut,
+                                       'r_cut': args.rcut,
                                        },
-                so3krates_layer_kwargs={'n_heads': 2,
-                                        'degrees': [1, 2]})
+                so3krates_layer_kwargs={'n_heads': args.H,
+                                        'degrees': [1,2]})
 
 obs_fn = get_obs_and_force_fn(net)
 obs_fn = jax.vmap(obs_fn, in_axes=(None, 0))
 
 opt = Optimizer()
-
-tx = opt.get(learning_rate=1e-3)
+tx = opt.get(learning_rate=args.lr)
 
 coach = Coach(inputs=[atomic_position, atomic_type, idx_i, idx_j, node_mask],
               targets=[energy, force],
@@ -146,7 +154,6 @@ coach = Coach(inputs=[atomic_position, atomic_type, idx_i, idx_j, node_mask],
               data_path=args.data_path,
               net_seed=0,
               training_seed=0)
-
 loss_fn = get_loss_fn(obs_fn=obs_fn,
                       weights=coach.loss_weights,
                       prop_keys=prop_keys)
@@ -166,10 +173,10 @@ train_state, h_train_state = create_train_state(net,
                                                 tx,
                                                 polyak_step_size=None,
                                                 plateau_lr_decay={'patience': 50,
-                                                                  'decay_factor': 1.
+                                                                  'decay_factor': 1.0
                                                                   },
-                                                scheduled_lr_decay={'exponential': {'transition_steps': 10_000,
-                                                                                    'decay_factor': 0.9}
+                                                scheduled_lr_decay={'exponential': {'transition_steps': 10000,
+                                                                                    'decay_factor': args.lr_decay_exp_df} #default setting is 0.9
                                                                     }
                                                 )
 
@@ -182,6 +189,7 @@ save_dict(path=ckpt_dir, filename='hyperparameters.json', data=h, exists_ok=True
 
 if args.project is None:
     raise Exception("Please specify the project name for wandb")
+
 wandb.init(config=h, project=args.project)
 coach.run(train_state=train_state,
           train_ds=train_ds,
@@ -190,4 +198,3 @@ coach.run(train_state=train_state,
           log_every_t=1,
           restart_by_nan=True,
           use_wandb=True)
-
