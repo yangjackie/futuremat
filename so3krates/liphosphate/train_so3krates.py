@@ -146,7 +146,6 @@ net = So3krates(F=args.F,
                 so3krates_layer_kwargs={'n_heads': args.H,
                                         'degrees': [1,2,3]})
 
-
 obs_fn = get_obs_and_force_fn(net)
 obs_fn = jax.vmap(obs_fn, in_axes=(None, 0))
 
@@ -184,7 +183,7 @@ train_state, h_train_state = create_train_state(net,
                                                 plateau_lr_decay={'patience': 50,
                                                                   'decay_factor': 1.0
                                                                   },
-                                                scheduled_lr_decay={'exponential': {'transition_steps': 10000,
+                                                scheduled_lr_decay={'exponential': {'transition_steps': 100000,
                                                                                     'decay_factor': args.lr_decay_exp_df} #default setting is 0.9
                                                                     }
                                                 )

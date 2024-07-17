@@ -63,7 +63,7 @@ parser.add_argument("--prop_keys", action=StoreDictKeyPair, metavar="KEY1=VAL1,K
 parser.add_argument('--batch_size', type=int, required=False, default=10,
                         help="Batch size of the inference passes. Default=10")
 parser.add_argument('--targets', nargs='+', required=False, default=None)
-parser.add_argument('--jax_dtype', type=str, required=False, default='x32',
+parser.add_argument('--jax_dtype', type=str, required=False, default='x64',
                     help='Set JAX default dtype. Default is jax.numpy.float32')
 parser.add_argument('--apply_to', type=str, required=False, default=None,
                     help='Path to data file that the model should be applied to. '
@@ -81,8 +81,7 @@ batch_size = args.batch_size
 
 jax_dtype = args.jax_dtype
 if jax_dtype == 'x64':
-    from jax.config import config
-    config.update("jax_enable_x64", True)
+    jax.config.update("jax_enable_x64", True)
 
 ckpt_dir = (Path(args.ckpt_dir).absolute().resolve()).as_posix()
 print("Loading parameters from ", ckpt_dir)

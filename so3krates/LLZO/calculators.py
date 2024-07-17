@@ -19,8 +19,12 @@ def optimise_extended_xyz(extxyz: str = None,
                           gpu_run: bool = False):
     dirname = extxyz.replace('.xyz','')
 
-    for c in read_extxyz(open(extxyz,'r')):
-        __crystal = c
+    if os.path.exists(dirname + '.zip'):
+        #this needs to be further implmented to do secondary minimisation
+        return 0
+    else:
+        for c in read_extxyz(open(extxyz,'r')):
+            crystal = c
 
     pwd = os.getcwd()
     if not os.path.exists('./'+dirname):
@@ -28,20 +32,22 @@ def optimise_extended_xyz(extxyz: str = None,
 
     os.chdir('./'+dirname)
 
-    crystal = map_pymatgen_IStructure_to_crystal(__crystal)
+    crystal = map_pymatgen_IStructure_to_crystal(crystal)
     VaspWriter().write_structure(crystal,filename='POSCAR_orig')
 
     #this is a hack, using the api from Pymatgen. somehow my own version didnt work anymore. problem in
     #converting fractional coordinates when structure is mapped from pymatgen IStructure
     #need to randomly displace the atoms to get some more unique optimisation trajectories
-    __crystal = Structure.from_file('POSCAR_orig')
-    transformer = PerturbStructureTransformation(min_distance=0.01, distance=0.1)
-    randomised_crystal = transformer.apply_transformation(__crystal)
+    crystal = Structure.from_file('POSCAR_orig')
+    transformer = PerturbStructureTransformation(min_distance=0.01, distance=0.025)
+    randomised_crystal = transformer.apply_transformation(crystal)
     randomised_crystal.to_file('POSCAR_rand')
     randomised_crystal = read('POSCAR_rand')
     randomised_crystal = map_pymatgen_IStructure_to_crystal(randomised_crystal)
     randomised_crystal.gamma_only = True  # DO NOT DELETE THIS!!!
-    optimisation_set = {'ISPIN': 1, 'PREC': "Normal", 'IALGO': 38, 'NCORE': 32, 'ENCUT': 500, 'IBRION': 1, 'ISIF': 0, 'NSW': 300,
+
+
+    optimisation_set = {'ISPIN': 1, 'PREC': "Accurate", 'IALGO': 38, 'NCORE': 32, 'ENCUT': 500, 'IBRION': 1, 'ISIF': 0, 'NSW': 400,
                      'LCHARG': True, 'LWAVE': True, 'use_gw': True, 'Gamma_centered': True, 'MP_points': [1, 1, 1],
                      'clean_after_success': False, 'LREAL': 'False', 'executable': 'vasp_gam', 'gpu_run': gpu_run}
     vasp = Vasp(**optimisation_set)
@@ -59,7 +65,7 @@ def optimise_extended_xyz(extxyz: str = None,
     os.chdir(pwd)
     ZipDir(dirname, dirname + '.zip')
     shutil.rmtree(dirname, ignore_errors=True)
-
+    return 0
 
 def optimise_frames_from_md_trajectory(part: int = 0,
                                        batch_size: int = 20,
@@ -112,7 +118,7 @@ def optimise_frames_from_md_trajectory(part: int = 0,
         os.chdir(pwd)
         ZipDir(folder, folder + '.zip')
         shutil.rmtree(folder, ignore_errors=True)
-
+    return 0
 
 
 if __name__ == "__main__":

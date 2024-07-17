@@ -45,4 +45,4 @@ if mix:
     R, F, E, z, pbc, unit_cell, node_mask = np.array(R), np.array(F), np.array(E), np.array(z), np.array(pbc), np.array(
         unit_cell), np.array(node_mask)
     np.savez('all_data_2_3_4_MD', R=R, F=F, E=E, z=z, pbc=pbc, unit_cell=unit_cell, node_mask=node_mask)
-~                                                                                                           
+
