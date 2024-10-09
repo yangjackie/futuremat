@@ -218,11 +218,17 @@ class VaspReader(FileReader):
             if _counter > 7:
                 if 'Direct configuration' not in line:
                     if _counter == len(self.file_content) - 1:
+                      if len(_atoms) != crystal.total_num_atoms():
+                        print('last frame is not completed')
                         break
-                    # read in the atomic coordinates
-                    coord = cVector3D(float(line.split()[0]), float(line.split()[1]), float(line.split()[2]))
-                    _atoms.append(Atom(label=_atomic_labels[_atom_counter], scaled_position=coord))
-                    _atom_counter += 1
+                    else:
+                        from core.models.lattice import Lattice
+                        crystal = Crystal(lattice=Lattice.from_lattice_vectors(lattice_vectors),
+                                          asymmetric_unit=[Molecule(atoms=_atoms)],
+                                          space_group=CrystallographicSpaceGroups.get(1))
+                        all_frames.append(crystal)
+                        _frame_counter += 1
+                        break
                 else:
                     from core.models.lattice import Lattice
                     crystal = Crystal(lattice=Lattice.from_lattice_vectors(lattice_vectors),
