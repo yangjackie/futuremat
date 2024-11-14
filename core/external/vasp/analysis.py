@@ -334,7 +334,7 @@ def velocity_autocorrelation_function(frames, potim=8):
     pos = pos.ravel().reshape((-1, num_atoms_in_cell, 3))
     Niter = len(frames)
     dpos = np.diff(pos, axis=0)
-    positionC = np.zeros_like(pos)
+    #positionC = np.zeros_like(pos)
 
     dpos[dpos > 0.5] -= 1.0
     dpos[dpos < -0.5] += 1.0
@@ -346,10 +346,10 @@ def velocity_autocorrelation_function(frames, potim=8):
         [[_lv[0][0], _lv[0][1], _lv[0][2]], [_lv[1][0], _lv[1][1], _lv[1][2]], [_lv[2][0], _lv[2][1], _lv[2][2]]])
 
     for i in range(Niter - 1):
-        positionC[i, :, :] = np.dot(pos[i, :, :], lv)
+        #positionC[i, :, :] = np.dot(pos[i, :, :], lv)
         dpos[i, :, :] = np.dot(dpos[i, :, :], lv) / potim
 
-    positionC[-1, :, :] = np.dot(pos[-1, :, :], lv)
+    #positionC[-1, :, :] = np.dot(pos[-1, :, :], lv)
     velocity = dpos
 
     VAF2 = np.zeros((Niter - 1) * 2 - 1)
@@ -474,7 +474,7 @@ def plot_atomic_displacement_statistics(frames, ref_frame, ref_atomic_label, dir
     plt.show()
 
 
-def get_phonon_dos(frames, potim=8, nblock=10, unit='THz'):
+def get_phonon_dos(frames, potim=8, nblock=10, unit='meV'):
     potim = potim * nblock
     N = len(frames) - 1
     # Frequency in THz

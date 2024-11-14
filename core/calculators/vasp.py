@@ -395,6 +395,7 @@ class Vasp(Calculator):
             self.writer.write_structure(self.crystal, filename='POSCAR', magnetic=self.magnetic)
             logger.info('POSCAR written')
         else:
+
             logger.info("Skip writing POSCAR, use existing POSCAR (temp hack for MD runs")
 
         self.writer.write_potcar(self.crystal, sort=False, unique=True, magnetic=self.magnetic, use_GW=self.use_gw)

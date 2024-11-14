@@ -22,7 +22,7 @@ for izip, zip in enumerate(list(sorted(all_zips))):
     f.close()
 
     #R, F, E, z, pbc, unit_cell, idx_i, idx_j, node_mask = [[] for _ in range(9)]
-    atoms=ase.io.read("./vasprun_temp.xml", format='vasp-xml', index=-10)
+    atoms=ase.io.read("./vasprun_temp.xml", format='vasp-xml', index=0)
     #for atoms in out:
     R.append(atoms.get_positions())
     #sys.stdout.write(str(R[-1]))

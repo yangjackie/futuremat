@@ -1,6 +1,13 @@
-from phonopy.interface.calculator import read_crystal_structure
-from pymatgen.analysis.magnetism import CollinearMagneticStructureAnalyzer
-from pymatgen.transformations.standard_transformations import ConventionalCellTransformation
+#from phonopy.interface.calculator import read_crystal_structure
+try:
+    from pymatgen.analysis.magnetism import CollinearMagneticStructureAnalyzer
+except:
+    pass
+
+try:
+    from pymatgen.transformations.standard_transformations import ConventionalCellTransformation
+except:
+    pass
 
 from core.calculators.vasp import Vasp, VaspReader
 from core.internal.builders.crystal import build_supercell, map_pymatgen_IStructure_to_crystal
@@ -462,23 +469,25 @@ def molecular_dynamics_workflow(force_rerun=False, continue_MD=True, gpu_run=Fal
         #structure.gamma_only = True
         logger.info("Will run MD with spin polarization: " + str(spin_polarized))
     """
-    spin_polarized = True
-    #structure = load_supercell_structure()
+    spin_polarized = False
+    structure = load_supercell_structure(supercell_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     structure = load_structure(logger)
+    structure.gamma_only = True
 
-    equilibrium_set = {'prec': 'Normal', 'algo': 'VeryFast', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+    equilibrium_set = {'prec': 'Normal', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
                        'maxmix': 40,
-                       'ncore': 32, 'nelmin': 4, 'nsw': 10000, 'smass': -1, 'isif': 1, 'tebeg': 10,
+                       'ncore': 32, 'nelmin': 4, 'nsw': 500, 'smass': -1, 'isif': 1, 'tebeg': 10,
                        'teend': 300, 'potim': 1, 'nblock': 10, 'nwrite': 0, 'lcharg': False, 'lwave': False,
-                       'iwavpr': 11, 'encut': 400, 'Gamma_centered': True, 'MP_points': [1,1,1], 'use_gw': False,
-                       'write_poscar': False, 'gpu_run': gpu_run, 'GGA':'RP' ,'IVDW':12}
+                       'iwavpr': 11, 'encut': 500, 'Gamma_centered': True, 'MP_points': [1,1,1], 'use_gw': True,
+                       'write_poscar': True, 'gpu_run': gpu_run}
 
-    production_set = {'prec': 'Normal', 'algo': 'VeryFast', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
+    production_set = {'prec': 'Normal', 'algo': 'Normal', 'lreal': 'AUTO', 'ismear': 0, 'isym': 0, 'ibrion': 0,
                       'maxmix': 40,
-                       'ncore': 32, 'nelmin': 4, 'nsw': 40000, 'isif': 1, 'tebeg': 300,
+                       'ncore': 32, 'nelmin': 4, 'nsw': 5000, 'isif': 1, 'tebeg': 300,
                       'teend': 300, 'potim': 1, 'nblock': 1, 'nwrite': 0, 'lcharg': False, 'lwave': False, 'iwavpr': 11,
-                      'encut': 400, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1,1,1],
-                      'use_gw': False, 'write_poscar': False, 'gpu_run': gpu_run, 'GGA':'RP','IVDW':12}
+                      'encut': 500, 'andersen_prob': 0.5, 'mdalgo': 1, 'Gamma_centered': True, 'MP_points': [1,1,1],
+                      'use_gw': True, 'write_poscar': False, 'gpu_run': gpu_run}
+
 
     #del equilibrium_set['ncore']
     #del production_set['ncore']
