@@ -324,42 +324,6 @@ def pair_correlation_function_single_frame(crystal, bins=50, A='', B='', cross_t
     return pair_correlation_function_averaged([crystal], bins=bins, A=A, B=B, cross_term=cross_term)
 
 
-def velocity_autocorrelation_function(frames, potim=8):
-    def get_coord(frame_index, atom_index):
-        position = frames[frame_index].asymmetric_unit[0].atoms[atom_index].scaled_position
-        return np.array([position.x, position.y, position.z])
-
-    num_atoms_in_cell = len(frames[0].asymmetric_unit[0].atoms)
-    pos = np.array([[get_coord(i, j) for j in range(num_atoms_in_cell)] for i in range(len(frames))])
-    pos = pos.ravel().reshape((-1, num_atoms_in_cell, 3))
-    Niter = len(frames)
-    dpos = np.diff(pos, axis=0)
-    #positionC = np.zeros_like(pos)
-
-    dpos[dpos > 0.5] -= 1.0
-    dpos[dpos < -0.5] += 1.0
-
-    # Velocity in Angstrom per femtosecond
-
-    _lv = frames[0].lattice.lattice_vectors
-    lv = np.array(
-        [[_lv[0][0], _lv[0][1], _lv[0][2]], [_lv[1][0], _lv[1][1], _lv[1][2]], [_lv[2][0], _lv[2][1], _lv[2][2]]])
-
-    for i in range(Niter - 1):
-        #positionC[i, :, :] = np.dot(pos[i, :, :], lv)
-        dpos[i, :, :] = np.dot(dpos[i, :, :], lv) / potim
-
-    #positionC[-1, :, :] = np.dot(pos[-1, :, :], lv)
-    velocity = dpos
-
-    VAF2 = np.zeros((Niter - 1) * 2 - 1)
-    for i in range(num_atoms_in_cell):
-        for j in range(3):
-            VAF2 += np.correlate(velocity[:, i, j], velocity[:, i, j], 'full')
-    # two-sided VAF
-    VAF2 /= np.sum(velocity ** 2)
-    # VAF = VAF2[Niter - 2:]
-    return VAF2
 
 
 def atomic_displacement_from_ref_frame(frames, ref_frame, ref_atomic_label, direction='x'):
@@ -474,6 +438,45 @@ def plot_atomic_displacement_statistics(frames, ref_frame, ref_atomic_label, dir
     plt.show()
 
 
+def velocity_autocorrelation_function(frames, potim=8):
+    def get_coord(frame_index, atom_index):
+        position = frames[frame_index].asymmetric_unit[0].atoms[atom_index].scaled_position
+        return np.array([position.x, position.y, position.z])
+
+    num_atoms_in_cell = len(frames[0].asymmetric_unit[0].atoms)
+    pos = np.array([[get_coord(i, j) for j in range(num_atoms_in_cell)] for i in range(len(frames))])
+    pos = pos.ravel().reshape((-1, num_atoms_in_cell, 3))
+    Niter = len(frames)
+    dpos = np.diff(pos, axis=0)
+    #positionC = np.zeros_like(pos)
+
+    dpos[dpos > 0.5] -= 1.0
+    dpos[dpos < -0.5] += 1.0
+
+    # Velocity in Angstrom per femtosecond
+
+    _lv = frames[0].lattice.lattice_vectors
+    lv = np.array(
+        [[_lv[0][0], _lv[0][1], _lv[0][2]], [_lv[1][0], _lv[1][1], _lv[1][2]], [_lv[2][0], _lv[2][1], _lv[2][2]]])
+
+    for i in range(Niter - 1):
+        #positionC[i, :, :] = np.dot(pos[i, :, :], lv)
+        dpos[i, :, :] = np.dot(dpos[i, :, :], lv) / potim
+
+    #positionC[-1, :, :] = np.dot(pos[-1, :, :], lv)
+    velocity = dpos
+
+    VAF2 = np.zeros((Niter - 1) * 2 - 1)
+    for i in range(num_atoms_in_cell):
+        for j in range(3):
+            VAF2 += np.correlate(velocity[:, i, j], velocity[:, i, j], 'full')
+    # two-sided VAF
+    VAF2 /= np.sum(velocity ** 2)
+    VAF2 = VAF2
+    # VAF = VAF2[Niter - 2:]
+    return VAF2
+
+
 def get_phonon_dos(frames, potim=8, nblock=10, unit='meV'):
     potim = potim * nblock
     N = len(frames) - 1
@@ -500,9 +503,14 @@ def vibrational_free_energies(frames, temp=300, potim=8, nblock=10):
             omega.append(_omega[i] * 1e-3)
             pdos.append(_pdos[i])
 
-    integrand = [math.log(2 * math.sinh(hbar_ev * omega[i] / (2 * k_B_ev * temp))) * pdos[i] for i in range(len(omega))]
-    fe = np.trapz(integrand, omega)
-    fe = 3 * num_atoms_in_cell * k_B_ev * temp * fe
+    integrand =  [math.log(2*math.sinh(hbar_ev * omega[i] / (2 * k_B_ev * temp))) * pdos[i] for i in range(len(omega))]
+
+    from scipy import integrate
+    S = -1.0*k_B_ev * integrate.simpson(integrand, x=omega) / num_atoms_in_cell
+    print("Straight after integration, the vibrational entropy is :"+str(S)+' eV/(K.atom)')
+    #fe = 3 * num_atoms_in_cell *  temp * S
+    fe = temp * S
+    print("As such, the vibrational free energy at "+str(temp)+" K is :"+str(fe)+' eV/atom.')
     return fe
 
 
