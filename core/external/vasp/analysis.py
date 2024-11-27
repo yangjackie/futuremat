@@ -507,10 +507,10 @@ def vibrational_free_energies(frames, temp=300, potim=8, nblock=10):
 
     from scipy import integrate
     S = -1.0*k_B_ev * integrate.simpson(integrand, x=omega) / num_atoms_in_cell
-    print("Straight after integration, the vibrational entropy is :"+str(S)+' eV/(K.atom)')
+    print("Straight after integration, the vibrational entropy is :"+str(S*1000)+' meV/(K.atom)')
     #fe = 3 * num_atoms_in_cell *  temp * S
     fe = temp * S
-    print("As such, the vibrational free energy at "+str(temp)+" K is :"+str(fe)+' eV/atom.')
+    print("As such, the vibrational free energy at "+str(temp)+" K is :"+str(fe*1000)+' meV/atom.')
     return fe
 
 

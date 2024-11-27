@@ -43,6 +43,9 @@ class Crystal(object):
         # check if the MP-k point for this crystal contains only gamma point
         self.gamma_only = False
 
+        self.potential_energy = None
+        self.kinetic_energy = None
+
     def copy(self):
         return self.__class__(self.lattice.copy(), [m.copy() for m in self.asymmetric_unit], self.space_group)
 
@@ -109,3 +112,4 @@ class Crystal(object):
         all_atoms = sorted(all_atoms, key=keyfunc)
         self.__mag_group = groupby(all_atoms, keyfunc)
         return self.__mag_group
+

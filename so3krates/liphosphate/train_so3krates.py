@@ -5,6 +5,8 @@ garnet-like (e.g. LLZO) solid electrolyte dataset.
 """
 
 import argparse
+from pathlib import Path
+
 import portpicker
 import jax
 
@@ -16,12 +18,14 @@ import os
 import numpy as np
 
 from mlff.io.io import create_directory, bundle_dicts, save_dict
+from mlff.io import load_params_from_ckpt_dir
 from mlff.data import DataTuple, DataSet
 from mlff.properties.property_names import *
 from mlff.nn import So3krates
 from mlff.nn.stacknet import get_obs_and_force_fn, get_observable_fn, get_energy_force_stress_fn
 from mlff.training import Coach, Optimizer, get_loss_fn, create_train_state
 from mlff.cAPI.process_argparse import StoreDictKeyPair
+import mlff.properties.property_names as pn
 
 """
 Monitoring the training outcomes with different choices of the hyperparameters using the weight and loss
@@ -69,6 +73,10 @@ parser.add_argument('--lr_decay_exp_df', type=float, default=0.9)
 
 parser.add_argument('--lr_warmup', action=StoreDictKeyPair, required=False, default=None)
 
+parser.add_argument('--restart_from_ckpt_dir', type=str, required=False, default=None,
+                        help='Path to a checkpoint directory from which to load model parameters and start the '
+                             'training.')
+
 args = parser.parse_args()
 
 # =================== Main part of the script =========================
@@ -88,10 +96,13 @@ prop_keys = {
     pbc: 'pbc',
     idx_i: 'idx_i',
     idx_j: 'idx_j',
-    node_mask: 'node_mask'
+    node_mask: 'node_mask',
+    cell_offset: 'cell_offset',
 }
 
-
+inputs =  [pn.atomic_type,pn.atomic_position,pn.idx_i, pn.idx_j,pn.node_mask]
+inputs += [pn.unit_cell]
+inputs += [pn.cell_offset]
 
 # Set up the filesystem for this calculation
 args.checkpoint_path = os.getcwd() + '/' + args.checkpoint_path
@@ -116,19 +127,6 @@ data_set.random_split(n_train=args.n_train,
                       training=True,
                       seed=random.randint(1,1000))
 
-
-#print("start splitting")
-#data_idx_train=list(range(0,1000))+list(range(2000,3000))+list(range(4000,5000))+list(range(6000,7000))+list(range(8000,9000))+list(range(10000,11000)),
-                     #data_idx_valid=list(range(1000,2000))+list(range(3000,4000))+list(range(5000,6000))+list(range(7000,8000))+list(range(9000,10000))+list(range(11000,11900)),
-#data_set.index_split(data_idx_train=list(range(0,1000))+list(range(2000,3000))+list(range(4000,5000))+list(range(6000,7000))+list(range(8000,9000))+list(range(10000,11000)),
-#                     data_idx_valid=list(range(1000,2000))+list(range(3000,4000))+list(range(5000,6000))+list(range(7000,8000))+list(range(9000,10000))+list(range(11000,11900)),
-#                     data_idx_test=[],
-#                     r_cut=r_cut,
-#                     mic=True,
-#                     training=True)
-
-#print("finish splitting")
-
 data_set.shift_x_by_mean_x(x=energy)
 # persisting this particular set (good idea for back tracking what's going on!
 data_set.save_splits_to_file(ckpt_dir, 'splits.json')
@@ -142,9 +140,11 @@ net = So3krates(F=args.F,
                 prop_keys=prop_keys,
                 geometry_embed_kwargs={'degrees': [1,2,3],
                                        'r_cut': args.rcut,
+                                       'mic':True
                                        },
                 so3krates_layer_kwargs={'n_heads': args.H,
                                         'degrees': [1,2,3]})
+
 
 obs_fn = get_obs_and_force_fn(net)
 obs_fn = jax.vmap(obs_fn, in_axes=(None, 0))
@@ -152,7 +152,7 @@ obs_fn = jax.vmap(obs_fn, in_axes=(None, 0))
 opt = Optimizer()
 tx = opt.get(learning_rate=args.lr)
 
-coach = Coach(inputs=[atomic_position, atomic_type, idx_i, idx_j, node_mask],
+coach = Coach(inputs=inputs,
               targets=[energy, force],
               epochs=args.epochs,
               training_batch_size=args.n_batch_train,
@@ -175,7 +175,21 @@ valid_ds = data_tuple(d['valid'])
 
 inputs = jax.tree_map(lambda x: jnp.array(x[0, ...]), train_ds[0])
 
-params = net.init(jax.random.PRNGKey(coach.net_seed), inputs)
+restart_from_ckpt_dir = None
+if args.restart_from_ckpt_dir is not None:
+    restart_from_ckpt_dir = (Path(args.restart_from_ckpt_dir).absolute().resolve()).as_posix()
+    assert restart_from_ckpt_dir != ckpt_dir
+
+
+
+if restart_from_ckpt_dir is None:
+    params = net.init(jax.random.PRNGKey(coach.net_seed), inputs)
+else:
+    print(f"Restarting training from {restart_from_ckpt_dir}.")
+    params = load_params_from_ckpt_dir(restart_from_ckpt_dir)
+    print("parameters loaded successfully "+str(params))
+
+
 train_state, h_train_state = create_train_state(net,
                                                 params,
                                                 tx,

@@ -42,7 +42,7 @@ for idx in range(args.batch_size*part, args.batch_size*(part+1), 1):
 
     optimizer = mdx.GradientDescent.create(potential=potential, learning_rate=5e-4)
 
-    atoms = Atoms(positions=data['R'][idx], numbers=data['z'][idx])
+    atoms = Atoms(positions=data['R'][idx], numbers=data['z'][idx], cell=data['unit_cell'][idx], pbc=[True,True,True])
     atomsx = mdx.AtomsX.create(atoms=atoms, dtype=dtype)
     atomsx = atomsx.init_spatial_partitioning(cutoff=potential.cutoff,skin=0.9)
 
@@ -96,4 +96,4 @@ for idx in range(args.batch_size*part, args.batch_size*(part+1), 1):
 
 if args.save_pickle:
     R, E, pbc, unit_cell, system_names, z  = np.array(R), np.array(E), np.array(pbc), np.array(unit_cell), np.array(system_names), np.array(z)
-    np.savez('all_data_set_11_45_part_'+str(args.part), R=R, z=z, pbc=pbc, unit_cell=unit_cell, system_name=system_names, E=E)
+    np.savez('all_data_set_12_44_part_'+str(args.part), R=R, z=z, pbc=pbc, unit_cell=unit_cell, system_name=system_names, E=E)
