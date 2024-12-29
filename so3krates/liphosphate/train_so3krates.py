@@ -37,6 +37,7 @@ must be specified in the job submission script. The results can be regularly upl
 """
 import wandb
 import random
+
 parser = argparse.ArgumentParser(description='Controls for running the SO3 neural networks for the LLZO data',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -60,7 +61,7 @@ parser.add_argument('-F', '--F', type=int, default=32)
 parser.add_argument('-n_layer', '--n_layer', type=int, default=3)
 parser.add_argument('-rcut', '--rcut', type=float, help='Cutoff radius to find neighboring atoms', default=5)
 parser.add_argument('--H', type=int, required=False, default=2, help='Number of heads.')
-#parser.add_argument('--degrees',  type=int, required=False, default=3,
+# parser.add_argument('--degrees',  type=int, required=False, default=3,
 #                        help='Degrees for the spherical harmonic coordinates.')
 # wandb arguments
 parser.add_argument('-p', '--project', type=str, help='name of the wandb project', default=None)
@@ -74,8 +75,11 @@ parser.add_argument('--lr_decay_exp_df', type=float, default=0.9)
 parser.add_argument('--lr_warmup', action=StoreDictKeyPair, required=False, default=None)
 
 parser.add_argument('--restart_from_ckpt_dir', type=str, required=False, default=None,
-                        help='Path to a checkpoint directory from which to load model parameters and start the '
-                             'training.')
+                    help='Path to a checkpoint directory from which to load model parameters and start the '
+                         'training.')
+
+parser.add_argument('-degrees', '--degrees', type=int, nargs='+',
+                    help='angular momentums for the spherical harmonics ')
 
 args = parser.parse_args()
 
@@ -100,7 +104,7 @@ prop_keys = {
     cell_offset: 'cell_offset',
 }
 
-inputs =  [pn.atomic_type,pn.atomic_position,pn.idx_i, pn.idx_j,pn.node_mask]
+inputs = [pn.atomic_type, pn.atomic_position, pn.idx_i, pn.idx_j, pn.node_mask]
 inputs += [pn.unit_cell]
 inputs += [pn.cell_offset]
 
@@ -125,7 +129,7 @@ data_set.random_split(n_train=args.n_train,
                       mic=True,
                       r_cut=args.rcut,
                       training=True,
-                      seed=random.randint(1,1000))
+                      seed=random.randint(1, 1000))
 
 data_set.shift_x_by_mean_x(x=energy)
 # persisting this particular set (good idea for back tracking what's going on!
@@ -138,13 +142,12 @@ d = data_set.get_data_split()  # not sure
 net = So3krates(F=args.F,
                 n_layer=args.n_layer,
                 prop_keys=prop_keys,
-                geometry_embed_kwargs={'degrees': [1,2,3],
+                geometry_embed_kwargs={'degrees': args.degrees,
                                        'r_cut': args.rcut,
-                                       'mic':True
+                                       'mic': True
                                        },
                 so3krates_layer_kwargs={'n_heads': args.H,
-                                        'degrees': [1,2,3]})
-
+                                        'degrees': args.degrees})
 
 obs_fn = get_obs_and_force_fn(net)
 obs_fn = jax.vmap(obs_fn, in_axes=(None, 0))
@@ -180,15 +183,12 @@ if args.restart_from_ckpt_dir is not None:
     restart_from_ckpt_dir = (Path(args.restart_from_ckpt_dir).absolute().resolve()).as_posix()
     assert restart_from_ckpt_dir != ckpt_dir
 
-
-
 if restart_from_ckpt_dir is None:
     params = net.init(jax.random.PRNGKey(coach.net_seed), inputs)
 else:
     print(f"Restarting training from {restart_from_ckpt_dir}.")
     params = load_params_from_ckpt_dir(restart_from_ckpt_dir)
-    print("parameters loaded successfully "+str(params))
-
+    print("parameters loaded successfully " + str(params))
 
 train_state, h_train_state = create_train_state(net,
                                                 params,
@@ -198,7 +198,8 @@ train_state, h_train_state = create_train_state(net,
                                                                   'decay_factor': 1.0
                                                                   },
                                                 scheduled_lr_decay={'exponential': {'transition_steps': 100000,
-                                                                                    'decay_factor': args.lr_decay_exp_df} #default setting is 0.9
+                                                                                    'decay_factor': args.lr_decay_exp_df}
+                                                                    # default setting is 0.9
                                                                     }
                                                 )
 
