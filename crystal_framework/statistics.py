@@ -20,13 +20,13 @@ pylab.rcParams.update(params)
 API_KEY = "l3tSgHcRPO5Sf8pQQHGg3o6Q2ZJJDywb"
 
 
-def get_compounds(anion='O', number_of_elements=2):
+def get_compounds(anion='O', number_of_elements=2, theoretical=False):
     """Retrieve all structures from the Materials Project database that satisfy the chemistry criteria."""
     elements = [anion]
     mpr = MPRester(API_KEY)
     # Retrieve matching entries
     compounds = mpr.materials.summary.search(num_elements=number_of_elements, elements=elements,
-                                             fields=['symmetry.number','structure'])
+                                             fields=['symmetry.number','structure','database_IDs','formula_pretty','material_id'], theoretical=theoretical)
     print("Total number of compounds: {}".format(len(compounds)))
     return compounds
 

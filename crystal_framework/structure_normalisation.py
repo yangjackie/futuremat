@@ -3,6 +3,9 @@ from pymatgen.core import Structure
 from ase import Atoms
 from pymatgen.io.ase import AseAtomsAdaptor
 
+nonmetals = ['H', 'He', 'C', 'N', 'O', 'F', 'Ne', 'P', 'S', 'Cl', 'Ar', 'Se', 'Br', 'Kr', 'I', 'Xe', 'Rn', 'At',
+             'Og', 'Ts']
+
 
 def convert_pymatgen_to_ase(pmg_structure):
     """
@@ -18,20 +21,7 @@ def convert_pymatgen_to_ase(pmg_structure):
     return adaptor.get_atoms(pmg_structure)
 
 
-def find_shortest_cation_anion_bond(atoms, anions='O'):
-    """
-    Find the shortest metal-oxygen bond length in an ASE Atoms object.
-
-    Parameters:
-    atoms (Atoms): An ASE Atoms object representing a crystal structure.
-
-    Returns:
-    float: The shortest metal-oxygen bond length.
-    """
-    from ase.neighborlist import build_neighbor_list
-    nonmetals = ['H', 'He', 'C', 'N', 'O', 'F', 'Ne', 'P', 'S', 'Cl', 'Ar', 'Se', 'Br', 'Kr', 'I', 'Xe', 'Rn', 'At',
-                 'Og', 'Ts']
-
+def find_extreme_cation_anion_bond(atoms, anions='O',filter='longest'):
     metal_indices = [i for i, atom in enumerate(atoms) if atom.symbol not in nonmetals]
     anion_indices = [i for i, atom in enumerate(atoms) if atom.symbol == anions]
 
@@ -43,17 +33,25 @@ def find_shortest_cation_anion_bond(atoms, anions='O'):
     nl = NeighborList(cutoffs, self_interaction=False, bothways=True)
     nl.update(atoms)
 
+
     # Find the shortest metal-anion bond
     shortest_bondlength = float("inf")
+    longest_bondlength = -1.0*float("inf")
 
     for metal_idx in metal_indices:
         neighbors, offsets = nl.get_neighbors(metal_idx)
         for neighbor_idx in neighbors:
             if neighbor_idx in anion_indices:
                 bond_length = atoms.get_distance(metal_idx, neighbor_idx)
-                shortest_bondlength = min(shortest_bondlength, bond_length)
+                if filter == 'shortest':
+                    shortest_bondlength = min(shortest_bondlength, bond_length)
+                elif filter == 'longest':
+                    longest_bondlength = max(longest_bondlength, bond_length)
 
-    return shortest_bondlength if shortest_bondlength != float("inf") else None
+    if filter == 'shortest':
+        return shortest_bondlength if shortest_bondlength != float("inf") else None
+    elif filter == 'longest':
+        return longest_bondlength if longest_bondlength != -1.0*float("inf") else None
 
 def normalise_structure(structure, anion='O'):
     """
@@ -64,7 +62,7 @@ def normalise_structure(structure, anion='O'):
     :return: a pymatgen Structure object.
     """
     ase_atoms = convert_pymatgen_to_ase(structure)
-    l = find_shortest_cation_anion_bond(ase_atoms,anion=anion)
+    l = find_extreme_cation_anion_bond(ase_atoms,anion=anion,filter='longest')
     ase_atoms.set_cell(cell=ase_atoms.cell*(1.0/l),scale_atoms=True)
     return AseAtomsAdaptor.get_structure(ase_atoms) #convert it back to a pymatgen structure
 
