@@ -214,7 +214,7 @@ def prepare_and_plot(dft_path=None,
     mace_phonon = PhonopyWorker(
         structure=read(dft_poscar_file),
         supercell_matrix=np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]]),
-        displacement_distance=0.02,
+        displacement_distance=0.01,
         calculator=calculator
     )
     mace_phonon.generate_force_constants()
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     from mace.calculators import mace_mp
 
     dft_paths = glob.glob(
-        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Cs2AgBiBr6")
+        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_*")
 
     mace_model_path = "/Users/z3079335/OneDrive - UNSW/Documents/Projects/artificial_intelligence/oxide_benchmark/"
     mace_model_name = "mace-mp-0b3-medium.model"
