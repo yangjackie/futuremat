@@ -191,7 +191,7 @@ def prepare_and_plot(dft_path=None,
                      calculator=None):
     dft_fc_file = dft_path + dft_fc_file
     dft_poscar_file = dft_path + dft_poscar_file
-    dft_phonon = phonopy.load(supercell_matrix=[2, 2, 2],  # WARNING - hard coded!
+    dft_phonon = phonopy.load(supercell_matrix=np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]]),  # WARNING - hard coded!
                               primitive_matrix=primitive_matrix,
                               unitcell_filename=dft_poscar_file,
                               force_constants_filename=dft_fc_file)
@@ -218,7 +218,7 @@ def prepare_and_plot(dft_path=None,
         calculator=calculator
     )
     mace_phonon.generate_force_constants()
-    mace_phonon.phonon.run_band_structure(
+    mace_phonon.phonopy.run_band_structure(
         bands,
         with_eigenvectors=False,
         with_group_velocities=False,
@@ -226,8 +226,8 @@ def prepare_and_plot(dft_path=None,
         labels=labels,
         is_legacy_plot=False,
     )
-    mace_distances = mace_phonon.phonon.band_structure.distances
-    mace_frequencies = mace_phonon.phonon.band_structure.frequencies
+    mace_distances = mace_phonon.phonopy.band_structure.distances
+    mace_frequencies = mace_phonon.phonopy.band_structure.frequencies
 
     materials_name = dft_path.split("/")[-2].split("_")[-1]
 
@@ -236,7 +236,7 @@ def prepare_and_plot(dft_path=None,
     stdev = np.std(np.stack((_dft_frequencies, _mace_frequencies)))
     print(f"Standard deviation of frequencies for {materials_name}: {stdev:.4f} THz")
 
-    """
+
     PhononPlotter(
         distances_set=[dft_distances,mace_distances],
         frequencies_set=[dft_frequencies,mace_frequencies],
@@ -248,7 +248,7 @@ def prepare_and_plot(dft_path=None,
         linewidths=[1,1],
         figsize=(7, 5),
         meterial_name=f"{materials_name}: {stdev:.4f} THz").beautiful_phonon_plotter()
-    """
+
     return dft_frequencies, mace_frequencies, materials_name
 
 
