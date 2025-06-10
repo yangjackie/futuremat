@@ -191,7 +191,7 @@ def prepare_and_plot(dft_path=None,
                      calculator=None):
     dft_fc_file = dft_path + dft_fc_file
     dft_poscar_file = dft_path + dft_poscar_file
-    dft_phonon = phonopy.load(supercell_matrix=np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]]),  # WARNING - hard coded!
+    dft_phonon = phonopy.load(supercell_matrix=np.array([2,2,2]),  # WARNING - hard coded!
                               primitive_matrix=primitive_matrix,
                               unitcell_filename=dft_poscar_file,
                               force_constants_filename=dft_fc_file)
@@ -257,10 +257,10 @@ if __name__ == "__main__":
     from mace.calculators import mace_mp
 
     dft_paths = glob.glob(
-        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_*")
+        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Cs2AgBiBr6")
 
     mace_model_path = "/Users/z3079335/OneDrive - UNSW/Documents/Projects/artificial_intelligence/oxide_benchmark/"
-    mace_model_name = "mace-mpa-0-medium.model"
+    mace_model_name = "mace-mp-0b3-medium.model"
     calculator = mace_mp(model=mace_model_path + mace_model_name, device='cpu')
 
     all_dft_frequencies = []
@@ -272,11 +272,12 @@ if __name__ == "__main__":
         print("Processing:", dft_path)
         dft_frequencies, mace_frequencies, materials_name = prepare_and_plot(dft_path=dft_path + '/',
                                                                              calculator=calculator)
-        all_dft_frequencies += list(np.array(dft_frequencies).flatten())
-        all_mace_frequencies += list(np.array(mace_frequencies).flatten())
+        #all_dft_frequencies += list(np.array(dft_frequencies).flatten())
+        #all_mace_frequencies += list(np.array(mace_frequencies).flatten())
 
     # prepare_and_plot(dft_path="/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Cs2CeAgI6/")
 
+    """
     plt.plot(all_dft_frequencies, all_mace_frequencies, 'b.', markersize=1)
     plt.plot(all_dft_frequencies, all_dft_frequencies, 'r--', markersize=1)
     plt.plot(all_mace_frequencies, all_mace_frequencies, 'r--', markersize=1)
@@ -285,3 +286,4 @@ if __name__ == "__main__":
     plt.ylabel("MACE Frequencies [THz]")
     plt.tight_layout()
     plt.show()
+    """

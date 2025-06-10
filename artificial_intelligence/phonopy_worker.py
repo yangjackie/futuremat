@@ -43,7 +43,7 @@ if __name__ == "__main__":
     mace_model_name = "mace-mpa-0-medium.model"
     calculator = mace_mp(model=mace_model_path + mace_model_name, device='cpu')
 
-    phonopy_worker = PhonopyWorker(strcture=read(
+    phonopy_worker = PhonopyWorker(structure=read(
         "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Rb3YF6/CONTCAR"),
         calculator=calculator)
 
