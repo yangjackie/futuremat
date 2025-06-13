@@ -42,7 +42,7 @@ if __name__ == "__main__":
     calculator = mace_mp(model=mace_model_path + mace_model_name, device='cpu')
 
     phonopy_worker = PhonopyWorker(structure=read(
-        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Cs2AgBiBr6/CONTCAR"),
+        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/raw_data/chlorides/dpv_Cs2AgBiCl6/CONTCAR"),
         calculator=calculator)
 
     phonopy_worker.generate_force_constants()

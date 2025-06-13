@@ -126,7 +126,7 @@ class PhononPlotter:
                     ax.plot(distances[path][point], 0, color="red", marker="D")
         return sorted(set(xticks))
 
-    def beautiful_phonon_plotter(self):
+    def beautiful_phonon_plotter(self,savefig=False,filename=None):
         """creates a beautiful phonon plot
         gives back:
         fig, ax: figure and axis of the plot
@@ -180,6 +180,8 @@ class PhononPlotter:
         if self.material_name:
             plt.suptitle(self.material_name, y=0.95)
         plt.tight_layout()
+        if savefig:
+            plt.savefig(filename, bbox_inches="tight")
         plt.show()
         return fig, ax
 
@@ -188,7 +190,10 @@ def prepare_and_plot(dft_path=None,
                      dft_fc_file='force_constants.hdf5',
                      dft_poscar_file='CONTCAR',
                      primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                     calculator=None):
+                     calculator=None,
+                     savefig=False,
+                     filename=None,
+                     plot=False):
     dft_fc_file = dft_path + dft_fc_file
     dft_poscar_file = dft_path + dft_poscar_file
     dft_phonon = phonopy.load(supercell_matrix=np.array([2,2,2]),  # WARNING - hard coded!
@@ -203,7 +208,7 @@ def prepare_and_plot(dft_path=None,
     dft_phonon.run_band_structure(
         bands,
         with_eigenvectors=False,
-        with_group_velocities=False,
+        with_group_velocities=True,
         path_connections=path_connections,
         labels=labels,
         is_legacy_plot=False
@@ -221,7 +226,7 @@ def prepare_and_plot(dft_path=None,
     mace_phonon.phonopy.run_band_structure(
         bands,
         with_eigenvectors=False,
-        with_group_velocities=False,
+        with_group_velocities=True,
         path_connections=path_connections,
         labels=labels,
         is_legacy_plot=False,
@@ -232,24 +237,44 @@ def prepare_and_plot(dft_path=None,
     materials_name = dft_path.split("/")[-2].split("_")[-1]
 
     _dft_frequencies = np.ndarray.flatten(np.array(dft_frequencies))
+    _dft_frequencies = _dft_frequencies.astype(complex)
+    _dft_frequencies[_dft_frequencies<0] = 1j * np.abs(_dft_frequencies[_dft_frequencies<0])
+
     _mace_frequencies = np.ndarray.flatten(np.array(mace_frequencies))
-    stdev = np.std(np.stack((_dft_frequencies, _mace_frequencies)))
+    _mace_frequencies = _mace_frequencies.astype(complex)
+    _mace_frequencies[_mace_frequencies<0] = 1j * np.abs(_mace_frequencies[_mace_frequencies<0])
+
+    stdev = np.real(np.sqrt(np.average(np.square(np.square(_mace_frequencies) - np.square(_dft_frequencies)))))
     print(f"Standard deviation of frequencies for {materials_name}: {stdev:.4f} THz")
 
+    dft_group_velocities = np.ndarray.flatten(np.array(dft_phonon.band_structure.group_velocities))
+    mace_group_velocities = np.ndarray.flatten(np.array(mace_phonon.phonopy.band_structure.group_velocities))
 
-    PhononPlotter(
-        distances_set=[dft_distances,mace_distances],
-        frequencies_set=[dft_frequencies,mace_frequencies],
-        x_labels=labels,
-        connections=path_connections,
-        colors=["blue","red"],
-        legend_labels=["DFT","MACE"],
-        linestyles=["-",'--'],
-        linewidths=[1,1],
-        figsize=(7, 5),
-        meterial_name=f"{materials_name}: {stdev:.4f} THz").beautiful_phonon_plotter()
+    vel_stdev= np.sqrt(np.average(np.square(dft_group_velocities - mace_group_velocities)))
+    print(f"Standard deviation of group velocities for {materials_name}: {vel_stdev:.4f} m/s")
 
-    return dft_frequencies, mace_frequencies, materials_name
+
+    if filename is None:
+        filename = dft_path + materials_name + '_dft_mlff_phonon.pdf'
+    if plot:
+        PhononPlotter(
+            distances_set=[dft_distances,mace_distances],
+            frequencies_set=[dft_frequencies,mace_frequencies],
+            x_labels=labels,
+            connections=path_connections,
+            colors=["blue","red"],
+            legend_labels=["DFT","MACE"],
+            linestyles=["-",'--'],
+            linewidths=[1,1],
+            figsize=(7, 5),
+            meterial_name=f"{materials_name}: Freq Stdev: {stdev:.4f} THz; group velocity stdev: {vel_stdev:.4f} (m/s)").beautiful_phonon_plotter(savefig=savefig,filename=filename)
+
+    data_dict = {"name": materials_name,
+                 "dft_frequencies": dft_frequencies,
+                 "mace_frequencies": mace_frequencies,
+                 "dft_group_velocities": dft_group_velocities,
+                 "mace_group_velocities": mace_group_velocities}
+    return data_dict
 
 
 if __name__ == "__main__":
@@ -257,7 +282,7 @@ if __name__ == "__main__":
     from mace.calculators import mace_mp
 
     dft_paths = glob.glob(
-        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_*")
+        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/raw_data/chlorides/dpv_*")
 
     mace_model_path = "/Users/z3079335/OneDrive - UNSW/Documents/Projects/artificial_intelligence/oxide_benchmark/"
     mace_model_name = "mace-mp-0b3-medium.model"
@@ -270,8 +295,11 @@ if __name__ == "__main__":
         if ".tar.gz" in dft_path:
             continue
         print("Processing:", dft_path)
-        dft_frequencies, mace_frequencies, materials_name = prepare_and_plot(dft_path=dft_path + '/',
-                                                                             calculator=calculator)
+        try:
+            data_dict = prepare_and_plot(dft_path=dft_path + '/',
+                                                                                calculator=calculator)
+        except:
+            pass
         #all_dft_frequencies += list(np.array(dft_frequencies).flatten())
         #all_mace_frequencies += list(np.array(mace_frequencies).flatten())
 
