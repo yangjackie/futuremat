@@ -114,8 +114,8 @@ class Benchmarking:
 
         ax.set_xscale('log')
         ax.set_yscale('log')
-        ax.set_xlim([0.2,120])
-        ax.set_ylim([0.7,120])
+        ax.set_xlim([0.05,100])
+        ax.set_ylim([0.7,100])
         ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
         ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
         ax.xaxis.set_minor_formatter(ticker.ScalarFormatter())
@@ -137,8 +137,11 @@ class Benchmarking:
 def format_minor_tick_label(x, pos):
     if (abs(x) < 1) :
         x = float(f'{x:.1f}')
-        if ((10*x) % 2 == 0):
+        if (abs(x) > 0.1) and ((10*x) % 2 == 0):
             return f'{x:.1f}'
+        #elif (abs(x) <= 0.1) and (int(100 * x) % 2 == 0):
+        #    print(x)
+        #    return f'{x:.2f}'
         return None
     if (abs(x) > 1) and (abs(x) < 11):
         x = int(x)
@@ -159,9 +162,10 @@ if __name__ == "__main__":
     parser.add_argument("--system", type=str, default="fluorides",help="System to benchmark (e.g., 'fluorides', 'chlorides', 'bromides', 'iodides').")
     parser.add_argument("--run_benchmark", action='store_true', help="Run the benchmarking of frequencies.")
     parser.add_argument("--plot_freq", action='store_true', help="Plot the frequency data.")
+    parser.add_argument("--model_name", type=str, default="mace-mp-0b3-medium.model")
     args = parser.parse_args()
 
-    benchmark = Benchmarking(system=args.system)
+    benchmark = Benchmarking(system=args.system,mace_model_name=args.model_name)
     if args.run_benchmark:
         benchmark.benchmark_frequencies()
     elif args.plot_freq:
