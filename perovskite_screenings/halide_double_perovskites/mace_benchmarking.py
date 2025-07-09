@@ -54,6 +54,7 @@ class Benchmarking:
             print(f"Processing {comp}...")
             filename = _system_cwd + "/" + comp + '/' + comp + '_dft_mlff_phonon_' + self.mace_model_name.replace(
                 '.model', '') + '.pdf'
+
             try:
                 return_dict = prepare_and_plot(dft_path=_system_cwd + "/" + comp + '/',
                                                calculator=self.calculator,

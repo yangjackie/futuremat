@@ -20,7 +20,10 @@ import os
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import gaussian_kde
-from sklearn.neighbors import KernelDensity
+try:
+    from sklearn.neighbors import KernelDensity
+except ImportError:
+    pass
 from phonopy.phonon.band_structure import *
 
 import matplotlib.pyplot as plt
@@ -406,18 +409,20 @@ class AnharmonicScore(object):
                                 for i, v in enumerate(elem):
                                     this_position = [float(_v) for _v in v.text.split()]
                                     this_positions.append(this_position)
-
                                     # pbc_shortest_dist = pbc_shortest_vectors(__pymatgen_lattice,self.ref_coords[i],this_position)[0][0]
                                     # this_positions.append(pbc_shortest_dist)
 
                                 this_position_set.append(np.array(this_positions))
-
-                    this_position_set = this_position_set[-1 * force_dimension_counter[fc]:]
+                    #print(fc,np.shape(this_position_set),'<---')
+                    #this_position_set = this_position_set[-1 * force_dimension_counter[fc]:]
+                    this_position_set = this_position_set[-len(self.dft_forces):]
+                    #print(fc,np.shape(this_position_set))
                     all_positions = all_positions + this_position_set
                 except:
                     pass
 
             # only need those with forces
+            #print(np.shape(all_positions),len(self.dft_forces))
             all_positions = all_positions[-len(self.dft_forces):]
             all_positions = np.array(all_positions)
             print(
@@ -435,25 +440,26 @@ class AnharmonicScore(object):
             self._all_displacements = np.zeros(np.shape(__all_displacements))
             for i in range(__all_displacements.shape[0]):
                 np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self._all_displacements[i, :, :])
-
             print('All MD displacement shape ', np.shape(self._all_displacements))
         return self._all_displacements
 
     @property
     def harmonic_forces(self):
         if (not hasattr(self, '_harmonic_forces')) or (
-                hasattr(self, '_harmonic_forces') and self._harmonic_force is None):
-            self._harmonic_force = np.zeros(np.shape(self.dft_forces))
+                hasattr(self, '_harmonic_forces') and self._harmonic_forces is None):
+            print("compute harmonic force")
+            self._harmonic_forces = np.zeros(np.shape(self.dft_forces))
             for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
                 if not self.mode_resolved:
-                    self._harmonic_force[i, :, :] = -1.0 * (
+                    self._harmonic_forces[i, :, :] = -1.0 * (
                         np.dot(self.force_constants, self.all_displacements[i, :, :].flatten())).reshape(
                         self.all_displacements[0, :, :].shape)
                 else:
-                    self._harmonic_force[i, :] = -1.0 * (
+                    self._harmonic_forces[i, :] = -1.0 * (
                         np.dot(self.force_constants, self.all_displacements[i, :, :].flatten()))
+            print(self._harmonic_forces)
 
-        return self._harmonic_force
+        return self._harmonic_forces
 
     @property
     def third_order_forces(self):
@@ -495,7 +501,6 @@ class AnharmonicScore(object):
         if (not hasattr(self, '_anharmonic_forces')) or (
                 hasattr(self, '_anharmonic_forces') and self._anharmonic_forces is None):
             self._anharmonic_forces = self.dft_forces - self.harmonic_forces
-
             # for i in range(self._anharmonic_forces.shape[0]):
             #    print('ANHF ',np.std(self._anharmonic_forces[i]))
 
@@ -635,6 +640,9 @@ class AnharmonicScore(object):
                 self.sigma_frames.append(_sigma_frame)
 
     def structural_sigma(self, return_trajectory=False):
+        #print(self.anharmonic_forces[2][3])
+        #print(self.dft_forces[2][3])
+
         if self.atom_masks is None:
             rmse = self.anharmonic_forces
             std = self.dft_forces
@@ -642,6 +650,8 @@ class AnharmonicScore(object):
             rmse = self.anharmonic_forces[:, self.atom_masks, :]
             std = self.dft_forces[:, self.atom_masks, :]
 
+        #print(rmse[2][3])
+        #print(std[2][3])
         print(".............Calculating Sigma...................")
         print('dft forces matrix, shape ', np.shape(std))
         print('anharmonic force matrix, shape', np.shape(rmse))
@@ -652,6 +662,8 @@ class AnharmonicScore(object):
             print("Sigma for entire structure over the MD trajectory is ", str(sigma))
             return sigma, self.time_series
         else:
+            print("here")
+            #print(rmse.std(axis=(1, 2), dtype=np.float64)/ std.std(axis=(1, 2), dtype=np.float64))
             sigma = rmse.std(axis=(1, 2), dtype=np.float64) / std.std(axis=(1, 2), dtype=np.float64)
             # print('sigma is ', sigma)
             print("=" * 100)
@@ -726,9 +738,10 @@ if __name__ == "__main__":
 
     if args.sigma:
         sigma, time_stps = scorer.structural_sigma(return_trajectory=args.trajectory)
-        print('sigma is ', sigma)
+        #print('sigma is ', sigma)
         if args.plot_trajectory:
             # print(len(sigma))
+            time_stps=range(len(sigma))
             plt.plot(time_stps, sigma, 'b-', lw=1)
             plt.xlabel("Time (fs)", fontsize=16)
             plt.ylabel("$\\sigma(t)$", fontsize=16)
@@ -760,3 +773,4 @@ if __name__ == "__main__":
 
     if args.mode_resolved and args.band:
         scorer.mode_resolved_sigma_band()
+
