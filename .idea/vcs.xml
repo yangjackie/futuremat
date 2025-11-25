@@ -2,7 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$USER_HOME$/Library/CloudStorage/OneDrive-UNSW/Documents/Projects/perovskite_anharmonic_screening/visualisation" vcs="Git" />
     <mapping directory="$USER_HOME$/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/visualisation" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/../futuremat_public" vcs="Git" />
   </component>
 </project>
