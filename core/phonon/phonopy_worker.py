@@ -4,9 +4,12 @@ from ase.io import read
 from ase import Atoms
 from phonopy import Phonopy
 from phonopy.structure.atoms import PhonopyAtoms
-
+import argparse
 
 class PhonopyWorker:
+    """A class to interface Phonopy with ASE calculators to compute force constants.
+    This enables the use of machine learning interatomic potentials, such as MACE foundation models, 
+    for phonon calculations."""
 
     def __init__(self,
                  structure,
@@ -42,13 +45,15 @@ class PhonopyWorker:
 
 
 if __name__ == "__main__":
-    mace_model_path = "/Users/jackyang-macmini/OneDrive - UNSW/Documents/Projects/artificial_intelligence/mace_models/"
-    mace_model_name = "mace-mp-0b3-medium.model"
-    calculator = mace_mp(model=mace_model_path + mace_model_name, device='cpu')
+    parser = argparse.ArgumentParser(description='argument parser for performing  phonopy calculations with MLSPs',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--model_path', type=str, default=None)
+    parser.add_argument('--model_name', type=str, default="mace-mp-0b3-medium.model")
+    args = parser.parse_args()
 
-    phonopy_worker = PhonopyWorker(structure=read(
-        "/Users/jackyang-macmini/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Rb3YF6/CONTCAR"),
-        calculator=calculator)
+    calculator = mace_mp(model=args.model_path + "/" + args.model_name, device='cpu')
+
+    #read in structure from CONTCAR file, replace with your own structure file as needed
+    phonopy_worker = PhonopyWorker(structure=read("CONTCAR"),calculator=calculator)
 
     phonopy_worker.generate_force_constants(save_fc=True,fc_file_name="force_constants-mace-mp-0b3-medium.hdf5")
-    #phonopy_worker.phonopy.auto_band_structure(plot=True).show()

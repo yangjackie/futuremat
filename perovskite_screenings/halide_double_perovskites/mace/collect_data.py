@@ -1,5 +1,5 @@
 import argparse, os, glob
-from artificial_intelligence.phonopy_worker import PhonopyWorker
+from core.phonon.phonopy_worker import PhonopyWorker
 from ase.io import read
 from core.phonon.anharmonic_score import *
 from mace.calculators import mace_mp, MACECalculator

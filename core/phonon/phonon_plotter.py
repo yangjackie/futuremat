@@ -5,7 +5,7 @@ from phonopy.structure.atoms import PhonopyAtoms
 import phonopy
 import seekpath
 
-from artificial_intelligence.phonopy_worker import PhonopyWorker
+from core.phonon.phonopy_worker import PhonopyWorker
 
 
 class PhononPlotter:
@@ -282,11 +282,22 @@ def prepare_and_plot(dft_path=None,
 if __name__ == "__main__":
     import glob
     from mace.calculators import mace_mp
+    import argparse
 
+    parser = argparse.ArgumentParser(description='argument parser for phonon plotter',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--dft_path', type=str, default=None)
+    parser.add_argument('--model_path', type=str, default=None)
+    args = parser.parse_args()
+
+    #this is a bit of the code to generate phonon bandstructures plots that is computed with DFT
+    #to the one that is computed with the MACE models
+
+    #TODO - make this more general, remove hard coded bits
     dft_paths = glob.glob(
-        "/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/raw_data/chlorides/dpv_*")
+        args.dft_path+"/dpv_*")
 
-    mace_model_path = "/Users/z3079335/OneDrive - UNSW/Documents/Projects/artificial_intelligence/oxide_benchmark/"
+    mace_model_path = args.model_path + '/'
     mace_model_name = "mace-mp-0b3-medium.model"
     calculator = mace_mp(model=mace_model_path + mace_model_name, device='cpu')
 
@@ -302,18 +313,4 @@ if __name__ == "__main__":
                                          calculator=calculator)
         except:
             pass
-        # all_dft_frequencies += list(np.array(dft_frequencies).flatten())
-        # all_mace_frequencies += list(np.array(mace_frequencies).flatten())
-
-    # prepare_and_plot(dft_path="/Users/z3079335/OneDrive - UNSW/Documents/Projects/perovskite_anharmonic_screening/halide_double_perovskites/MLFF_benchmark/dpv_Cs2CeAgI6/")
-
-    """
-    plt.plot(all_dft_frequencies, all_mace_frequencies, 'b.', markersize=1)
-    plt.plot(all_dft_frequencies, all_dft_frequencies, 'r--', markersize=1)
-    plt.plot(all_mace_frequencies, all_mace_frequencies, 'r--', markersize=1)
-
-    plt.xlabel("DFT Frequencies [THz]")
-    plt.ylabel("MACE Frequencies [THz]")
-    plt.tight_layout()
-    plt.show()
-    """
+        

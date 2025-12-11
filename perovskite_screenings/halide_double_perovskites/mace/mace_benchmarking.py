@@ -10,7 +10,7 @@ from phonopy.structure.atoms import PhonopyAtoms
 import os
 import pickle
 
-from artificial_intelligence.phonon_plotter import prepare_and_plot
+from core.phonon.phonon_plotter import prepare_and_plot
 
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt

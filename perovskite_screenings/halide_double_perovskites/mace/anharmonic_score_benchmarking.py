@@ -129,7 +129,7 @@ def compare_anharmonic_scores_dft_mlff(
                 #use the default DFT force constants
                 _fc = force_constants
             else:
-                from artificial_intelligence.phonopy_worker import PhonopyWorker
+                from core.phonon.phonopy_worker import PhonopyWorker
                 from ase.io import read
                 calculator = mace_mp(model=mace_model_path + model, device='cpu')
                 contcar = working_dir+'/CONTCAR'
