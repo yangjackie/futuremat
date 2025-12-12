@@ -49,11 +49,16 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model_path', type=str, default=None)
     parser.add_argument('--model_name', type=str, default="mace-mp-0b3-medium.model")
+    parser.add_argument('--output_fc_name', type=str, default="force_constants-mace-mp-0b3-medium.hdf5")
+    parser.add_argument('--input_structure', type=str, default='./POSCAR')
     args = parser.parse_args()
 
     calculator = mace_mp(model=args.model_path + "/" + args.model_name, device='cpu')
 
     #read in structure from CONTCAR file, replace with your own structure file as needed
-    phonopy_worker = PhonopyWorker(structure=read("CONTCAR"),calculator=calculator)
+    phonopy_worker = PhonopyWorker(structure=read(args.input_structure),calculator=calculator)
 
-    phonopy_worker.generate_force_constants(save_fc=True,fc_file_name="force_constants-mace-mp-0b3-medium.hdf5")
+    if args.output_fc_name is None:
+        args.output_fc_name = "force_constants-" + args.model_name.replace(".model", ".hdf5")
+
+    phonopy_worker.generate_force_constants(save_fc=True,fc_file_name=args.output_fc_name)

@@ -195,6 +195,48 @@ def prepare_and_plot(dft_path=None,
                      savefig=False,
                      filename=None,
                      plot=False):
+    """Prepare phonon band structures (DFT and MLFF) and optionally plot them.
+
+    This function loads a DFT phonon calculation from a unitcell (`CONTCAR`) and
+    its force constants file, computes the phonon band structure with seekpath to identify 
+    reciproal space q-point paths, generates an equivalent band structure using a machine-learned force-field
+    via `PhonopyWorker`, and returns a dictionary with frequency and group
+    velocity data for both DFT and MLFF results.
+
+    Args:
+        dft_path (str or None): Path prefix where `dft_fc_file` and
+            `dft_poscar_file` are located. If `None`, files are taken from the
+            current working directory. Trailing slash expected if provided.
+        dft_fc_file (str): Filename (or suffix) of the DFT force constants
+            HDF5 file. Default: `'force_constants.hdf5'`.
+        dft_poscar_file (str): Filename (or suffix) of the DFT POSCAR/CONTCAR
+            unit cell file. Default: `'CONTCAR'`.
+        primitive_matrix (list[list[int]]): 3x3 matrix describing the
+            primitive cell transformation used by phonopy when loading the
+            DFT calculation. Default is the identity matrix.
+        calculator: An ASE-compatible calculator (or ML potential wrapper)
+            to evaluate forces on displaced supercells when building force
+            constants for the ML model. This is passed to `PhonopyWorker`.
+        savefig (bool): If True, save the generated phonon comparison plot to
+            `filename`.
+        filename (str or None): Output filename for the saved plot. If None,
+            a default name derived from `dft_path` is used.
+        plot (bool): If True, display the phonon comparison plot using
+            matplotlib. If False, the function still computes and returns data.
+
+    Returns:
+        dict: `data_dict` containing frequency and group-velocity computed from DFT
+        and MLFF methods allowing the comparison of phonon properties.
+
+    Notes:
+        - The function assumes `dft_path` if provided ends with a path
+          separator; it concatenates `dft_path + dft_fc_file` and
+          `dft_path + dft_poscar_file`.
+        - The MLFF computation uses `PhonopyWorker.generate_force_constants()`
+          to create force constants in memory; ensure `calculator` is set and
+          able to evaluate forces for each displaced supercell.
+    """
+
     dft_fc_file = dft_path + dft_fc_file
     dft_poscar_file = dft_path + dft_poscar_file
     dft_phonon = phonopy.load(supercell_matrix=np.array([2, 2, 2]),  # WARNING - hard coded!
@@ -279,38 +321,3 @@ def prepare_and_plot(dft_path=None,
     return data_dict
 
 
-if __name__ == "__main__":
-    import glob
-    from mace.calculators import mace_mp
-    import argparse
-
-    parser = argparse.ArgumentParser(description='argument parser for phonon plotter',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--dft_path', type=str, default=None)
-    parser.add_argument('--model_path', type=str, default=None)
-    args = parser.parse_args()
-
-    #this is a bit of the code to generate phonon bandstructures plots that is computed with DFT
-    #to the one that is computed with the MACE models
-
-    #TODO - make this more general, remove hard coded bits
-    dft_paths = glob.glob(
-        args.dft_path+"/dpv_*")
-
-    mace_model_path = args.model_path + '/'
-    mace_model_name = "mace-mp-0b3-medium.model"
-    calculator = mace_mp(model=mace_model_path + mace_model_name, device='cpu')
-
-    all_dft_frequencies = []
-    all_mace_frequencies = []
-
-    for dft_path in dft_paths:
-        if ".tar.gz" in dft_path:
-            continue
-        print("Processing:", dft_path)
-        try:
-            data_dict = prepare_and_plot(dft_path=dft_path + '/',
-                                         calculator=calculator)
-        except:
-            pass
-        

@@ -75,6 +75,8 @@ class AnharmonicScore(object):
         self._fc_input = force_constants
         self.prepare_phonon_eigs()
 
+    
+
     @property
     def ref_frame(self) -> Crystal:
         return self._ref_frame
