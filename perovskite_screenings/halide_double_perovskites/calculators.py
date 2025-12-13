@@ -1,10 +1,11 @@
+from core.dao.vasp import load_structure
 from phonopy.interface.calculator import read_crystal_structure
 from pymatgen.analysis.magnetism import CollinearMagneticStructureAnalyzer
 from pymatgen.transformations.standard_transformations import ConventionalCellTransformation
 
 from core.calculators.vasp import Vasp, VaspReader
 from core.internal.builders.crystal import build_supercell, map_pymatgen_IStructure_to_crystal
-from twodPV.calculators import default_bulk_optimisation_set, setup_logger, update_core_info, load_structure
+from twodPV.calculators import default_bulk_optimisation_set, setup_logger, update_core_info
 import argparse, os, tarfile, shutil, glob
 
 

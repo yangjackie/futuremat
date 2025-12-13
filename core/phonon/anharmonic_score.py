@@ -19,6 +19,7 @@ import phonopy
 import os
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import gaussian_kde
+
 try:
     from sklearn.neighbors import KernelDensity
 except ImportError:
@@ -29,35 +30,41 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 import h5py
 
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
-rc('text', usetex=True)
+rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
+rc("text", usetex=True)
 
 import matplotlib.pylab as pylab
 
-params = {'legend.fontsize': '14',
-          'figure.figsize': (6, 5),
-          'axes.labelsize': 18,
-          'axes.titlesize': 14,
-          'xtick.labelsize': 16,
-          'ytick.labelsize': 16}
+params = {
+    "legend.fontsize": "14",
+    "figure.figsize": (6, 5),
+    "axes.labelsize": 18,
+    "axes.titlesize": 14,
+    "xtick.labelsize": 16,
+    "ytick.labelsize": 16,
+}
 pylab.rcParams.update(params)
+
 
 class AnharmonicScore(object):
 
-    def __init__(self, ref_frame=None,
-                 unit_cell_frame=None,
-                 md_frames=None,
-                 potim=1,
-                 force_constants=None,
-                 supercell=[1, 1, 1],
-                 primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                 atoms=None,
-                 include_third_order=False,
-                 third_order_fc='./phono3py/fc3.hdf5',
-                 include_fourth_order=False,
-                 fourth_order_fc=None,
-                 force_sets_filename='FORCE_SETS',
-                 mode_resolved=False):
+    def __init__(
+        self,
+        ref_frame=None,
+        unit_cell_frame=None,
+        md_frames=None,
+        potim=1,
+        force_constants=None,
+        supercell=[1, 1, 1],
+        primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        atoms=None,
+        include_third_order=False,
+        third_order_fc="./phono3py/fc3.hdf5",
+        include_fourth_order=False,
+        fourth_order_fc=None,
+        force_sets_filename="FORCE_SETS",
+        mode_resolved=False,
+    ):
 
         self.ref_frame = ref_frame
         self.md_frames = md_frames
@@ -75,26 +82,28 @@ class AnharmonicScore(object):
         self._fc_input = force_constants
         self.prepare_phonon_eigs()
 
-    
-
     @property
     def ref_frame(self) -> Crystal:
         return self._ref_frame
 
     @ref_frame.setter
     def ref_frame(self, val):
-        if not hasattr(self, '_ref_frame'):
+        if not hasattr(self, "_ref_frame"):
             if isinstance(val, Crystal):
                 self._ref_frame = val
-            elif ('POSCAR' in val) or ('CONTCAR' in val):
+            elif ("POSCAR" in val) or ("CONTCAR" in val):
                 print("initialising reference frame from POSCAR ")
                 self.ref_frame = VaspReader(input_location=val).read_POSCAR()
 
     @property
     def ref_coords(self) -> np.array:
-        if not hasattr(self, '_ref_coords'):
-            self._ref_coords = np.array([[a.scaled_position.x, a.scaled_position.y, a.scaled_position.z] for a in
-                                         self._ref_frame.asymmetric_unit[0].atoms])
+        if not hasattr(self, "_ref_coords"):
+            self._ref_coords = np.array(
+                [
+                    [a.scaled_position.x, a.scaled_position.y, a.scaled_position.z]
+                    for a in self._ref_frame.asymmetric_unit[0].atoms
+                ]
+            )
         return self._ref_coords
 
     @property
@@ -103,10 +112,13 @@ class AnharmonicScore(object):
 
     @atom_masks.setter
     def atom_masks(self, val: list):
-        if not hasattr(self, '_atom_masks'):
+        if not hasattr(self, "_atom_masks"):
             if val is not None:
-                self._atom_masks = [id for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if
-                                    atom.label in val]
+                self._atom_masks = [
+                    id
+                    for id, atom in enumerate(self.ref_frame.asymmetric_unit[0].atoms)
+                    if atom.label in val
+                ]
             else:
                 self._atom_masks = None
 
@@ -123,9 +135,9 @@ class AnharmonicScore(object):
 
     @property
     def phonon(self):
-        if hasattr(self, '_phonon'):
+        if hasattr(self, "_phonon"):
             return self._phonon
-        elif isinstance(self._fc_input, str) and 'hdf5' in self._fc_input:
+        elif isinstance(self._fc_input, str) and "hdf5" in self._fc_input:
             self.__make_phonopy_object_from_hdf5()
         elif self._fc_input is None:
             self.__make_phonopy_object_from_forcesets()
@@ -133,37 +145,50 @@ class AnharmonicScore(object):
 
     def __make_phonopy_object_from_forcesets(self):
         """
-                Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
-                reconstructing the force constants for supercells from primitive cells
-                This is hard coded in as a hack, not often used
-                """
+        Loading directly from SPOSCAR (supercell structure) and FORCESET to avoid problem of the need for
+        reconstructing the force constants for supercells from primitive cells
+        This is hard coded in as a hack, not often used
+        """
         if not self.mode_resolved:
-            self._phonon = phonopy.load(supercell_filename='SPOSCAR', log_level=1,
-                                        force_sets_filename='FORCE_SETS')
+            self._phonon = phonopy.load(
+                supercell_filename="SPOSCAR",
+                log_level=1,
+                force_sets_filename="FORCE_SETS",
+            )
         else:
-            self._phonon = phonopy.load(supercell_filename='SPOSCAR', log_level=1,
-                                        force_sets_filename='FORCE_SETS',
-                                        primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            self._phonon = phonopy.load(
+                supercell_filename="SPOSCAR",
+                log_level=1,
+                force_sets_filename="FORCE_SETS",
+                primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            )
         self._phonon.produce_force_constants()
 
     def __make_phonopy_object_from_hdf5(self):
         try:
-            self._phonon = phonopy.load(supercell_matrix=self._supercell,  # WARNING - hard coded!
-                                        primitive_matrix=self._primitive_matrix,
-                                        unitcell_filename=self._unit_cell_frame,
-                                        force_constants_filename=self._fc_input)
+            self._phonon = phonopy.load(
+                supercell_matrix=self._supercell,  # WARNING - hard coded!
+                primitive_matrix=self._primitive_matrix,
+                unitcell_filename=self._unit_cell_frame,
+                force_constants_filename=self._fc_input,
+            )
             print("Use supercell " + str(self._supercell))
             print("Use primitive matrix " + str(self._primitive_matrix) + " done")
         except:
-            self._phonon = phonopy.load(supercell_matrix=self._supercell,  # WARNING - hard coded!
-                                        primitive_matrix='auto',
-                                        unitcell_filename=self._unit_cell_frame,
-                                        force_constants_filename=self._fc_input)
-        print("INPUT PHONOPY force constant shape ", np.shape(self._phonon.force_constants))
+            self._phonon = phonopy.load(
+                supercell_matrix=self._supercell,  # WARNING - hard coded!
+                primitive_matrix="auto",
+                unitcell_filename=self._unit_cell_frame,
+                force_constants_filename=self._fc_input,
+            )
+        print(
+            "INPUT PHONOPY force constant shape ",
+            np.shape(self._phonon.force_constants),
+        )
 
     @property
     def force_constants(self):
-        if not hasattr(self, '_force_constants'):
+        if not hasattr(self, "_force_constants"):
             if isinstance(self._fc_input, np.ndarray):
                 __fc = self._fc_input
             else:
@@ -171,7 +196,9 @@ class AnharmonicScore(object):
 
             __new_shape = np.shape(__fc)[0] * np.shape(__fc)[2]
             self._force_constants = np.zeros((__new_shape, __new_shape))
-            self._force_constants = __fc.transpose(0, 2, 1, 3).reshape(__new_shape, __new_shape)
+            self._force_constants = __fc.transpose(0, 2, 1, 3).reshape(
+                __new_shape, __new_shape
+            )
             print("force constant reshape ", np.shape(self.force_constants))
             print("Force constants ready")
         return self._force_constants
@@ -182,17 +209,21 @@ class AnharmonicScore(object):
 
     @force_constant_3.setter
     def force_constant_3(self, val):
-        if not hasattr(self, '_force_constant_3') and self.include_third_oder:
+        if not hasattr(self, "_force_constant_3") and self.include_third_oder:
             if isinstance(val, str):
                 if os.path.isfile(val):
                     print("Found third order force constants")
                     f = h5py.File(val)  # './phono3py/fc3.hdf5'
-                    raw_force_constant_3 = np.array(f['fc3'])
+                    raw_force_constant_3 = np.array(f["fc3"])
             elif isinstance(val, np.ndarray):
                 raw_force_constant_3 = val
             s = np.shape(raw_force_constant_3)[0] * 3
-            self._force_constant_3 = raw_force_constant_3.transpose([0, 3, 1, 4, 2, 5]).reshape(s, s, s)
-            print("Reshaped 3rd order force constant is ", np.shape(self.force_constant_3))
+            self._force_constant_3 = raw_force_constant_3.transpose(
+                [0, 3, 1, 4, 2, 5]
+            ).reshape(s, s, s)
+            print(
+                "Reshaped 3rd order force constant is ", np.shape(self.force_constant_3)
+            )
 
     @property
     def force_constant_4(self) -> np.ndarray:
@@ -200,11 +231,13 @@ class AnharmonicScore(object):
 
     @force_constant_4.setter
     def force_constant_4(self, val):
-        if not hasattr(self, '_force_constant_4') and self.include_fourth_order:
+        if not hasattr(self, "_force_constant_4") and self.include_fourth_order:
             if isinstance(val, np.ndarray):
                 raw_force_constant_4 = val
             s = np.shape(raw_force_constant_4)[0] * 3
-            self._force_constant_4 = raw_force_constant_4.transpose([0, 4, 1, 5, 2, 6, 3, 7]).reshape(s, s, s, s)
+            self._force_constant_4 = raw_force_constant_4.transpose(
+                [0, 4, 1, 5, 2, 6, 3, 7]
+            ).reshape(s, s, s, s)
 
     @property
     def mode_resolved(self):
@@ -222,34 +255,51 @@ class AnharmonicScore(object):
         if not self.mode_resolved:
             return
 
-        print("Need to calculate the mode resolved anharmonic scores, first get the phonon eigenvectors")
-        from core.models.element import atomic_mass_dict
+        print(
+            "Need to calculate the mode resolved anharmonic scores, first get the phonon eigenvectors"
+        )
+        from core.data.element import atomic_mass_dict
 
         from pymatgen.symmetry.bandstructure import HighSymmKpath
         from core.internal.builders.crystal import map_to_pymatgen_Structure
-        pmg_path = HighSymmKpath(map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3)
+
+        pmg_path = HighSymmKpath(
+            map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3
+        )
         self._kpath = pmg_path._kpath
         self.prim = pmg_path.prim
         self.conv = pmg_path.conventional
-        __qpoints = [[self._kpath['kpoints'][self._kpath['path'][j][i]] for i in range(len(self._kpath['path'][j]))] for
-                     j in range(len(self._kpath['path']))]
+        __qpoints = [
+            [
+                self._kpath["kpoints"][self._kpath["path"][j][i]]
+                for i in range(len(self._kpath["path"][j]))
+            ]
+            for j in range(len(self._kpath["path"]))
+        ]
         from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
-        qpoints, connections = get_band_qpoints_and_path_connections(__qpoints,
-                                                                     npoints=nqpoints)  # now this qpoints will contain points within two high-symmetry points along the Q-path
-        self.phonon.run_band_structure(qpoints, with_eigenvectors=True, with_group_velocities=True)
-        _eigvecs = self.phonon.band_structure.__dict__['_eigenvectors']
-        _eigvals = self.phonon.band_structure.__dict__['_eigenvalues']
-        _group_velocities = self.phonon.band_structure.__dict__['_group_velocities']
+
+        qpoints, connections = get_band_qpoints_and_path_connections(
+            __qpoints, npoints=nqpoints
+        )  # now this qpoints will contain points within two high-symmetry points along the Q-path
+        self.phonon.run_band_structure(
+            qpoints, with_eigenvectors=True, with_group_velocities=True
+        )
+        _eigvecs = self.phonon.band_structure.__dict__["_eigenvectors"]
+        _eigvals = self.phonon.band_structure.__dict__["_eigenvalues"]
+        _group_velocities = self.phonon.band_structure.__dict__["_group_velocities"]
         print(self.phonon.band_structure.__dict__.keys())
         self.eigvecs = []
         self.eigvals = []
         self.group_velocities = []
 
         import math
+
         self.atomic_masses = []
         for a in self.ref_frame.all_atoms(sort=False, unique=False):
             for _ in range(3):
-                self.atomic_masses.append(1.0 / math.sqrt(atomic_mass_dict[a.label.upper()]))
+                self.atomic_masses.append(
+                    1.0 / math.sqrt(atomic_mass_dict[a.label.upper()])
+                )
 
         from phonopy.units import VaspToTHz
 
@@ -260,13 +310,18 @@ class AnharmonicScore(object):
                         # vec = np.array(vec).reshape(self.ref_frame.total_num_atoms(), 3)
                         self.eigvecs.append(self.atomic_masses * vec)
                         eigv = _eigvals[i][j][k]
-                        self.eigvals.append(np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz)
-                        self.group_velocities.append(abs(np.mean(_group_velocities[i][j][k])))
-        print('eigenvector shape ', np.shape(vec))
-        print('Total number of eigenstates ' + str(len(self.eigvals)))
+                        self.eigvals.append(
+                            np.sqrt(abs(eigv)) * np.sign(eigv) * VaspToTHz
+                        )
+                        self.group_velocities.append(
+                            abs(np.mean(_group_velocities[i][j][k]))
+                        )
+        print("eigenvector shape ", np.shape(vec))
+        print("Total number of eigenstates " + str(len(self.eigvals)))
 
     def mode_resolved_sigma(self):
-        if self.mode_resolved is not True: raise Exception("eigenmodes not prepared for running this function")
+        if self.mode_resolved is not True:
+            raise Exception("eigenmodes not prepared for running this function")
         print("do dot")
         dft_dot = np.dot(self.dft_forces, np.array(self.eigvecs).T).std(axis=0)
         anh_dot = np.dot(self.anharmonic_forces, np.array(self.eigvecs).T).std(axis=0)
@@ -279,33 +334,43 @@ class AnharmonicScore(object):
     def mode_resolved_sigma_band(self):
         from pymatgen.symmetry.bandstructure import HighSymmKpath
         from core.internal.builders.crystal import map_to_pymatgen_Structure
-        pmg_path = HighSymmKpath(map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3)
+
+        pmg_path = HighSymmKpath(
+            map_to_pymatgen_Structure(self.ref_frame), symprec=1e-3
+        )
         self._kpath = pmg_path._kpath
 
-        distances = self.phonon.band_structure.__dict__['_distances']
+        distances = self.phonon.band_structure.__dict__["_distances"]
         print(np.shape(distances[0]))
-        eigvals = self.phonon.band_structure.__dict__['_frequencies']
+        eigvals = self.phonon.band_structure.__dict__["_frequencies"]
         print(np.shape(eigvals[0]))
-        eigvecs = self.phonon.band_structure.__dict__['_eigenvectors']
+        eigvecs = self.phonon.band_structure.__dict__["_eigenvectors"]
 
-        sp_pts = self.phonon.band_structure.__dict__['_special_points']
+        sp_pts = self.phonon.band_structure.__dict__["_special_points"]
         print(sp_pts)
-        sp_pt_labels = self._kpath['path']
+        sp_pt_labels = self._kpath["path"]
         print(sp_pt_labels)
 
-        f, (a0, a1) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]})
+        f, (a0, a1) = plt.subplots(1, 2, gridspec_kw={"width_ratios": [3, 1]})
         from phonopy.units import VaspToTHz
+
         freqs = []
         sigmas = []
         for j in range(len(distances)):
 
             for i in range(len(eigvals[j].T)):
                 # now need something to calculate the sigma here along each point
-                print(str(j) + '/' + str(len(distances) - 1), str(i) + '/' + str(len(eigvals[j].T) - 1))
+                print(
+                    str(j) + "/" + str(len(distances) - 1),
+                    str(i) + "/" + str(len(eigvals[j].T) - 1),
+                )
                 _sigmas = []
                 for k in range(len(distances[j])):
                     e = eigvecs[j][k][i]
-                    _s = np.dot(self.anharmonic_forces, e).std() / np.dot(self.dft_forces, e).std()
+                    _s = (
+                        np.dot(self.anharmonic_forces, e).std()
+                        / np.dot(self.dft_forces, e).std()
+                    )
                     _sigmas.append(np.exp(1.5 * _s))
                     # sigmas.append(_s)
                     # eigv=eigvals[j][k][i]
@@ -314,22 +379,36 @@ class AnharmonicScore(object):
                 # print(max(sigmas),min(sigmas))
                 # sigmas=[np.dot(self.anharmonic_forces,e).std()/np.dot(self.dft_forces,e).std() for e in eigvecs[j][:][i]]
                 # print(sigmas)
-                a0.plot(distances[j], eigvals[j].T[i], '-', c='#FFBB00', alpha=0.75, linewidth=0.85)
-                a0.scatter(distances[j], eigvals[j].T[i], marker='o', s=_sigmas, fc='#3F681C', alpha=0.45)
+                a0.plot(
+                    distances[j],
+                    eigvals[j].T[i],
+                    "-",
+                    c="#FFBB00",
+                    alpha=0.75,
+                    linewidth=0.85,
+                )
+                a0.scatter(
+                    distances[j],
+                    eigvals[j].T[i],
+                    marker="o",
+                    s=_sigmas,
+                    fc="#3F681C",
+                    alpha=0.45,
+                )
 
         a0.set_xlim(min(distances[0]), max(distances[-1]))
 
         unique_labels = []
         for i in range(len(sp_pt_labels)):
             for j in range(len(sp_pt_labels[i])):
-                if sp_pt_labels[i][j] == '\\Gamma':
+                if sp_pt_labels[i][j] == "\\Gamma":
                     _l = "$\\Gamma$"
                 elif "_1" in sp_pt_labels[i][j]:
                     _l = sp_pt_labels[i][j].replace("_1", "")
                 else:
                     _l = sp_pt_labels[i][j]
                 if (j == len(sp_pt_labels[i]) - 1) and (i != len(sp_pt_labels) - 1):
-                    unique_labels.append(_l + '$\\vert$')
+                    unique_labels.append(_l + "$\\vert$")
                 elif (i > 0) and (j == 0):
                     unique_labels[-1] = unique_labels[-1] + _l
                 else:
@@ -338,23 +417,23 @@ class AnharmonicScore(object):
         a0.set_xticks(sp_pts)
         a0.set_xticklabels(unique_labels)
         for i in sp_pts:
-            a0.axvline(x=i, ls=':', c='k')
+            a0.axvline(x=i, ls=":", c="k")
 
         a0.set_ylabel("Frequency (THz)")
 
         freqs, sigmas = self.mode_resolved_sigma()
-        a1.scatter(sigmas, freqs, marker='o', fc='#3F681C', alpha=0.6, s=1)
+        a1.scatter(sigmas, freqs, marker="o", fc="#3F681C", alpha=0.6, s=1)
         a1.set_ylim(a0.get_ylim())
-        a1.set_xlabel('$\\sigma$ (300 K)')
-        a1.axvline(x=1, ls=':', c='k')
+        a1.set_xlabel("$\\sigma$ (300 K)")
+        a1.axvline(x=1, ls=":", c="k")
         a1.set_yticks([])
         plt.tight_layout()
-        plt.savefig('phonon_band_sigma.pdf')
+        plt.savefig("phonon_band_sigma.pdf")
 
     def plot_fc(self):
         plt.matshow(self.force_constants)
         plt.colorbar()
-        plt.savefig('fc.pdf')
+        plt.savefig("fc.pdf")
 
     @property
     def lattice_vectors(self) -> np.array:
@@ -363,50 +442,60 @@ class AnharmonicScore(object):
         """
         _lv = self.ref_frame.lattice.lattice_vectors
         return np.array(
-            [[_lv[0][0], _lv[0][1], _lv[0][2]], [_lv[1][0], _lv[1][1], _lv[1][2]], [_lv[2][0], _lv[2][1], _lv[2][2]]])
+            [
+                [_lv[0][0], _lv[0][1], _lv[0][2]],
+                [_lv[1][0], _lv[1][1], _lv[1][2]],
+                [_lv[2][0], _lv[2][1], _lv[2][2]],
+            ]
+        )
 
     @property
     def dft_forces(self) -> np.array:
-        if not hasattr(self, '_dft_forces'):
+        if not hasattr(self, "_dft_forces"):
             all_forces = []
             if ".xml" in self.md_frames[0]:
-                #we are getting the forces from the vasprun.xml files
+                # we are getting the forces from the vasprun.xml files
                 for frame in self.md_frames:
                     try:
                         c = 0
                         for event, elem in etree.iterparse(frame):
-                            if elem.tag == 'varray':
-                                if elem.attrib['name'] == 'forces':
+                            if elem.tag == "varray":
+                                if elem.attrib["name"] == "forces":
                                     this_forces = []
                                     if not self.mode_resolved:
                                         for v in elem:
-                                            this_force = [float(_v) for _v in v.text.split()]
+                                            this_force = [
+                                                float(_v) for _v in v.text.split()
+                                            ]
                                             this_forces.append(this_force)
                                     else:
                                         for v in elem:
-                                            for this_force in [float(_v) for _v in v.text.split()]:
+                                            for this_force in [
+                                                float(_v) for _v in v.text.split()
+                                            ]:
                                                 this_forces.append(this_force)
                                     all_forces.append(np.array(this_forces))
                                     c += 1
                     except:
                         pass
             elif ".traj" in self.md_frames[0]:
-                #we are getting the forces from the ase trajectory file
+                # we are getting the forces from the ase trajectory file
                 from ase.io import read as ase_read
+
                 for frame in self.md_frames:
-                    traj = ase_read(frame,':')
+                    traj = ase_read(frame, ":")
                     for ase_atoms in traj:
                         all_forces.append(ase_atoms.get_forces())
 
-                print('MD force vector shape ', np.shape(all_forces))
+                print("MD force vector shape ", np.shape(all_forces))
             self._dft_forces = np.array(all_forces)
-            print('All MD force vector shape ', np.shape(self._dft_forces))
+            print("All MD force vector shape ", np.shape(self._dft_forces))
             print("Atomic forces along the MD trajectory loaded\n")
         return self._dft_forces
 
     @property
     def all_displacements(self) -> np.array:
-        if not hasattr(self, '_all_displacements'):
+        if not hasattr(self, "_all_displacements"):
             all_positions = []
             if ".xml" in self.md_frames[0]:
                 force_dimension_counter = [1 for _ in range(len(self.dft_forces))]
@@ -414,116 +503,160 @@ class AnharmonicScore(object):
                     try:
                         this_position_set = []
                         for event, elem in etree.iterparse(frame):
-                            if elem.tag == 'varray':
-                                if elem.attrib['name'] == 'positions':
+                            if elem.tag == "varray":
+                                if elem.attrib["name"] == "positions":
                                     this_positions = []
                                     for i, v in enumerate(elem):
-                                        this_position = [float(_v) for _v in v.text.split()]
+                                        this_position = [
+                                            float(_v) for _v in v.text.split()
+                                        ]
                                         this_positions.append(this_position)
 
                                     this_position_set.append(np.array(this_positions))
-                        this_position_set = this_position_set[-len(self.dft_forces):]
+                        this_position_set = this_position_set[-len(self.dft_forces) :]
                         all_positions = all_positions + this_position_set
                     except:
                         pass
 
                 # only need those with forces
-                #print(np.shape(all_positions),len(self.dft_forces))
-                all_positions = all_positions[-len(self.dft_forces):]
+                # print(np.shape(all_positions),len(self.dft_forces))
+                all_positions = all_positions[-len(self.dft_forces) :]
 
             elif ".traj" in self.md_frames[0]:
                 from ase.io import read as ase_read
+
                 for frame in self.md_frames:
-                    traj = ase_read(frame,':')
+                    traj = ase_read(frame, ":")
                     for ase_atoms in traj:
                         ase_atoms.wrap(eps=1e-8)
                         all_positions.append(ase_atoms.get_scaled_positions())
 
             all_positions = np.array(all_positions)
             print(
-                "Atomic positions along the MD trajectory loaded, converting to displacement, taking into account PBC")
+                "Atomic positions along the MD trajectory loaded, converting to displacement, taking into account PBC"
+            )
             print("Atomic positions, shape ", np.shape(all_positions))
 
             __all_displacements = all_positions
 
             __all_displacements_holder = np.array(
-                [all_positions[i, :] - self.ref_coords for i in range(all_positions.shape[0])])
+                [
+                    all_positions[i, :] - self.ref_coords
+                    for i in range(all_positions.shape[0])
+                ]
+            )
             __all_displacements = __all_displacements_holder - np.round(
-                __all_displacements_holder)  # this is how it's done in Pymatgen
+                __all_displacements_holder
+            )  # this is how it's done in Pymatgen
 
             # Convert to Cartesian
             self._all_displacements = np.zeros(np.shape(__all_displacements))
             for i in range(__all_displacements.shape[0]):
-                np.dot(__all_displacements[i, :, :], self.lattice_vectors, out=self._all_displacements[i, :, :])
-            print('All MD displacement shape ', np.shape(self._all_displacements))
+                np.dot(
+                    __all_displacements[i, :, :],
+                    self.lattice_vectors,
+                    out=self._all_displacements[i, :, :],
+                )
+            print("All MD displacement shape ", np.shape(self._all_displacements))
 
         return self._all_displacements
 
     @property
     def harmonic_forces(self):
-        if (not hasattr(self, '_harmonic_forces')) or (
-                hasattr(self, '_harmonic_forces') and self._harmonic_forces is None):
+        if (not hasattr(self, "_harmonic_forces")) or (
+            hasattr(self, "_harmonic_forces") and self._harmonic_forces is None
+        ):
             print("compute harmonic force")
             self._harmonic_forces = np.zeros(np.shape(self.dft_forces))
-            for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
+            for i in range(
+                np.shape(self.all_displacements)[0]
+            ):  # this loop over MD frames
                 if not self.mode_resolved:
                     self._harmonic_forces[i, :, :] = -1.0 * (
-                        np.dot(self.force_constants, self.all_displacements[i, :, :].flatten())).reshape(
-                        self.all_displacements[0, :, :].shape)
+                        np.dot(
+                            self.force_constants,
+                            self.all_displacements[i, :, :].flatten(),
+                        )
+                    ).reshape(self.all_displacements[0, :, :].shape)
                 else:
                     self._harmonic_forces[i, :] = -1.0 * (
-                        np.dot(self.force_constants, self.all_displacements[i, :, :].flatten()))
-            #print(self._harmonic_forces)
+                        np.dot(
+                            self.force_constants,
+                            self.all_displacements[i, :, :].flatten(),
+                        )
+                    )
+            # print(self._harmonic_forces)
 
         return self._harmonic_forces
 
     @property
     def third_order_forces(self):
         print("Do we have third_order constant " + str(self.force_constant_3.__class__))
-        if self.mode_resolved: raise NotImplementedError
+        if self.mode_resolved:
+            raise NotImplementedError
         if self.force_constant_3 is not None:
-            if (not hasattr(self, '_third_order_forces')) or (
-                    hasattr(self, '_third_order_forces') and self._third_order_forces is None):
+            if (not hasattr(self, "_third_order_forces")) or (
+                hasattr(self, "_third_order_forces")
+                and self._third_order_forces is None
+            ):
                 self._third_order_forces = np.zeros(np.shape(self.dft_forces))
                 _a = self.force_constant_3
-                for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
+                for i in range(
+                    np.shape(self.all_displacements)[0]
+                ):  # this loop over MD frames
                     _b = self.all_displacements[i, :, :].flatten()
-                    _A = np.einsum('ijk,k->ij', _a, _b)
-                    self._third_order_forces[i, :, :] = -1 * np.einsum('ij,j->i', _A, _b).reshape(
-                        self.all_displacements[0, :, :].shape)
-                return self._third_order_forces / 2.0  # see https://hiphive.materialsmodeling.org/background/force_constants.html
+                    _A = np.einsum("ijk,k->ij", _a, _b)
+                    self._third_order_forces[i, :, :] = -1 * np.einsum(
+                        "ij,j->i", _A, _b
+                    ).reshape(self.all_displacements[0, :, :].shape)
+                return (
+                    self._third_order_forces / 2.0
+                )  # see https://hiphive.materialsmodeling.org/background/force_constants.html
 
     @property
     def fourth_order_forces(self):
-        if self.mode_resolved: raise NotImplementedError
-        print("Do we have fourth_order constant " + str(self.force_constant_4.__class__))
+        if self.mode_resolved:
+            raise NotImplementedError
+        print(
+            "Do we have fourth_order constant " + str(self.force_constant_4.__class__)
+        )
         if self.force_constant_4 is not None:
-            if (not hasattr(self, '_fourth_order_forces')) or (
-                    hasattr(self, '_fourth_order_forces') and self._fourth_order_forces is None):
+            if (not hasattr(self, "_fourth_order_forces")) or (
+                hasattr(self, "_fourth_order_forces")
+                and self._fourth_order_forces is None
+            ):
                 self._fourth_order_forces = np.zeros(np.shape(self.dft_forces))
                 _a = self.force_constant_4
-                for i in range(np.shape(self.all_displacements)[0]):  # this loop over MD frames
+                for i in range(
+                    np.shape(self.all_displacements)[0]
+                ):  # this loop over MD frames
                     print("fourth order forces, frame " + str(i))
                     _b = self.all_displacements[i, :, :].flatten()
-                    _A = np.einsum('ijkl,l->ijk', _a, _b)
-                    _B = np.einsum('ijk,k->ij', _A, _b)
-                    self._fourth_order_forces[i, :, :] = -1 * np.einsum('ij,j->i', _B, _b).reshape(
-                        self.all_displacements[0, :, :].shape)
+                    _A = np.einsum("ijkl,l->ijk", _a, _b)
+                    _B = np.einsum("ijk,k->ij", _A, _b)
+                    self._fourth_order_forces[i, :, :] = -1 * np.einsum(
+                        "ij,j->i", _B, _b
+                    ).reshape(self.all_displacements[0, :, :].shape)
                 print("fourth order forces done")
                 return self._fourth_order_forces / 6.0
 
     @property
     def anharmonic_forces(self):
-        if (not hasattr(self, '_anharmonic_forces')) or (
-                hasattr(self, '_anharmonic_forces') and self._anharmonic_forces is None):
+        if (not hasattr(self, "_anharmonic_forces")) or (
+            hasattr(self, "_anharmonic_forces") and self._anharmonic_forces is None
+        ):
             self._anharmonic_forces = self.dft_forces - self.harmonic_forces
             # for i in range(self._anharmonic_forces.shape[0]):
             #    print('ANHF ',np.std(self._anharmonic_forces[i]))
 
             if self.include_third_oder:
-                self._anharmonic_forces = self._anharmonic_forces - self.third_order_forces
+                self._anharmonic_forces = (
+                    self._anharmonic_forces - self.third_order_forces
+                )
             if self.include_fourth_order:
-                self._anharmonic_forces = self._anharmonic_forces - self.fourth_order_forces
+                self._anharmonic_forces = (
+                    self._anharmonic_forces - self.fourth_order_forces
+                )
         return self._anharmonic_forces
 
     def trajectory_normalized_dft_forces(self, flat=False):
@@ -545,7 +678,11 @@ class AnharmonicScore(object):
         return out
 
     def atom_normalized_dft_forces(self, atom, flat=False):
-        _mask = [id for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if a.label == atom]
+        _mask = [
+            id
+            for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms)
+            if a.label == atom
+        ]
         dft_forces = self.dft_forces[:, _mask, :]
         dft_forces_std = dft_forces.flatten().std()
         out = np.zeros(np.shape(dft_forces))
@@ -555,7 +692,11 @@ class AnharmonicScore(object):
         return out, dft_forces_std
 
     def atom_normalized_anharmonic_forces(self, atom, flat=False):
-        _mask = [id for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms) if a.label == atom]
+        _mask = [
+            id
+            for id, a in enumerate(self.ref_frame.asymmetric_unit[0].atoms)
+            if a.label == atom
+        ]
         print(atom, _mask)
         anharmonic_forces = self.anharmonic_forces[:, _mask, :]
 
@@ -589,29 +730,31 @@ class AnharmonicScore(object):
             Z = np.reshape(kernel(positions).T, X_pred.shape)
 
             print("Making the plot")
-            a = axs[id].imshow(np.rot90(Z), cmap=plt.get_cmap('Blues'), extent=[-1, 1, -1, 1])
+            a = axs[id].imshow(
+                np.rot90(Z), cmap=plt.get_cmap("Blues"), extent=[-1, 1, -1, 1]
+            )
 
-            axs[id].plot([-1, -0.5, 0, 0.5, 1], [std for i in range(5)], 'k--')
-            axs[id].plot([-1, -0.5, 0, 0.5, 1], [-1.0 * std for i in range(5)], 'k--')
+            axs[id].plot([-1, -0.5, 0, 0.5, 1], [std for i in range(5)], "k--")
+            axs[id].plot([-1, -0.5, 0, 0.5, 1], [-1.0 * std for i in range(5)], "k--")
 
             axs[id].set_xlim([-1, 1])
             axs[id].set_ylim([-1, 1])
             axs[id].set_xlabel("$F_{i}/\\sigma(F_{i})$", fontsize=16)
             axs[id].set_ylabel("$F^{A}_{i}/\\sigma(F_{i})$", fontsize=16)
             axs[id].set_title(str(atom), fontsize=20)
-            axs[id].tick_params(axis='both', which='major', labelsize=10)
+            axs[id].tick_params(axis="both", which="major", labelsize=10)
             plt.colorbar(a, cax=cax1)  # .set_label(label='probability density',size=15)
         plt.tight_layout()
-        plt.savefig('atom_joint_PDF.pdf')
+        plt.savefig("atom_joint_PDF.pdf")
 
-    def plot_total_joint_distribution(self, x='DFT', y='anh'):
-        if x == 'DFT':
+    def plot_total_joint_distribution(self, x="DFT", y="anh"):
+        if x == "DFT":
             X = self.dft_forces.flatten() / self.dft_forces.flatten().std()
         else:
             raise NotImplementedError()
-        if y == 'anh':
+        if y == "anh":
             Y = self.anharmonic_forces.flatten() / self.dft_forces.flatten().std()
-        elif y == 'har':
+        elif y == "har":
             Y = self.harmonic_forces.flatten() / self.dft_forces.flatten().std()
         else:
             raise NotImplementedError()
@@ -623,25 +766,33 @@ class AnharmonicScore(object):
         kernel = gaussian_kde(values)
         print("Kernel done")
         Z = np.reshape(kernel(positions).T, X_pred.shape)
-        plt.imshow(np.rot90(Z), cmap=plt.get_cmap('Blues'), extent=[-1, 1, -1, 1])
+        plt.imshow(np.rot90(Z), cmap=plt.get_cmap("Blues"), extent=[-1, 1, -1, 1])
         plt.xlim([-1, 1])
         plt.ylim([-1, 1])
 
         plt.xlabel("$F/\\sigma(F)$", fontsize=16)
-        if y == 'anh':
+        if y == "anh":
             plt.ylabel("$F^{A}/\\sigma(F)$", fontsize=16)
-        elif y == 'har':
+        elif y == "har":
             plt.ylabel("$F^{(2)}/\\sigma(F)$", fontsize=16)
 
-        if y == 'anh':
-            plt.plot([-1, -0.5, 0, 0.5, 1], [self.anharmonic_forces.flatten().std() for i in range(5)], 'k--')
-            plt.plot([-1, -0.5, 0, 0.5, 1], [-1.0 * self.anharmonic_forces.flatten().std() for i in range(5)], 'k--')
+        if y == "anh":
+            plt.plot(
+                [-1, -0.5, 0, 0.5, 1],
+                [self.anharmonic_forces.flatten().std() for i in range(5)],
+                "k--",
+            )
+            plt.plot(
+                [-1, -0.5, 0, 0.5, 1],
+                [-1.0 * self.anharmonic_forces.flatten().std() for i in range(5)],
+                "k--",
+            )
 
-        plt.tick_params(axis='both', which='major', labelsize=10)
-        plt.colorbar().set_label(label='probability density', size=15)
+        plt.tick_params(axis="both", which="major", labelsize=10)
+        plt.colorbar().set_label(label="probability density", size=15)
 
         plt.tight_layout()
-        plt.savefig('joint_PDF.pdf')
+        plt.savefig("joint_PDF.pdf")
 
     def structure_averaged_sigma_trajectory(self):
         atoms = [a.label for a in self.ref_frame.asymmetric_unit[0].atoms]
@@ -652,12 +803,14 @@ class AnharmonicScore(object):
             dft_f = self.atom_normalized_dft_forces(atom)
 
             for i in range(np.shape(self.all_displacements)[0]):
-                _sigma_frame = anh_f[i, :, :].flatten().std() / dft_f[i, :, :].flatten().std()
+                _sigma_frame = (
+                    anh_f[i, :, :].flatten().std() / dft_f[i, :, :].flatten().std()
+                )
                 self.sigma_frames.append(_sigma_frame)
 
     def structural_sigma(self, return_trajectory=False):
-        #print(self.anharmonic_forces[2][3])
-        #print(self.dft_forces[2][3])
+        # print(self.anharmonic_forces[2][3])
+        # print(self.dft_forces[2][3])
 
         if self.atom_masks is None:
             rmse = self.anharmonic_forces
@@ -666,23 +819,25 @@ class AnharmonicScore(object):
             rmse = self.anharmonic_forces[:, self.atom_masks, :]
             std = self.dft_forces[:, self.atom_masks, :]
 
-        #print(rmse[2][3])
-        #print(std[2][3])
+        # print(rmse[2][3])
+        # print(std[2][3])
         print(".............Calculating Sigma...................")
-        print('dft forces matrix, shape ', np.shape(std))
-        print('anharmonic force matrix, shape', np.shape(rmse))
+        print("dft forces matrix, shape ", np.shape(std))
+        print("anharmonic force matrix, shape", np.shape(rmse))
 
         if not return_trajectory:
-            print(return_trajectory, 'calculate sigma')
+            print(return_trajectory, "calculate sigma")
             sigma = rmse.std(dtype=np.float64) / std.std(dtype=np.float64)
             print("Sigma for entire structure over the MD trajectory is ", str(sigma))
             return sigma, self.time_series
         else:
-            #print(rmse.std(axis=(1, 2), dtype=np.float64)/ std.std(axis=(1, 2), dtype=np.float64))
-            sigma = rmse.std(axis=(1, 2), dtype=np.float64) / std.std(axis=(1, 2), dtype=np.float64)
+            # print(rmse.std(axis=(1, 2), dtype=np.float64)/ std.std(axis=(1, 2), dtype=np.float64))
+            sigma = rmse.std(axis=(1, 2), dtype=np.float64) / std.std(
+                axis=(1, 2), dtype=np.float64
+            )
             # print('sigma is ', sigma)
             print("=" * 100)
-            print('averaged sigma is ', sigma.mean())
+            print("averaged sigma is ", sigma.mean())
             print("=" * 100)
             return sigma, self.time_series
 
@@ -694,56 +849,129 @@ class AnharmonicScore(object):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Options for analyzing anharmonic scores from MD trajectory',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--md_xml", type=str, nargs='+',
-                        help="vasprun.xml file containing the molecular dynamic trajectory")
-    parser.add_argument("--ref_frame", type=str,
-                        help="POSCAR for the reference frame containing the static atomic positions at 0K")
-    parser.add_argument("--unit_cell_frame", type=str,
-                        help="POSCAR for the unitcell.")
-    parser.add_argument("--joint_pdf", action='store_true',
-                        help="plot the joint distributions of normalized total and anharmonic forces")
-    parser.add_argument("--atom_joint_pdf", action='store_true',
-                        help="plot the joint distributions of normalized total and anharmonic forces for each atom in the structure")
-    parser.add_argument("--md_time_step", type=float, default=1,
-                        help="Time step for the molecular dynamic trajectory (in fs), default: 1fs")
-    parser.add_argument("--fc", type=str, default=None,
-                        help='Name of the second-order force constant file')
-    parser.add_argument("--third", action='store_true',
-                        help='Whether to include third order contribution')
-    parser.add_argument("--fc3", type=str, default=None,
-                        help='Name of the third-order force constant file')
-    parser.add_argument('--sigma', action='store_true',
-                        help="Return the structural sigma value from this MD trajectory")
-    parser.add_argument('--trajectory', action='store_true',
-                        help="Whether to return sigma for each frame of the MD trajectory")
-    parser.add_argument('--plot_trajectory', action='store_true',
-                        help="Whether to plot sigma for each frame of the MD trajectory")
-    parser.add_argument("-X", "--X", type=str, default='DFT',
-                        help='data to plot along the X-axis for the joint probability distribution, default: DFT force')
-    parser.add_argument("-Y", "--Y", type=str, default='anh',
-                        help='data to plot along the Y-axis for the joint probability distribution, default: anharmonic forces')
-    parser.add_argument("-mr", "--mode_resolved", action='store_true',
-                        help='Plot the anharmonic score as a function of harmonic phonon frequencies.')
-    parser.add_argument("-band", "--band", action='store_true',
-                        help='Plot the anharmonic score on the phonon band structure.')
-    parser.add_argument('-ymin', '--ymin', type=float,
-                        help='Minimum of y to plot frequency--dependent anharmonic scores', default=None)
-    parser.add_argument('-ymax', '--ymax', type=float,
-                        help='Maximum of y to plot frequency--dependent anharmonic scores', default=None)
+    parser = argparse.ArgumentParser(
+        description="Options for analyzing anharmonic scores from MD trajectory",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--md_xml",
+        type=str,
+        nargs="+",
+        help="vasprun.xml file containing the molecular dynamic trajectory",
+    )
+    parser.add_argument(
+        "--ref_frame",
+        type=str,
+        help="POSCAR for the reference frame containing the static atomic positions at 0K",
+    )
+    parser.add_argument("--unit_cell_frame", type=str, help="POSCAR for the unitcell.")
+    parser.add_argument(
+        "--joint_pdf",
+        action="store_true",
+        help="plot the joint distributions of normalized total and anharmonic forces",
+    )
+    parser.add_argument(
+        "--atom_joint_pdf",
+        action="store_true",
+        help="plot the joint distributions of normalized total and anharmonic forces for each atom in the structure",
+    )
+    parser.add_argument(
+        "--md_time_step",
+        type=float,
+        default=1,
+        help="Time step for the molecular dynamic trajectory (in fs), default: 1fs",
+    )
+    parser.add_argument(
+        "--fc",
+        type=str,
+        default=None,
+        help="Name of the second-order force constant file",
+    )
+    parser.add_argument(
+        "--third",
+        action="store_true",
+        help="Whether to include third order contribution",
+    )
+    parser.add_argument(
+        "--fc3",
+        type=str,
+        default=None,
+        help="Name of the third-order force constant file",
+    )
+    parser.add_argument(
+        "--sigma",
+        action="store_true",
+        help="Return the structural sigma value from this MD trajectory",
+    )
+    parser.add_argument(
+        "--trajectory",
+        action="store_true",
+        help="Whether to return sigma for each frame of the MD trajectory",
+    )
+    parser.add_argument(
+        "--plot_trajectory",
+        action="store_true",
+        help="Whether to plot sigma for each frame of the MD trajectory",
+    )
+    parser.add_argument(
+        "-X",
+        "--X",
+        type=str,
+        default="DFT",
+        help="data to plot along the X-axis for the joint probability distribution, default: DFT force",
+    )
+    parser.add_argument(
+        "-Y",
+        "--Y",
+        type=str,
+        default="anh",
+        help="data to plot along the Y-axis for the joint probability distribution, default: anharmonic forces",
+    )
+    parser.add_argument(
+        "-mr",
+        "--mode_resolved",
+        action="store_true",
+        help="Plot the anharmonic score as a function of harmonic phonon frequencies.",
+    )
+    parser.add_argument(
+        "-band",
+        "--band",
+        action="store_true",
+        help="Plot the anharmonic score on the phonon band structure.",
+    )
+    parser.add_argument(
+        "-ymin",
+        "--ymin",
+        type=float,
+        help="Minimum of y to plot frequency--dependent anharmonic scores",
+        default=None,
+    )
+    parser.add_argument(
+        "-ymax",
+        "--ymax",
+        type=float,
+        help="Maximum of y to plot frequency--dependent anharmonic scores",
+        default=None,
+    )
 
     args = parser.parse_args()
 
-    scorer = AnharmonicScore(md_frames=args.md_xml, unit_cell_frame=args.unit_cell_frame, ref_frame=args.ref_frame,
-                             atoms=None,
-                             potim=args.md_time_step, force_constants=args.fc, mode_resolved=args.mode_resolved,
-                             include_third_order=args.third, third_order_fc=args.fc3)
+    scorer = AnharmonicScore(
+        md_frames=args.md_xml,
+        unit_cell_frame=args.unit_cell_frame,
+        ref_frame=args.ref_frame,
+        atoms=None,
+        potim=args.md_time_step,
+        force_constants=args.fc,
+        mode_resolved=args.mode_resolved,
+        include_third_order=args.third,
+        third_order_fc=args.fc3,
+    )
 
     from matplotlib import rc
 
-    rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
-    rc('text', usetex=True)
+    rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
+    rc("text", usetex=True)
 
     if args.joint_pdf:
         scorer.plot_total_joint_distribution(x=args.X, y=args.Y)
@@ -753,11 +981,11 @@ if __name__ == "__main__":
 
     if args.sigma:
         sigma, time_stps = scorer.structural_sigma(return_trajectory=args.trajectory)
-        #print('sigma is ', sigma)
+        # print('sigma is ', sigma)
         if args.plot_trajectory:
             # print(len(sigma))
-            time_stps=range(len(sigma))
-            plt.plot(time_stps, sigma, 'b-', lw=1)
+            time_stps = range(len(sigma))
+            plt.plot(time_stps, sigma, "b-", lw=1)
             plt.xlabel("Time (fs)", fontsize=16)
             plt.ylabel("$\\sigma(t)$", fontsize=16)
             plt.tight_layout()
@@ -768,10 +996,10 @@ if __name__ == "__main__":
         print("plotting")
         print(np.shape(velocity), np.shape(sigmas))
         plt.figure(figsize=(3, 5))
-        plt.scatter(sigmas, velocity, marker='o', alpha=0.5, s=5, c='#FA6775')
-        plt.xlabel('$\\sigma^{(2)}(\\mathbf{q},\\nu)$')
-        plt.ylabel('$v_{g}$ (m/s)')
-        plt.yscale('symlog')
+        plt.scatter(sigmas, velocity, marker="o", alpha=0.5, s=5, c="#FA6775")
+        plt.xlabel("$\\sigma^{(2)}(\\mathbf{q},\\nu)$")
+        plt.ylabel("$v_{g}$ (m/s)")
+        plt.yscale("symlog")
         plt.tight_layout()
         plt.savefig("sigma_vg.pdf")
 
@@ -788,4 +1016,3 @@ if __name__ == "__main__":
 
     if args.mode_resolved and args.band:
         scorer.mode_resolved_sigma_band()
-

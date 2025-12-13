@@ -1,0 +1,5 @@
+.vscode/ftp-kr.json
+build/temp.macosx-11.1-arm64-cpython-313/core/models/lattice.o
+build/temp.macosx-11.1-arm64-cpython-313/core/models/matrix3d.o
+build/temp.macosx-11.1-arm64-cpython-313/core/models/vector3d.o
+.vscode/sftp.json
