@@ -2,6 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ase.io import read, write
 from phonopy.structure.atoms import PhonopyAtoms
+from phonopy.phonon.band_structure import (
+    BandStructure,
+    get_band_qpoints_by_seekpath,
+)
 import phonopy
 import seekpath
 
@@ -10,18 +14,18 @@ from core.phonon.phonopy_worker import PhonopyWorker
 
 class PhononPlotter:
     def __init__(
-            self,
-            distances_set: list,
-            frequencies_set: list,
-            x_labels: list,
-            connections: list,
-            colors=None,
-            legend_labels=None,
-            linestyles=None,
-            linewidths=None,
-            figsize=(10, 6),
-            commensurate_points=None,
-            meterial_name=None,
+        self,
+        distances_set: list,
+        frequencies_set: list,
+        x_labels: list,
+        connections: list,
+        colors=None,
+        legend_labels=None,
+        linestyles=None,
+        linewidths=None,
+        figsize=(10, 6),
+        commensurate_points=None,
+        meterial_name=None,
     ):
         """
         initializing the phonon plotter
@@ -44,22 +48,10 @@ class PhononPlotter:
         self.frequencies_set = frequencies_set
         self.x_labels = x_labels
         self.connections = connections
-        self.colors = (
-            colors
-            if colors is not None
-            else ["black", "red", "blue", "green", "orange"]
-        )
-        self.legend_labels = (
-            legend_labels
-            if legend_labels is not None
-            else ["DFT", "MP-0", "DFT+MP0", "ft MACE", "DFT+ft MACE"]
-        )
-        self.linestyles = (
-            linestyles if linestyles is not None else ["-", "-", "-", ":", ":"]
-        )
-        self.linewidths = (
-            linewidths if linewidths is not None else [1] * len(self.colors)
-        )
+        self.colors = colors if colors is not None else ["black", "red", "blue", "green", "orange"]
+        self.legend_labels = legend_labels if legend_labels is not None else ["DFT", "MP-0", "DFT+MP0", "ft MACE", "DFT+ft MACE"]
+        self.linestyles = linestyles if linestyles is not None else ["-", "-", "-", ":", ":"]
+        self.linewidths = linewidths if linewidths is not None else [1] * len(self.colors)
         self.figsize = figsize
         self.commensurate_points = commensurate_points
         self.material_name = meterial_name
@@ -91,15 +83,11 @@ class PhononPlotter:
                     xtick_labels.append(self.x_labels[count])
                     count += 1
                 else:
-                    xtick_labels.append(
-                        str(self.x_labels[count]) + " | " + self.x_labels[count + 1]
-                    )
+                    xtick_labels.append(str(self.x_labels[count]) + " | " + self.x_labels[count + 1])
                     count += 2
         return xtick_labels
 
-    def _plot_phonon_bands(
-            self, ax, distances, frequencies, color, linestyle, linewidth
-    ):
+    def _plot_phonon_bands(self, ax, distances, frequencies, color, linestyle, linewidth):
         """plots phonon band structrue"""
         num_paths, num_kpoints, num_bands = frequencies.shape
         for path in range(num_paths):
@@ -153,14 +141,8 @@ class PhononPlotter:
             )
 
         # add vertcal lines and commensurate points
-        default_comm_points = (
-            self.commensurate_points
-            if self.commensurate_points is not None
-            else [[]] * np.array(self.distances_set)[0].shape[0]
-        )
-        xticks = self._add_vertical_lines_and_commensurate_points(
-            ax, np.array(self.distances_set)[0], default_comm_points
-        )
+        default_comm_points = self.commensurate_points if self.commensurate_points is not None else [[]] * np.array(self.distances_set)[0].shape[0]
+        xticks = self._add_vertical_lines_and_commensurate_points(ax, np.array(self.distances_set)[0], default_comm_points)
 
         # set xtick labels
         xtick_labels = self._create_xtick_labels()
@@ -187,18 +169,130 @@ class PhononPlotter:
         return fig, ax
 
 
-def prepare_and_plot(dft_path=None,
-                     dft_fc_file='force_constants.hdf5',
-                     dft_poscar_file='CONTCAR',
-                     primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                     calculator=None,
-                     savefig=False,
-                     filename=None,
-                     plot=False):
+def make_phonopy_from_force_constants(
+    path: str = None,
+    fc_file: str = "force_constants.hdf5",
+    poscar_file: str = "CONTCAR",
+    supercell_matrix: list = [2, 2, 2],
+    primitive_matrix: list = [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+) -> phonopy.Phonopy:
+    """Create a Phonopy object from force constants and POSCAR file.
+    Args:
+        path (str): Path prefix where `fc_file` and `poscar_file` are located.
+        fc_file (str): Filename of the force constants HDF5 file. Default: 'force_constants.hdf5'.
+        poscar_file (str): Filename of the POSCAR/CONTCAR unit cell file. Default: 'CONTCAR'.
+        supercell_matrix (list): 3-element list defining the supercell matrix. Default: [2, 2, 2].
+        primitive_matrix (list): 3x3 matrix defining the primitive cell transformation. Default is the identity matrix.
+    Returns:
+        phonopy.Phonopy: Phonopy object initialized with the provided force constants and unit cell.
+    """
+    fc_file = path + "/" + fc_file
+    poscar_file = path + "/" + poscar_file
+    phonon = phonopy.load(
+        supercell_matrix=np.array(supercell_matrix),  # WARNING - hard coded!
+        primitive_matrix=primitive_matrix,
+        unitcell_filename=poscar_file,
+        force_constants_filename=fc_file,
+    )
+
+    return phonon
+
+
+def run_phonon_band_structure(phonon: phonopy.Phonopy, num_qpoints: int = 50):
+    """Run phonon band structure calculation.
+    Args:
+        phonon (phonopy.Phonopy): Phonopy object with force constants and unit cell.
+        num_qpoints (int): Number of q-points along each path segment. Default: 50.
+    Returns:
+        tuple: (bands, distances, frequencies, labels, path_connections) where
+            bands (list): List of q-point bands.
+            distances (list): List of distances along the bands.
+            frequencies (list): List of phonon frequencies.
+            labels (list): List of high-symmetry point labels.
+            path_connections (list): List indicating connections between path segments.
+    """
+    bands, labels, path_connections = get_band_qpoints_by_seekpath(phonon._primitive, num_qpoints, is_const_interval=False)
+    phonon.run_band_structure(
+        bands,
+        with_eigenvectors=False,
+        with_group_velocities=False,
+        path_connections=path_connections,
+        labels=labels,
+        is_legacy_plot=False,
+    )
+    distances = phonon.band_structure.distances
+    frequencies = phonon.band_structure.frequencies
+    return bands, distances, frequencies, labels, path_connections
+
+
+def prepare_and_plot_single_phonon_band_structure(
+    path: str = None,
+    fc_file: str = "force_constants.hdf5",
+    poscar_file: str = "CONTCAR",
+    primitive_matrix: list = [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    supercell_matrix: list = [2, 2, 2],
+    num_qpoints: int = 50,
+    labels: list = ["PBE-sol"],
+    colors: list = ["blue"],
+    filename: str = None,
+    savefig: bool = True,
+):
+    """Prepare and plot a single phonon band structure.
+    This function loads a phonon calculation from a unitcell (`CONTCAR`) and
+    its force constants file, computes the phonon band structure with seekpath to identify
+    reciproal space q-point paths, and generates a plot of the phonon band structure.
+    Args:
+        path (str): Path prefix where `fc_file` and `poscar_file` are located.
+        fc_file (str): Filename of the force constants HDF5 file. Default: 'force_constants.hdf5'.
+        poscar_file (str): Filename of the POSCAR/CONTCAR unit cell file. Default: 'CONTCAR'.
+        primitive_matrix (list): 3x3 matrix defining the primitive cell transformation. Default is the identity matrix.
+        supercell_matrix (list): 3-element list defining the supercell matrix. Default: [2, 2, 2].
+        num_qpoints (int): Number of q-points along each path segment. Default: 50.
+        labels (list): List of labels for the legend. Default: ['PBE-sol'].
+        colors (list): List of colors for the plot. Default: ['blue'].
+        filename (str): Output filename for the saved plot. If None, a default name is used.
+        savefig (bool): If True, save the generated phonon plot to `filename`.
+    """
+    phonon = make_phonopy_from_force_constants(
+        path=path,
+        fc_file=fc_file,
+        poscar_file=poscar_file,
+        supercell_matrix=supercell_matrix,
+        primitive_matrix=primitive_matrix,
+    )
+    _, distances, frequencies, labels, path_connections = run_phonon_band_structure(phonon, num_qpoints=num_qpoints)
+
+    if filename is None:
+        filename = path + "/phonon_band_structure.pdf"
+
+    PhononPlotter(
+        distances_set=[distances],
+        frequencies_set=[frequencies],
+        x_labels=labels,
+        connections=path_connections,
+        colors=colors,
+        legend_labels=labels,
+        linestyles=["-"],
+        linewidths=[1, 1],
+        figsize=(7, 5),
+    ).beautiful_phonon_plotter(savefig=savefig, filename=filename, showfig=False)
+
+
+def prepare_and_plot_phonon_band_dft_vs_mlff(
+    dft_path=None,
+    dft_fc_file="force_constants.hdf5",
+    dft_poscar_file="CONTCAR",
+    primitive_matrix=[[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    supercell_matrix=[2, 2, 2],
+    calculator=None,
+    savefig=False,
+    filename=None,
+    plot=False,
+):
     """Prepare phonon band structures (DFT and MLFF) and optionally plot them.
 
     This function loads a DFT phonon calculation from a unitcell (`CONTCAR`) and
-    its force constants file, computes the phonon band structure with seekpath to identify 
+    its force constants file, computes the phonon band structure with seekpath to identify
     reciproal space q-point paths, generates an equivalent band structure using a machine-learned force-field
     via `PhonopyWorker`, and returns a dictionary with frequency and group
     velocity data for both DFT and MLFF results.
@@ -237,33 +331,21 @@ def prepare_and_plot(dft_path=None,
           able to evaluate forces for each displaced supercell.
     """
 
-    dft_fc_file = dft_path + dft_fc_file
-    dft_poscar_file = dft_path + dft_poscar_file
-    dft_phonon = phonopy.load(supercell_matrix=np.array([2, 2, 2]),  # WARNING - hard coded!
-                              primitive_matrix=primitive_matrix,
-                              unitcell_filename=dft_poscar_file,
-                              force_constants_filename=dft_fc_file)
+    dft_phonon = make_phonopy_from_force_constants(
+        path=dft_path,
+        fc_file=dft_fc_file,
+        poscar_file=dft_poscar_file,
+        supercell_matrix=supercell_matrix,
+        primitive_matrix=primitive_matrix,
+    )
 
-    from phonopy.phonon.band_structure import BandStructure, get_band_qpoints_by_seekpath
-    bands, labels, path_connections = get_band_qpoints_by_seekpath(
-        dft_phonon._primitive, 50, is_const_interval=False
-    )
-    dft_phonon.run_band_structure(
-        bands,
-        with_eigenvectors=False,
-        with_group_velocities=True,
-        path_connections=path_connections,
-        labels=labels,
-        is_legacy_plot=False
-    )
-    dft_distances = dft_phonon.band_structure.distances
-    dft_frequencies = dft_phonon.band_structure.frequencies
+    bands, dft_distances, dft_frequencies, labels, path_connections = run_phonon_band_structure(dft_phonon, num_qpoints=50)
 
     mace_phonon = PhonopyWorker(
         structure=read(dft_poscar_file),
         supercell_matrix=np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]]),
         displacement_distance=0.01,
-        calculator=calculator
+        calculator=calculator,
     )
     mace_phonon.generate_force_constants()
     mace_phonon.phonopy.run_band_structure(
@@ -297,7 +379,7 @@ def prepare_and_plot(dft_path=None,
     print(f"Standard deviation of group velocities for {materials_name}: {vel_stdev:.4f} m/s")
 
     if filename is None:
-        filename = dft_path + materials_name + '_dft_mlff_phonon.pdf'
+        filename = dft_path + materials_name + "_dft_mlff_phonon.pdf"
     if plot:
         PhononPlotter(
             distances_set=[dft_distances, mace_distances],
@@ -306,18 +388,18 @@ def prepare_and_plot(dft_path=None,
             connections=path_connections,
             colors=["blue", "red"],
             legend_labels=["DFT", "MACE"],
-            linestyles=["-", '--'],
+            linestyles=["-", "--"],
             linewidths=[1, 1],
             figsize=(7, 5),
-            #meterial_name=f"{materials_name}#: Freq Stdev: {stdev:.4f} THz; group velocity stdev: {vel_stdev:.4f} (m/s)").beautiful_phonon_plotter(
-            meterial_name=f"{materials_name}").beautiful_phonon_plotter(
-            savefig=savefig, filename=filename, showfig=False)
+            # meterial_name=f"{materials_name}#: Freq Stdev: {stdev:.4f} THz; group velocity stdev: {vel_stdev:.4f} (m/s)").beautiful_phonon_plotter(
+            meterial_name=f"{materials_name}",
+        ).beautiful_phonon_plotter(savefig=savefig, filename=filename, showfig=False)
 
-    data_dict = {"name": materials_name,
-                 "dft_frequencies": dft_frequencies,
-                 "mace_frequencies": mace_frequencies,
-                 "dft_group_velocities": dft_group_velocities,
-                 "mace_group_velocities": mace_group_velocities}
+    data_dict = {
+        "name": materials_name,
+        "dft_frequencies": dft_frequencies,
+        "mace_frequencies": mace_frequencies,
+        "dft_group_velocities": dft_group_velocities,
+        "mace_group_velocities": mace_group_velocities,
+    }
     return data_dict
-
-

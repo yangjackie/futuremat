@@ -44,67 +44,39 @@ def post_processor(job_type: str, directory: str = None):
         logger.info(f"Copying CONTCAR from {directory} to current directory.")
         shutil.copy(f"{directory}/CONTCAR", "./CONTCAR")
     elif job_type == "born_charges":
-        logger.info(
-            "extract born effective charges from outcar and write out using phonopy API"
-        )
+        logger.info("extract born effective charges from outcar and write out using phonopy API")
         Born.write_born_file_with_cmd(directory=directory)
     else:
         return
 
 
+def get_args():
+    # fmt: off
+    parser = argparse.ArgumentParser(description="Workflows for calculating and analysing the bandgap renormalisation due to electron-phonon interactions.")
+    parser.add_argument("-str", "--structure_file", type=str, default="POSCAR", 
+                        help="Path to the VASP structural input file containing the atomic structure to investigate on.")
+    parser.add_argument("-temp", "--temperature", type=float, default=300.0,
+                        help="Temperature in Kelvin for the calculation (default: 300 K).")
+    parser.add_argument("-opt", "--optimise_structure", action="store_true",
+                        help="Perform structural optimisation before phonon calculations.")
+    parser.add_argument("-born", "--calculate_born_charges", action="store_true", 
+                        help="Calculate Born effective charges and dielectric tensor.")
+    parser.add_argument("-phonon", "--calculate_phonons", action="store_true",
+                        help="Calculate phonon properties using Phonopy with ASE wrapper.")
+    parser.add_argument("-band", "--calculate_band_structure", action="store_true",
+                        help="Calculate electronic band structure.")
+    parser.add_argument("-nkpts", "--num_kpoints", type=int, default=20,
+                        help="Number of k-points for band structure calculation.")
+    parser.add_argument("-gpu", "--use_gpu", action="store_true", 
+                        help="Use GPU for VASP calculation.")
+    
+    parser.add_argument("-ppbs", "--plot_phonon_band_structure", action="store_true",
+                        help="Plot phonon band structure from force constants and POSCAR in the specified directory")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Workflows for calculating and analysing the bandgap renormalisation due to electron-phonon interactions."
-    )
-    parser.add_argument(
-        "-str",
-        "--structure_file",
-        type=str,
-        default="POSCAR",
-        help="Path to the VASP structural input file containing the atomic structure to investigate on.",
-    )
-    parser.add_argument(
-        "-temp",
-        "--temperature",
-        type=float,
-        default=300.0,
-        help="Temperature in Kelvin for the calculation (default: 300 K).",
-    )
-    parser.add_argument(
-        "-opt",
-        "--optimise_structure",
-        action="store_true",
-        help="Perform structural optimisation before phonon calculations.",
-    )
-    parser.add_argument(
-        "-born",
-        "--calculate_born_charges",
-        action="store_true",
-        help="Calculate Born effective charges and dielectric tensor.",
-    )
-    parser.add_argument(
-        "-phonon",
-        "--calculate_phonons",
-        action="store_true",
-        help="Calculate phonon properties using Phonopy with ASE wrapper.",
-    )
-    parser.add_argument(
-        "-band",
-        "--calculate_band_structure",
-        action="store_true",
-        help="Calculate electronic band structure.",
-    )
-    parser.add_argument(
-        "-nkpts",
-        "--num_kpoints",
-        type=int,
-        default=20,
-        help="Number of k-points for band structure calculation.",
-    )
-    parser.add_argument(
-        "-gpu", "--use_gpu", action="store_true", help="Use GPU for VASP calculation."
-    )
-    args = parser.parse_args()
+    args = get_args()
 
     if args.optimise_structure:
         job_type = "structure_optimisation"
@@ -114,7 +86,10 @@ if __name__ == "__main__":
         job_type = "finite_displacement_phonons"
     elif args.calculate_band_structure:
         job_type = "band_structure"
-    logger = setup_logger(output_filename=job_type + ".log")
+    else:
+        job_type = None
+    if job_type is not None:
+        logger = setup_logger(output_filename=job_type + ".log")
 
     if args.optimise_structure:
         DEFAULT_STRUCTURE_OPTIMISATION_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
@@ -140,18 +115,35 @@ if __name__ == "__main__":
             force_rerun=False,
             **DEFAULT_STATIC_SET_FOR_PHONONS,
         )
-
+        structure = Structure.from_file(args.structure_file)
         phonopy_worker = PhonopyWorker(
-            structure=Structure.from_file(args.structure_file),
+            structure=structure,
             calculator=vasp_calculator,
-            supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]],
+            supercell_matrix=[[2, 0, 0], [0, 2, 0], [0, 0, 2]],  # this need to be made more flexible
         )
         directory = "finite_displacement_phonons"
         if not os.path.exists(directory):
             os.mkdir(directory)
         os.chdir(directory)
+        structure.to(filename="POSCAR")
+        from phonopy.interface.vasp import write_vasp
+
+        write_vasp("SPOSCAR", phonopy_worker.phonopy.supercell)
         phonopy_worker.generate_force_constants(save_fc=True)
         os.chdir("..")
+    elif args.plot_phonon_band_structure:
+        from core.phonon.phonon_plotter import prepare_and_plot_single_phonon_band_structure
+
+        prepare_and_plot_single_phonon_band_structure(
+            path="finite_displacement_phonons",
+            fc_file="force_constants.hdf5",
+            poscar_file="POSCAR",
+            supercell_matrix=[2, 2, 2],  # this need to be made more flexible
+            num_qpoints=50,
+            labels=["PBE-sol"],
+            colors=["blue"],
+            savefig=True,
+        )
     elif args.calculate_band_structure:
         DEFAULT_STATIC_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
         DEFAULT_STATIC_SET_FOR_PHONONS["kpoint_mode"] = "line"
