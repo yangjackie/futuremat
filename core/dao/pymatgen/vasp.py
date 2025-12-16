@@ -36,7 +36,26 @@ class Potcar:
                     "Please set the vasp pseudopotential directory in settings.py or provide it as an argument."
                 )
 
-    def write(self, use_GW: bool = False):
+    def write(self, use_GW: bool = False) -> None:
+        """
+        Write a combined POTCAR file by concatenating individual POTCAR files for each element in the structure.
+        This method extracts unique element symbols from the structure, retrieves the corresponding POTCAR files
+        from the VASP pseudopotential directory, and concatenates them into a single POTCAR file. It supports
+        both standard PBE and GW pseudopotentials.
+        Args:
+            use_GW (bool, optional): If True, attempts to use GW-specific pseudopotentials if available.
+                                     Falls back to standard PBE potentials if GW variants don't exist.
+                                     Defaults to False.
+        Returns:
+            None
+        Notes:
+            - Creates a "POTCAR" file in the current working directory
+            - Requires self.vasp_pp_directory to be set with the path to pseudopotential files
+            - Requires pbe_pp_choices dictionary to map element symbols to pseudopotential names
+        Raises:
+            FileNotFoundError: If a required POTCAR file cannot be found
+            IOError: If unable to read input POTCAR files or write to output POTCAR file
+        """
 
         ordered_symbols = []
         for site in self.structure.sites:

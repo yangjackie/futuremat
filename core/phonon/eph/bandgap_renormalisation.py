@@ -89,6 +89,19 @@ if __name__ == "__main__":
         help="Calculate phonon properties using Phonopy with ASE wrapper.",
     )
     parser.add_argument(
+        "-band",
+        "--calculate_band_structure",
+        action="store_true",
+        help="Calculate electronic band structure.",
+    )
+    parser.add_argument(
+        "-nkpts",
+        "--num_kpoints",
+        type=int,
+        default=20,
+        help="Number of k-points for band structure calculation.",
+    )
+    parser.add_argument(
         "-gpu", "--use_gpu", action="store_true", help="Use GPU for VASP calculation."
     )
     args = parser.parse_args()
@@ -99,6 +112,8 @@ if __name__ == "__main__":
         job_type = "born_charges"
     elif args.calculate_phonons:
         job_type = "finite_displacement_phonons"
+    elif args.calculate_band_structure:
+        job_type = "band_structure"
     logger = setup_logger(output_filename=job_type + ".log")
 
     if args.optimise_structure:
@@ -107,6 +122,7 @@ if __name__ == "__main__":
             structure=Structure.from_file(args.structure_file),
             params=DEFAULT_STRUCTURE_OPTIMISATION_SET_FOR_PHONONS,
             job_type="structure_optimisation",
+            force_rerun=False,
         )
     elif args.calculate_born_charges:
         DEFAULT_BORN_EFFECTIVE_CHARGES_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
@@ -114,8 +130,9 @@ if __name__ == "__main__":
             structure=Structure.from_file(args.structure_file),
             params=DEFAULT_BORN_EFFECTIVE_CHARGES_SET_FOR_PHONONS,
             job_type="born_charges",
+            force_rerun=False,
         )
-    if args.calculate_phonons:
+    elif args.calculate_phonons:
         from core.phonon.phonopy_worker import PhonopyWorker
 
         DEFAULT_STATIC_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
@@ -135,3 +152,13 @@ if __name__ == "__main__":
         os.chdir(directory)
         phonopy_worker.generate_force_constants(save_fc=True)
         os.chdir("..")
+    elif args.calculate_band_structure:
+        DEFAULT_STATIC_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
+        DEFAULT_STATIC_SET_FOR_PHONONS["kpoint_mode"] = "line"
+        DEFAULT_STATIC_SET_FOR_PHONONS["kppa_band"] = args.num_kpoints
+        execute_vasp_calculation(
+            structure=Structure.from_file(args.structure_file),
+            params=DEFAULT_STATIC_SET_FOR_PHONONS,
+            job_type="band_structure",
+            force_rerun=False,
+        )

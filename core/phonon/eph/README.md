@@ -32,7 +32,7 @@ The implmentations heavily relies on the `pymatgen` API so interested user can u
 
 Here we briefly describe the steps to carry out the workflow to compute temperature-dependent band gap change due to electron-phonon couplings. 
 
-### Step One - Structure Optimisation
+### Structure Optimisation
 
 Given a starting structure in POSCAR file, the following command line option can be used to optimise the starting structure with our default calculation setting.
 ```bash
@@ -45,7 +45,7 @@ With API:
 from core.phonon.eph.bandgap_renormalisation import execute_vasp_calculation
 from core.data.vasp_settings import DEFAULT_STRUCTURE_OPTIMISATION_SET_FOR_PHONONS
 
-DEFAULT_STRUCTURE_OPTIMISATION_SET_FOR_PHONONS=        execute_vasp_calculation(
+execute_vasp_calculation(
     structure=Structure.from_file('POSCAR'),
     params=DEFAULT_STRUCTURE_OPTIMISATION_SET_FOR_PHONONS,
     job_type="structure_optimisation",
@@ -54,7 +54,7 @@ DEFAULT_STRUCTURE_OPTIMISATION_SET_FOR_PHONONS=        execute_vasp_calculation(
 
 By default, the VASP calculation will be performed with PBEsol functional with 520 eV energy cutoff. A densed MP KPOINT grids with `kppa=2000` is selected to use the `pymatgen` API to autogenerate the KPOUNTS file for the calculation.
 
-### Step Two - Compute the Born charges for the optimised structure.
+### Compute the Born charges for the optimised structure.
 
 This is for polar crystals. Starting from the optimised structure, it can be carried out from the command line:
 ```bash
@@ -64,7 +64,7 @@ which will be carried out in the `born_charges` subdirectory. Currently, the `ph
 
 This, as well as the following steps, can also be called from Python API. Examples are given in the `bandgap_renormalisation.py` module which will not be repeated here.
 
-### Step Three - Phonon couputation with finite-displacement approach
+### Phonon couputation with finite-displacement approach
 
 Starting from the optimised structure, it can be carried out from the command line:
 ```bash
@@ -76,6 +76,30 @@ KPOINTS are auto-generated same to the structural optimisation workflow.
 
 After all VASP single point calculations, the `force_constants.hdf5` file that stores the force constants are generated in the same sub-diretory by using the `phonopy` Python API.
 
+### Electronic structure calculations
+
+Starting from an input structure, the following command:
+```bash
+python3 bandgap_renormalisation.py --calculate_band_structure --structure_file CONTCAR --num_kpoints 20 
+```
+set up, and carry out a band structure calculation for the input structure specified in the input file under the `band_structure` sub-directory. We use the `pymatgen` to help automatically determine the k-point path and write out the KPOINTS file for the input structure. This is achieved with the following code snipplet in the `Vasp` class in the `core.calculatiors.pymatgen.vasp` module:
+
+```python
+from pymatgen.symmetry.bandstructure import HighSymmKpath
+
+kpath = HighSymmKpath(self.structure)  # auto-detects space group and path
+kpoints_bs = Kpoints.automatic_linemode(
+    divisions=self.kppa_band,  # number of points between labels
+    ibz=kpath,  # can pass HighSymmKpath directly
+)
+kpoints_bs.write_file(filename)
+```
+
+For visualising the computed band structure, we recommend the use of the sumo-plot package (https://smtg-bham.github.io/sumo/index.html). e.g.
+```bash
+sumo-bandplot --band-edges
+```
+
 ## Module Structure
 
 - `bandgap_renormalisation.py`: Bandgap renormalization calculations
@@ -86,7 +110,3 @@ After all VASP single point calculations, the `force_constants.hdf5` file that s
 - Phonopy documentation: https://phonopy.github.io/
 - PyMatGen: https://pymatgen.org/
 
-
-## License
-
-See the main project LICENSE file.
