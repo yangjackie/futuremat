@@ -1,8 +1,10 @@
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp.inputs import Incar, Kpoints
+from pymatgen.io.vasp.outputs import Vasprun
 
-from core.data.vasp_infos import all_incar_keys
+
 from core.dao.pymatgen.vasp import Potcar
+from core.calculators.abstract_calculator import VaspBase
 
 import logging
 import os
@@ -10,12 +12,14 @@ import os
 logger = logging.getLogger("futuremat.core.calculators.pymatgen.vasp")
 
 
-class Vasp:
+class Vasp(VaspBase):
     """
-    Reimplementing the futuremat VASP calculator with Pymatgen API.
+    Reimplementing the futuremat VASP calculator with Pymatgen API to set up and analyse the VASP calculations,
+    where we provided our own hook to picked up some environmental settings from the HPC system to
+    determine how these calculations are executed, which maybe changed if this is used by different users.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, force_rerun=False, directory=None, **kwargs):
         self.set_incar_params(**kwargs)
 
         try:
@@ -52,23 +56,35 @@ class Vasp:
         except KeyError:
             self.gpu_run = False
 
-    def set_incar_params(self, **kwargs):
-        """
-        From the provided keyword arguments, filter out those that belongs to the VASP INCAR keys.
-        """
-        self.incar_params = {}
-        for key in kwargs.keys():
-            if key.lower() in all_incar_keys:
-                self.incar_params[key.lower()] = kwargs[key]
+        try:
+            self.clean_after_success = kwargs["clean_after_success"]
+        except KeyError:
+            self.clean_after_success = False
 
-    def set_structure(self, structure: Structure):
-        """
-        Set the structure for the VASP calculation.
+        # a tag to determine if the calculation should be rerun if the previous calculation exists
+        self.force_rerun = force_rerun
 
-        :param structure: The structure to set, must be a pymatgen Structure oject
-        :type structure: Structure or Crystal
+        # set up the directory to run the calculation
+        self.directory = directory
+        # self.__setup_directory()
+
+    def __setup_directory(self):
         """
-        self.structure = structure
+        Set up the directory to run the VASP calculation. Instead of let the higher order workflow handle the directory, we did it at the calculator level, just to make it become consistent with ASE VASP calculator behaviour.
+        """
+        self.cwd = os.getcwd()
+        if self.directory is not None:
+            if not os.path.exists(self.directory):
+                os.mkdir(self.directory)
+
+    @property
+    def directory(self):
+        return self._directory
+
+    @directory.setter
+    def directory(self, val):
+        self._directory = val
+        self.__setup_directory()
 
     def _setup_kpoints(self):
         filename = "KPOINTS"
@@ -129,27 +145,6 @@ class Vasp:
                 self.kpoint_mode,
             )
 
-    def _update_executable(self):
-        """
-        Update the VASP executable based on some user settings.
-        """
-        # TODO: expand this to more options as needed and make it generalised
-        if not self.gpu_run:
-            if self.kpoint_mode == "gamma":
-                self.executable = "vasp_gam"
-            else:
-                self.executable = "vasp_std"
-        else:
-            if self.kpoint_mode == "gamma":
-                self.executable = "vasp_gam-gpu"
-            else:
-                self.executable = "vasp_std-gpu"
-
-        logger.info(
-            "VASP calculation to be executed with the following binary: "
-            + str(self.executable)
-        )
-
     def setup(self):
         """
         This methods set up a VASP calculation for a given structure, including writing out the structure, POTCAR,
@@ -166,10 +161,18 @@ class Vasp:
         if not self.gpu_run:
             # Append NCORE based on environment or detected CPU count so external
             # job scripts that rely on NCORE get a consistent INCAR entry.
+
             ncpus = os.environ.get("NCPUS")
+            logger.info("Auto-detect NCPUS from environment: %s", ncpus)
+
             if not ncpus:
                 # Fall back to Python's cpu count (may return None)
                 ncpus = str(os.cpu_count() or 1)
+                logger.info(
+                    "Auto-detect NCPUS failed, try from os.cpu_count(): %s; or set it to 1",
+                    ncpus,
+                )
+
             try:
                 with open("INCAR", "a") as f:
                     f.write(f"NCORE={ncpus}\n")
@@ -177,33 +180,89 @@ class Vasp:
             except Exception:
                 logger.exception("Failed to append NCORE to INCAR")
 
-            logger.info(
-                "Successfully written the INCAR file for structure optimisation."
-            )
+        logger.info("Successfully written the INCAR file for structure optimisation.")
 
         Potcar(self.structure).write(use_GW=self.use_gw)
         logger.info("Successfully written the POTCAR file for structure optimisation.")
 
         self._setup_kpoints()
-        self._update_executable()
 
-    def run(self):
-        logger.info("Start executing VASP")
-
-        # For the moment, implemented for running vasp on Katana HPC only, need to be generalised later
-
-        if self.gpu_run:
-            logger.info("Choose to run with GPU, automatically set mpirun -np $NGPUS")
-            cmd = "mpirun -np $NGPUS " + self.executable
+    def check_convergence(self):
+        vasprun = Vasprun("vasprun.xml", parse_dos=False, parse_eigen=False)
+        if vasprun.converged:
+            logger.info("VASP calculation converged successfully.")
+            self.completed = True
         else:
-            logger.info("Choose to run with CPU, automatically set mpirun -np $CPUS")
+            logger.warning(
+                "VASP calculation did not converge, please check cearefully!"
+            )
+            self.completed = False
 
-            cmd = "mpirun -np $NCPUS" + self.executable
+    def tear_down(self):
+        """
+        Clean up the calculation folder after VASP finishes execution
+        """
+        logger.info("Clean up directory after VASP executed successfully.")
+        files = [
+            "CHG",
+            "CHGCAR",
+            "EIGENVAL",
+            "IBZKPT",
+            "PCDAT",
+            "POTCAR",
+            "WAVECAR",
+            "LOCPOT",
+            "node_info",
+            "WAVECAR",
+            "WAVEDER",
+            "DOSCAR",
+            "PROCAR",
+            "REPORT",
+        ]
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
-        exitcode = os.system("%s > %s" % (cmd, "vasp.log"))
-        if exitcode != 0:
-            raise RuntimeError("Vasp exited with exit code: %d.  " % exitcode)
+    def run_this(self) -> bool:
+        if self.force_rerun is True:
+            logger.info(
+                "User asked the VASP calculations to be forced to rerun, will not check previous calculations, proceed to calculation..."
+            )
+            return True
+        else:
+            logger.info("Checking for existing calculations in the current folder...")
+            _vasprun_file = os.path.join(os.getcwd(), "vasprun.xml")
+            if os.path.exists(_vasprun_file):
+                vasprun = Vasprun(
+                    _vasprun_file,
+                    parse_dos=False,
+                    parse_eigen=False,
+                )
+                if vasprun.converged:
+                    logger.info(
+                        f"Previous VASP calculation in {_vasprun_file} is already converged. Skipping rerun."
+                    )
+                    return False
+                else:
+                    logger.info(
+                        f"Previous VASP calculation in {_vasprun_file} did not converged. Will rerun this calculation."
+                    )
+                    return True
+            else:
+                logger.info(
+                    "No previous VASP calculation found in the current folder. Proceed to calculation..."
+                )
+                return True
 
     def execute(self):
-        self.setup()
-        # self.run()
+        os.chdir(self.directory)
+        if self.run_this():
+            self.setup()
+            self.run()
+            self.check_convergence()
+
+            if self.completed and self.clean_after_success:
+                self.tear_down()
+        os.chdir(self.cwd)
