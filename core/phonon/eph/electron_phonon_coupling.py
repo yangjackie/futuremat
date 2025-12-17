@@ -21,6 +21,7 @@ def execute_vasp_calculation(
     job_type: str,
     directory: str = None,
     force_rerun: bool = False,
+    user_kpoints: Kpoints = None,
 ):
     """
     Perform VASP calculation for the given structure with specified parameters.
@@ -30,6 +31,10 @@ def execute_vasp_calculation(
 
     if directory is None:
         directory = job_type
+
+    if user_kpoints is not None:
+        params["user_kpoints"] = user_kpoints
+        params["kpoint_mode"] = "predetermined"
 
     vasp_calculator = Vasp(force_rerun=force_rerun, directory=directory, **params)
     vasp_calculator.structure = structure
@@ -55,6 +60,9 @@ def get_args():
     parser = argparse.ArgumentParser(description="Workflows for calculating and analysing the bandgap renormalisation due to electron-phonon interactions.")
     parser.add_argument("-str", "--structure_file", type=str, default="POSCAR", 
                         help="Path to the VASP structural input file containing the atomic structure to investigate on.")
+    parser.add_argument("-uc_str", "--unit_cell_structure_file", type=str, default=None,
+                        help="Path to the VASP structural input file containing the unit cell structure.")
+
     parser.add_argument("-temp", "--temperature", type=float, default=300.0,
                         help="Temperature in Kelvin for the calculation (default: 300 K).")
     parser.add_argument("-opt", "--optimise_structure", action="store_true",
@@ -72,6 +80,8 @@ def get_args():
     
     parser.add_argument("-ppbs", "--plot_phonon_band_structure", action="store_true",
                         help="Plot phonon band structure from force constants and POSCAR in the specified directory")
+    parser.add_argument("-nac", "--non-analytical_correction", action="store_true",
+                        help="Apply non-analytical correction for phonon calculations.")
     return parser.parse_args()
 
 
@@ -134,6 +144,7 @@ if __name__ == "__main__":
     elif args.plot_phonon_band_structure:
         from core.phonon.phonon_plotter import prepare_and_plot_single_phonon_band_structure
 
+        print("Plotting phonon band structure..., do we include NAC?", args.non_analytical_correction)
         prepare_and_plot_single_phonon_band_structure(
             path="finite_displacement_phonons",
             fc_file="force_constants.hdf5",
@@ -143,14 +154,36 @@ if __name__ == "__main__":
             labels=["PBE-sol"],
             colors=["blue"],
             savefig=True,
+            nac_correction=args.non_analytical_correction,
         )
+
     elif args.calculate_band_structure:
         DEFAULT_STATIC_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
         DEFAULT_STATIC_SET_FOR_PHONONS["kpoint_mode"] = "line"
         DEFAULT_STATIC_SET_FOR_PHONONS["kppa_band"] = args.num_kpoints
+
+        if args.unit_cell_structure_file is not None:
+            logger.info(
+                "Using unit cell structure from %s to generate k-points for band structure calculation to enable back mapping",
+                args.unit_cell_structure_file,
+            )
+            # this is to ensure the band structure is calculated based on the Kpoints of the unit cell
+            # structure, by setting the calculators with predetermined Kpoints from the unit cell structure
+            structure = Structure.from_file(args.unit_cell_structure_file)
+            from pymatgen.symmetry.bandstructure import HighSymmKpath
+
+            kpath = HighSymmKpath(structure)
+            kpoints_bs = Kpoints.automatic_linemode(
+                divisions=args.num_kpoints,
+                ibz=kpath,
+            )
+        else:
+            kpoints_bs = None
+
         execute_vasp_calculation(
             structure=Structure.from_file(args.structure_file),
             params=DEFAULT_STATIC_SET_FOR_PHONONS,
             job_type="band_structure",
             force_rerun=False,
+            user_kpoints=kpoints_bs,
         )

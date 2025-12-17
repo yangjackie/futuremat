@@ -175,6 +175,8 @@ def make_phonopy_from_force_constants(
     poscar_file: str = "CONTCAR",
     supercell_matrix: list = [2, 2, 2],
     primitive_matrix: list = [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    nac_correction: bool = False,
+    born_filename: str = None,
 ) -> phonopy.Phonopy:
     """Create a Phonopy object from force constants and POSCAR file.
     Args:
@@ -183,17 +185,27 @@ def make_phonopy_from_force_constants(
         poscar_file (str): Filename of the POSCAR/CONTCAR unit cell file. Default: 'CONTCAR'.
         supercell_matrix (list): 3-element list defining the supercell matrix. Default: [2, 2, 2].
         primitive_matrix (list): 3x3 matrix defining the primitive cell transformation. Default is the identity matrix.
+        nac_correction (bool): Whether to apply non-analytical corrections. Default: False.
+        born_filename (str): Filename for Born effective charges and dielectric constants. Default: None.
     Returns:
         phonopy.Phonopy: Phonopy object initialized with the provided force constants and unit cell.
     """
     fc_file = path + "/" + fc_file
     poscar_file = path + "/" + poscar_file
+
+    if nac_correction:
+        if born_filename is None:
+            born_filename = path + "/BORN"
+
+    print("where is the born file:", born_filename)
     phonon = phonopy.load(
         supercell_matrix=np.array(supercell_matrix),  # WARNING - hard coded!
         primitive_matrix=primitive_matrix,
         unitcell_filename=poscar_file,
         force_constants_filename=fc_file,
+        born_filename=born_filename if nac_correction else None,
     )
+    print(phonon.nac_params)
 
     return phonon
 
@@ -231,6 +243,8 @@ def prepare_and_plot_single_phonon_band_structure(
     poscar_file: str = "CONTCAR",
     primitive_matrix: list = [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
     supercell_matrix: list = [2, 2, 2],
+    nac_correction: bool = False,
+    born_filename: str = None,
     num_qpoints: int = 50,
     labels: list = ["PBE-sol"],
     colors: list = ["blue"],
@@ -247,6 +261,7 @@ def prepare_and_plot_single_phonon_band_structure(
         poscar_file (str): Filename of the POSCAR/CONTCAR unit cell file. Default: 'CONTCAR'.
         primitive_matrix (list): 3x3 matrix defining the primitive cell transformation. Default is the identity matrix.
         supercell_matrix (list): 3-element list defining the supercell matrix. Default: [2, 2, 2].
+        born_filename (str): Filename for the Born effective charges file. Default: None.
         num_qpoints (int): Number of q-points along each path segment. Default: 50.
         labels (list): List of labels for the legend. Default: ['PBE-sol'].
         colors (list): List of colors for the plot. Default: ['blue'].
@@ -259,6 +274,8 @@ def prepare_and_plot_single_phonon_band_structure(
         poscar_file=poscar_file,
         supercell_matrix=supercell_matrix,
         primitive_matrix=primitive_matrix,
+        nac_correction=nac_correction,
+        born_filename=born_filename,
     )
     _, distances, frequencies, labels, path_connections = run_phonon_band_structure(phonon, num_qpoints=num_qpoints)
 

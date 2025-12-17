@@ -40,6 +40,7 @@ class Vasp(VaspBase):
                 "band",
                 "lines",
                 "gamma",
+                "predetermined",  # allow user to provide their own KPOINTS file
             )
         except KeyError:
             raise KeyError("Please specify the kpoint_mode for the VASP calculation!")
@@ -63,6 +64,11 @@ class Vasp(VaspBase):
             self.clean_after_success = kwargs["clean_after_success"]
         except KeyError:
             self.clean_after_success = False
+
+        try:
+            self.user_kpoints = kwargs["user_kpoints"]
+        except KeyError:
+            self.user_kpoints = None
 
         # a tag to determine if the calculation should be rerun if the previous calculation exists
         self.force_rerun = force_rerun
@@ -123,15 +129,11 @@ class Vasp(VaspBase):
             kp = Kpoints.automatic_density(self.structure, kppa=self.kppa)
 
             kp.write_file(filename)
-            logger.info(
-                "Wrote Monkhorst-Pack KPOINTS (kppa=%s) to %s", self.kppa, filename
-            )
+            logger.info("Wrote Monkhorst-Pack KPOINTS (kppa=%s) to %s", self.kppa, filename)
         elif self.kpoint_mode == "gamma":
             kp = Kpoints.gamma_automatic(self.structure, kppa=self.kppa)
             kp.write_file(filename)
-            logger.info(
-                "Wrote Gamma-centered KPOINTS (kppa=%s) to %s", self.kppa, filename
-            )
+            logger.info("Wrote Gamma-centered KPOINTS (kppa=%s) to %s", self.kppa, filename)
         elif self.kpoint_mode in ("line", "band", "lines"):
             from pymatgen.symmetry.bandstructure import HighSymmKpath
 
@@ -146,6 +148,9 @@ class Vasp(VaspBase):
                 self.kppa_band,
                 filename,
             )
+        elif self.kpoint_mode == "predetermined":
+            logger.info("Using user-provided KPOINTS file as 'predetermined' mode is selected.")
+            self.user_kpoints.write_file("KPOINTS")
         else:
             logger.warning(
                 "Unknown KPOINTS mode '%s' requested; no KPOINTS written.",
@@ -221,9 +226,7 @@ class Vasp(VaspBase):
             logger.info("VASP calculation converged successfully.")
             self.completed = True
         else:
-            logger.warning(
-                "VASP calculation did not converge, please check cearefully!"
-            )
+            logger.warning("VASP calculation did not converge, please check cearefully!")
             self.completed = False
 
     def tear_down(self):
@@ -288,9 +291,7 @@ class Vasp(VaspBase):
                 - The convergence status of the previous calculation.
         """
         if self.force_rerun is True:
-            logger.info(
-                "User asked the VASP calculations to be forced to rerun, will not check previous calculations, proceed to calculation..."
-            )
+            logger.info("User asked the VASP calculations to be forced to rerun, will not check previous calculations, proceed to calculation...")
             return True
         else:
             logger.info("Checking for existing calculations in the current folder...")
@@ -302,19 +303,13 @@ class Vasp(VaspBase):
                     parse_eigen=False,
                 )
                 if vasprun.converged:
-                    logger.info(
-                        f"Previous VASP calculation in {_vasprun_file} is already converged. Skipping rerun."
-                    )
+                    logger.info(f"Previous VASP calculation in {_vasprun_file} is already converged. Skipping rerun.")
                     return False
                 else:
-                    logger.info(
-                        f"Previous VASP calculation in {_vasprun_file} did not converged. Will rerun this calculation."
-                    )
+                    logger.info(f"Previous VASP calculation in {_vasprun_file} did not converged. Will rerun this calculation.")
                     return True
             else:
-                logger.info(
-                    "No previous VASP calculation found in the current folder. Proceed to calculation..."
-                )
+                logger.info("No previous VASP calculation found in the current folder. Proceed to calculation...")
                 return True
 
     def execute(self):
