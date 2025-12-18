@@ -32,16 +32,7 @@ class Vasp(VaspBase):
 
         try:
             self.kpoint_mode = kwargs["kpoint_mode"]
-            assert self.kpoint_mode in (
-                "monkhorst",
-                "mp",
-                "grid",
-                "line",
-                "band",
-                "lines",
-                "gamma",
-                "predetermined",  # allow user to provide their own KPOINTS file
-            )
+            assert self.kpoint_mode in ("monkhorst", "mp", "grid", "line", "band", "lines", "gamma", "predetermined")
         except KeyError:
             raise KeyError("Please specify the kpoint_mode for the VASP calculation!")
 
@@ -138,6 +129,7 @@ class Vasp(VaspBase):
             from pymatgen.symmetry.bandstructure import HighSymmKpath
 
             kpath = HighSymmKpath(self.structure)  # auto-detects space group and path
+
             kpoints_bs = Kpoints.automatic_linemode(
                 divisions=self.kppa_band,  # number of points between labels
                 ibz=kpath,  # can pass HighSymmKpath directly

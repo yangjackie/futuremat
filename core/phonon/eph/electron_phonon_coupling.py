@@ -9,7 +9,7 @@ from pymatgen.io.vasp.inputs import Incar, Kpoints
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp.outputs import Vasprun
 
-import shutil
+import shutil, copy
 import logging
 
 logger = logging.getLogger("futuremat.core.calculators.pymatgen.vasp")
@@ -21,7 +21,7 @@ def execute_vasp_calculation(
     job_type: str,
     directory: str = None,
     force_rerun: bool = False,
-    user_kpoints: Kpoints = None,
+    chgcar_file: str = None,
 ):
     """
     Perform VASP calculation for the given structure with specified parameters.
@@ -31,10 +31,11 @@ def execute_vasp_calculation(
 
     if directory is None:
         directory = job_type
-
-    if user_kpoints is not None:
-        params["user_kpoints"] = user_kpoints
-        params["kpoint_mode"] = "predetermined"
+    if chgcar_file is not None:
+        logger.info("Copying CHGCAR from SCF calculation...")
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        shutil.copy(chgcar_file, f"{directory}/CHGCAR")
 
     vasp_calculator = Vasp(force_rerun=force_rerun, directory=directory, **params)
     vasp_calculator.structure = structure
@@ -53,6 +54,44 @@ def post_processor(job_type: str, directory: str = None):
         Born.write_born_file_with_cmd(directory=directory)
     else:
         return
+
+
+def band_structure_workflow(logger, structure_file: str = None, use_gpu: bool = False, scf_nkpts: int = 8000, band_nkpts: int = 20):
+
+    logger.info("Band structure calculation routine...")
+    logger.info("Starting a SCF calculation to obtain charge density...")
+
+    ELECTRONIC_STRUCTURE_SET = copy.deepcopy(DEFAULT_STATIC_SET_FOR_PHONONS)
+
+    ELECTRONIC_STRUCTURE_SET["gpu_run"] = use_gpu
+    ELECTRONIC_STRUCTURE_SET["kpoint_mode"] = "grid"
+    ELECTRONIC_STRUCTURE_SET["kppa"] = scf_nkpts  # denser k-point grid for SCF
+    ELECTRONIC_STRUCTURE_SET["LCHARG"] = True  # write out CHGCAR after SCF
+    ELECTRONIC_STRUCTURE_SET["clean_after_success"] = False  # keep files for the next NSCF run
+    ELECTRONIC_STRUCTURE_SET["ICHARG"] = 2
+    ELECTRONIC_STRUCTURE_SET["NSW"] = 0  # no ionic steps
+
+    execute_vasp_calculation(
+        structure=Structure.from_file(structure_file),
+        params=ELECTRONIC_STRUCTURE_SET,
+        job_type="scf_for_band_structure",
+        force_rerun=False,
+    )
+
+    logger.info("Starting a non-SCF calculation for band structure...")
+    ELECTRONIC_STRUCTURE_SET["kpoint_mode"] = "lines"
+    ELECTRONIC_STRUCTURE_SET["kppa_band"] = band_nkpts  # number of k-points along each band path
+    ELECTRONIC_STRUCTURE_SET["ICHARG"] = 11  # read charge density from CHGCAR
+    ELECTRONIC_STRUCTURE_SET["LCHARG"] = False  # no need to write out CHGCAR again
+    ELECTRONIC_STRUCTURE_SET["clean_after_success"] = True  # clean up
+
+    execute_vasp_calculation(
+        structure=Structure.from_file(structure_file),
+        params=ELECTRONIC_STRUCTURE_SET,
+        job_type="band_structure",
+        force_rerun=False,
+        chgcar_file="./scf_for_band_structure/CHGCAR",
+    )
 
 
 def get_args():
@@ -82,6 +121,7 @@ def get_args():
                         help="Plot phonon band structure from force constants and POSCAR in the specified directory")
     parser.add_argument("-nac", "--non-analytical_correction", action="store_true",
                         help="Apply non-analytical correction for phonon calculations.")
+
     return parser.parse_args()
 
 
@@ -158,32 +198,10 @@ if __name__ == "__main__":
         )
 
     elif args.calculate_band_structure:
-        DEFAULT_STATIC_SET_FOR_PHONONS["gpu_run"] = args.use_gpu
-        DEFAULT_STATIC_SET_FOR_PHONONS["kpoint_mode"] = "line"
-        DEFAULT_STATIC_SET_FOR_PHONONS["kppa_band"] = args.num_kpoints
-
-        if args.unit_cell_structure_file is not None:
-            logger.info(
-                "Using unit cell structure from %s to generate k-points for band structure calculation to enable back mapping",
-                args.unit_cell_structure_file,
-            )
-            # this is to ensure the band structure is calculated based on the Kpoints of the unit cell
-            # structure, by setting the calculators with predetermined Kpoints from the unit cell structure
-            structure = Structure.from_file(args.unit_cell_structure_file)
-            from pymatgen.symmetry.bandstructure import HighSymmKpath
-
-            kpath = HighSymmKpath(structure)
-            kpoints_bs = Kpoints.automatic_linemode(
-                divisions=args.num_kpoints,
-                ibz=kpath,
-            )
-        else:
-            kpoints_bs = None
-
-        execute_vasp_calculation(
-            structure=Structure.from_file(args.structure_file),
-            params=DEFAULT_STATIC_SET_FOR_PHONONS,
-            job_type="band_structure",
-            force_rerun=False,
-            user_kpoints=kpoints_bs,
-        )
+        # fmt: off
+        band_structure_workflow(logger, 
+                                structure_file=args.structure_file, 
+                                use_gpu=args.use_gpu, 
+                                scf_nkpts=8000, 
+                                band_nkpts=args.num_kpoints)
+        # fmt: on
