@@ -136,8 +136,7 @@ In the current implementation:
 
 An example of such plot is shown below:
 
-![Example of electronic structure of BaTiO3 computed with single (blue) and a (2x2x2) supercell (red)] (image/primitive_band_structure_sc.png)
-
+![Example of electronic structure of BaTiO3 computed with single (blue) and a (2x2x2) supercell (red)](https://github.com/yangjackie/futuremat/blob/master/core/phonon/eph/image/primitive_band_structure_sc.png)
 
 ## Module Structure
 
