@@ -6,3 +6,6 @@ build/temp.macosx-11.1-arm64-cpython-313/core/models/vector3d.o
 core/phonon/.DS_Store
 .gitignore
 core/phonon/eph/.DS_Store
+core/.DS_Store
+.gitignore
+.DS_Store

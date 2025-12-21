@@ -8,6 +8,7 @@ The EPH package requires:
 - `phonopy`: Lattice dynamics calculations
 - `pymatgen`: Structure manipulation and VASP I/O
 - `numpy`, `scipy`: Scientific computing
+- `easyunfold`: For mapping the electronic band structure from supercell calculation back to the primitive cell
 
 ## Overview
 
@@ -81,19 +82,21 @@ After all VASP single point calculations, the `force_constants.hdf5` file that s
 To plot the phonon band structure from finite-displacement calculations, one can use the following command line option executed in the root calculation folder:
 
 ```bash
-python3 electron_phonon_coupling.py -ppbs
+python3 plotter.py -ppbs
 ```
 
 Provided the `BORN` file is also in the `finite_displacement_phonons` directory, one can also apply the non-analytical correction for the LO-TO phonon splitting by including the `-nac` tag:
 
 ```bash
-python3 electron_phonon_coupling.py -ppbs -nac
+python3 plotter.py -ppbs -nac
 ```
 
 This will then generate the `phonon_band_structure.pdf` file under the `finite_displacement_phonons` directory.
 
 
 ### Electronic structure calculations
+
+#### Computing the band structure for primitive cell
 
 Starting from an input structure, the following command:
 ```bash
@@ -116,15 +119,34 @@ For visualising the computed band structure, we recommend the use of the sumo-pl
 ```bash
 sumo-bandplot --band-edges
 ```
+#### Computing electronic band structure for supercells
+
+To compute the electronic band structure for supercells (e.g. with atomic displacement) and map it back to the recirporcal points of the corresponding primitive cell, the `easyunfold` python package is utilised to achieve this goal, for which we have implemented a simple workflow to carry out this calculation. This workflow can be invoked with the following cli:
+
+```bash
+python3 electron_phonon_coupling.py --calculate_unfold_band_structure
+```
+
+In the current implementation:
+
+1. This must be called under a directory (`os.getcwd()`) which contains the `POSCAR` file for the supercell structure that you wish to compute its bandstructure.
+2. By default, it assumes (`../band_structure`) contains the converged bandstructure calculation for the primitive cell, from which it can pick up the `KPOINTS` file for generating the corresponding `KPOINTS` for the supercell.
+3. For the band structure calculations, a SCF-run to generate a converged charge density will be carried out prior to the band structure calculation.
+4. In the `plotter.py` routine, we have implemented the `plot_primitive_and_unfolded_super_cell_band_structrue` method which is used to generate an overlaied plot of the primitive band structure and the unfolded supercell band structure for comparison.
+
+An example of such plot is shown below:
+
+![Example of electronic structure of BaTiO3 computed with single (blue) and a (2x2x2) supercell (red)] (image/primitive_band_structure_sc.png)
 
 
 ## Module Structure
 
 - `electron_phonon_coupling.py`: Bandgap renormalization calculations
-
+-  `plotter.py`: Various plotting routines for result visualisations
+- `utils.py`: Utility routines including setting up the argparse for the package.
 
 ## References
 
 - Phonopy documentation: https://phonopy.github.io/
 - PyMatGen: https://pymatgen.org/
-
+- easyunfold: https://github.com/SMTG-Bham/easyunfold

@@ -141,8 +141,14 @@ class Vasp(VaspBase):
                 filename,
             )
         elif self.kpoint_mode == "predetermined":
-            logger.info("Using user-provided KPOINTS file as 'predetermined' mode is selected.")
-            self.user_kpoints.write_file("KPOINTS")
+            logger.info("Using user-provided KPOINTS file as 'predetermined' mode is selected")
+            if self.user_kpoints is not None:
+                self.user_kpoints.write_file("KPOINTS")
+            else:
+                if os.path.exists("KPOINTS"):
+                    logger.info("Found existing KPOINTS file in the current directory, using it for the calculation.")
+                else:
+                    raise FileNotFoundError("No user-provided KPOINTS file found for 'predetermined' mode!")
         else:
             logger.warning(
                 "Unknown KPOINTS mode '%s' requested; no KPOINTS written.",
@@ -286,22 +292,26 @@ class Vasp(VaspBase):
             logger.info("User asked the VASP calculations to be forced to rerun, will not check previous calculations, proceed to calculation...")
             return True
         else:
-            logger.info("Checking for existing calculations in the current folder...")
-            _vasprun_file = os.path.join(os.getcwd(), "vasprun.xml")
-            if os.path.exists(_vasprun_file):
-                vasprun = Vasprun(
-                    _vasprun_file,
-                    parse_dos=False,
-                    parse_eigen=False,
-                )
-                if vasprun.converged:
-                    logger.info(f"Previous VASP calculation in {_vasprun_file} is already converged. Skipping rerun.")
-                    return False
+            try:
+                logger.info("Checking for existing calculations in the current folder..." + os.getcwd())
+                _vasprun_file = os.path.join(os.getcwd(), "vasprun.xml")
+                if os.path.exists(_vasprun_file):
+                    vasprun = Vasprun(
+                        _vasprun_file,
+                        parse_dos=False,
+                        parse_eigen=False,
+                    )
+                    if vasprun.converged:
+                        logger.info(f"Previous VASP calculation in {_vasprun_file} is already converged. Skipping rerun.")
+                        return False
+                    else:
+                        logger.info(f"Previous VASP calculation in {_vasprun_file} did not converged. Will rerun this calculation.")
+                        return True
                 else:
-                    logger.info(f"Previous VASP calculation in {_vasprun_file} did not converged. Will rerun this calculation.")
+                    logger.info("No previous VASP calculation found in the current folder. Proceed to calculation...")
                     return True
-            else:
-                logger.info("No previous VASP calculation found in the current folder. Proceed to calculation...")
+            except Exception as e:
+                logger.warning(f"Error checking previous VASP calculation: {e}. Proceeding to rerun the calculation.")
                 return True
 
     def execute(self):
