@@ -1,5 +1,4 @@
-from pymatgen.io.vasp import BSVasprun
-from pymatgen.electronic_structure.plotter import BSPlotter
+from sumo.cli.bandplot import bandplot
 from easyunfold.unfold import UnfoldKSet, Unfold
 import argparse
 import os
@@ -23,12 +22,11 @@ def plot_primitive_and_unfolded_super_cell_band_structrue(
 
     # primitive cell band structure
     __prim_xml = "{}/vasprun.xml".format(primitive_path)
-    vasprun_prim = BSVasprun(__prim_xml, parse_projected_eigen=False)
-    bs_prim = vasprun_prim.get_band_structure(line_mode=True)
 
     # using the pymatgen BSPlotter to plot and save the band structure for the primitive cell
-    plotter = BSPlotter(bs_prim)
-    ax = plotter.get_plot(zero_to_efermi=True, bs_labels=None)
+    import matplotlib.pyplot as plt
+
+    plt = bandplot(filenames=[__prim_xml], plt=plt)
 
     # get the wavefunction for the supercell calculations to find out the VBM/CBM energy,
     # so it can be aligned with the primitive cell band structure (here assume the supercell is
@@ -52,9 +50,9 @@ def plot_primitive_and_unfolded_super_cell_band_structrue(
             y.append(w_for_this_dis[0] - zero_energy)  # only one band for phonon
             w.append(w_for_this_dis[1])  # spectral weight
 
-    plt.scatter(x, y, c="r", s=[weight * 50 for weight in w], alpha=0.5, label="Unfolded Supercell Band Structure")
+    plt.scatter(x, y, c="r", s=[weight * 2.5 for weight in w], alpha=0.5, label="Unfolded Supercell Band Structure")
     plt.tight_layout()
-    plt.savefig(os.getcwd() + "/bandstructure_prim_supercell_unfolded.pdf")
+    plt.savefig(os.getcwd() + "/primitive_band_structure_sc.png", dpi=300)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ The EPH package requires:
 - `pymatgen`: Structure manipulation and VASP I/O
 - `numpy`, `scipy`: Scientific computing
 - `easyunfold`: For mapping the electronic band structure from supercell calculation back to the primitive cell
+- `sumo`: For plotting electronic and phonon bandstructures/DOS
 
 ## Overview
 
@@ -149,3 +150,4 @@ An example of such plot is shown below:
 - Phonopy documentation: https://phonopy.github.io/
 - PyMatGen: https://pymatgen.org/
 - easyunfold: https://github.com/SMTG-Bham/easyunfold
+- sumo: https://smtg-bham.github.io/sumo/index.html
