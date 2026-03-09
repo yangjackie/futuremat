@@ -340,7 +340,10 @@ def unfold_band_structrure_workflow(primitive_folder: str = None, supercell_fold
 
     from core.phonon.eph.plotter import plot_primitive_and_unfolded_super_cell_band_structrue
 
-    plot_primitive_and_unfolded_super_cell_band_structrue(primitive_path=primitive_folder, supercell_path=supercell_folder + "/band_structure")
+    output_dict = plot_primitive_and_unfolded_super_cell_band_structrue(primitive_path=primitive_folder, supercell_path=supercell_folder + "/band_structure")
+    import pickle
+
+    pickle.dump(output_dict, open(os.path.join(os.getcwd(), "band_extrema.pkl"), "wb"))
     return
 
 

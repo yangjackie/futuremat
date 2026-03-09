@@ -2,6 +2,7 @@ from sumo.cli.bandplot import bandplot
 from easyunfold.unfold import UnfoldKSet, Unfold
 import argparse
 import os
+from pymatgen.io.vasp import Vasprun
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,13 +16,23 @@ def plot_primitive_and_unfolded_super_cell_band_structrue(
     """Plot the primitive cell band structure and unfolded supercell band structure together.
     Args:
         primitive_path (str): Path to the primitive cell band structure directory.
-        supercell_path (str): Path to the supercell band structure directory.
+        supercell_path (str): Path to the supercell band structure directory..
+
+    Returns:
+        dict: A dictionary containing the VBM and CBM energies and k points for both the primitive cell and the unfolded supercell band structure.
     """
     supercell_path = os.path.abspath(supercell_path)
     primitive_path = os.path.abspath(primitive_path)
 
     # primitive cell band structure
     __prim_xml = "{}/vasprun.xml".format(primitive_path)
+
+    vr = Vasprun(__prim_xml, parse_projected_eigen=False)
+    bs = vr.get_band_structure(kpoints_filename=None, line_mode=False)
+    vbm = bs.get_vbm()  # VBM info dict
+    cbm = bs.get_cbm()  # CBM info dict
+    print("VBM energy for primitive cell: ", vbm["energy"], " at k point: ", vbm["kpoint"].frac_coords)
+    print("CBM energy for primitive cell: ", cbm["energy"], " at k point: ", cbm["kpoint"].frac_coords)
 
     # using the pymatgen BSPlotter to plot and save the band structure for the primitive cell
     import matplotlib.pyplot as plt
@@ -32,7 +43,7 @@ def plot_primitive_and_unfolded_super_cell_band_structrue(
     # so it can be aligned with the primitive cell band structure (here assume the supercell is
     # still a semiconductor so we set the zero energy at VBM!)
     unfold = Unfold(M=2 * np.eye(3), fname="{}/WAVECAR".format(supercell_path))  # assuming the supercell is 2x2x2 of the primitive cell
-    zero_energy, _ = unfold.get_vbm_cbm()
+    vbm_unfold, cbm_unfold = unfold.get_vbm_cbm()
 
     # unfolded super cell band structure
     unfoled_json = "{}/easyunfold.json".format(os.getcwd())
@@ -47,12 +58,33 @@ def plot_primitive_and_unfolded_super_cell_band_structrue(
     for counter, dis in enumerate(__distances):
         for w_for_this_dis in __weights[counter][0][0]:
             x.append(dis)
-            y.append(w_for_this_dis[0] - zero_energy)  # only one band for phonon
+            y.append(w_for_this_dis[0] - vbm_unfold)  # only one band for phonon
             w.append(w_for_this_dis[1])  # spectral weight
+
+            # get the band extrema and k points for the unfolded band structure.
+            if w_for_this_dis[0] == vbm_unfold:
+                vmb_kpt_unfold = unfold_kset.as_dict()["kpts_pc"][counter]
+
+            elif w_for_this_dis[0] == cbm_unfold:
+                cbm_kpt_unfold = unfold_kset.as_dict()["kpts_pc"][counter]
+
+    print("VBM energy for supercell: ", vbm_unfold, " at k point: ", vmb_kpt_unfold)
+    print("CBM energy for supercell: ", cbm_unfold, " at k point: ", cbm_kpt_unfold)
 
     plt.scatter(x, y, c="r", s=[weight * 2.5 for weight in w], alpha=0.5, label="Unfolded Supercell Band Structure")
     plt.tight_layout()
     plt.savefig(os.getcwd() + "/primitive_band_structure_sc.png", dpi=300)
+
+    return {
+        "vbm_primitive_energy": vbm["energy"],
+        "vbm_primitive_kpoint": vbm["kpoint"].frac_coords,
+        "cbm_primitive_energy": cbm["energy"],
+        "cbm_primitive_kpoint": cbm["kpoint"].frac_coords,
+        "vbm_unfold_energy": vbm_unfold,
+        "vbm_unfold_kpoint": vmb_kpt_unfold,
+        "cbm_unfold_energy": cbm_unfold,
+        "cbm_unfold_kpoint": cbm_kpt_unfold,
+    }
 
 
 if __name__ == "__main__":
@@ -76,7 +108,7 @@ if __name__ == "__main__":
     if args.plot_overlayed_band_structrue:
         plot_primitive_and_unfolded_super_cell_band_structrue(primitive_path=args.primitive, supercell_path=args.supercell)
     elif args.plot_phonon_band_structure:
-        from core.phonon.phonon_plotter import prepare_and_plot_single_phonon_band_structure
+        from core.phonon.plotter import prepare_and_plot_single_phonon_band_structure
 
         print("Plotting phonon band structure..., do we include NAC?", args.non_analytical_correction)
         prepare_and_plot_single_phonon_band_structure(

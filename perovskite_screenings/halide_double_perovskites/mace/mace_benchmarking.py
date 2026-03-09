@@ -10,7 +10,7 @@ from phonopy.structure.atoms import PhonopyAtoms
 import os
 import pickle
 
-from core.phonon.phonon_plotter import prepare_and_plot_phonon_band_dft_vs_mlff
+from core.phonon.plotter import prepare_and_plot_phonon_band_dft_vs_mlff
 
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
@@ -59,33 +59,18 @@ class Benchmarking:
     @property
     def calculator(self):
         if not hasattr(self, "_calculator") or self._calculator is None:
-            self._calculator = mace_mp(
-                model=self.mace_model_path + self.mace_model_name, device="cpu"
-            )
+            self._calculator = mace_mp(model=self.mace_model_path + self.mace_model_name, device="cpu")
         return self._calculator
 
     def benchmark_frequencies(self):
         _cwd = os.getcwd()
         os.chdir(self.path)
         _system_cwd = os.getcwd()
-        all_compounds = list(
-            sorted(
-                [d for d in os.listdir() if os.path.isdir(d) and d.startswith("dpv_")]
-            )
-        )
+        all_compounds = list(sorted([d for d in os.listdir() if os.path.isdir(d) and d.startswith("dpv_")]))
 
         for comp in all_compounds:
             print(f"Processing {comp}...")
-            filename = (
-                _system_cwd
-                + "/"
-                + comp
-                + "/"
-                + comp
-                + "_dft_mlff_phonon_"
-                + self.mace_model_name.replace(".model", "")
-                + ".pdf"
-            )
+            filename = _system_cwd + "/" + comp + "/" + comp + "_dft_mlff_phonon_" + self.mace_model_name.replace(".model", "") + ".pdf"
 
             try:
                 return_dict = prepare_and_plot_phonon_band_dft_vs_mlff(
@@ -97,12 +82,7 @@ class Benchmarking:
                 )
 
                 with open(
-                    _system_cwd
-                    + "/"
-                    + comp
-                    + "/phonon_data_"
-                    + str(self.mace_model_name.replace(".model", ""))
-                    + ".pkl",
+                    _system_cwd + "/" + comp + "/phonon_data_" + str(self.mace_model_name.replace(".model", "")) + ".pkl",
                     "wb",
                 ) as f:
                     pickle.dump(return_dict, f)
@@ -129,21 +109,11 @@ class Benchmarking:
                 path = f"{self.directory}{system}/"
                 # get all the compounds in this system
                 os.chdir(path)
-                all_compounds = list(
-                    sorted(
-                        [
-                            d
-                            for d in os.listdir()
-                            if os.path.isdir(d) and d.startswith("dpv_")
-                        ]
-                    )
-                )
+                all_compounds = list(sorted([d for d in os.listdir() if os.path.isdir(d) and d.startswith("dpv_")]))
                 for comp in all_compounds:
                     os.chdir(comp + "/")
                     print(f"Processing {comp}: {model} .....")
-                    pickle_name = (
-                        "phonon_data_" + str(model.replace(".model", "")) + ".pkl"
-                    )
+                    pickle_name = "phonon_data_" + str(model.replace(".model", "")) + ".pkl"
                     if os.path.isfile(pickle_name):
                         with open(pickle_name, "rb") as f:
                             phonon_data = pickle.load(f)
@@ -155,34 +125,15 @@ class Benchmarking:
 
                         _dft_frequencies = np.ndarray.flatten(np.array(dft_frequencies))
                         _dft_frequencies = _dft_frequencies.astype(complex)
-                        _dft_frequencies[_dft_frequencies < 0] = 1j * np.abs(
-                            _dft_frequencies[_dft_frequencies < 0]
-                        )
+                        _dft_frequencies[_dft_frequencies < 0] = 1j * np.abs(_dft_frequencies[_dft_frequencies < 0])
 
-                        _mace_frequencies = np.ndarray.flatten(
-                            np.array(mace_frequencies)
-                        )
+                        _mace_frequencies = np.ndarray.flatten(np.array(mace_frequencies))
                         _mace_frequencies = _mace_frequencies.astype(complex)
-                        _mace_frequencies[_mace_frequencies < 0] = 1j * np.abs(
-                            _mace_frequencies[_mace_frequencies < 0]
-                        )
+                        _mace_frequencies[_mace_frequencies < 0] = 1j * np.abs(_mace_frequencies[_mace_frequencies < 0])
 
-                        stdev_freq = np.real(
-                            np.sqrt(
-                                np.average(
-                                    np.square(
-                                        np.square(_mace_frequencies)
-                                        - np.square(_dft_frequencies)
-                                    )
-                                )
-                            )
-                        )
+                        stdev_freq = np.real(np.sqrt(np.average(np.square(np.square(_mace_frequencies) - np.square(_dft_frequencies)))))
 
-                        stdev_vel = np.sqrt(
-                            np.average(
-                                np.square(dft_group_velocities - mace_group_velocities)
-                            )
-                        )
+                        stdev_vel = np.sqrt(np.average(np.square(dft_group_velocities - mace_group_velocities)))
                         all_data[model][system]["stdev_freq"].append(stdev_freq)
                         all_data[model][system]["stdev_vel"].append(stdev_vel)
                     os.chdir("../..")
@@ -190,9 +141,7 @@ class Benchmarking:
 
         # making the box plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-        flierprops = dict(
-            marker="+", markeredgecolor="#6FB98F", markersize=5, alpha=0.5
-        )
+        flierprops = dict(marker="+", markeredgecolor="#6FB98F", markersize=5, alpha=0.5)
         positions = [
             1,
             2,
@@ -294,11 +243,7 @@ class Benchmarking:
         _cwd = os.getcwd()
         os.chdir(self.path)
         _system_cwd = os.getcwd()
-        all_compounds = list(
-            sorted(
-                [d for d in os.listdir() if os.path.isdir(d) and d.startswith("dpv_")]
-            )
-        )
+        all_compounds = list(sorted([d for d in os.listdir() if os.path.isdir(d) and d.startswith("dpv_")]))
 
         stdev_frequencies = []
         stdev_velocities = []
@@ -326,11 +271,7 @@ class Benchmarking:
                 continue
 
             os.chdir(_system_cwd + "/" + comp + "/")
-            pickle_name = (
-                "phonon_data_"
-                + str(self.mace_model_name.replace(".model", ""))
-                + ".pkl"
-            )
+            pickle_name = "phonon_data_" + str(self.mace_model_name.replace(".model", "")) + ".pkl"
             if os.path.isfile(pickle_name):
                 print(f"Loading phonon data for {comp}...")
 
@@ -344,30 +285,15 @@ class Benchmarking:
 
                 _dft_frequencies = np.ndarray.flatten(np.array(dft_frequencies))
                 _dft_frequencies = _dft_frequencies.astype(complex)
-                _dft_frequencies[_dft_frequencies < 0] = 1j * np.abs(
-                    _dft_frequencies[_dft_frequencies < 0]
-                )
+                _dft_frequencies[_dft_frequencies < 0] = 1j * np.abs(_dft_frequencies[_dft_frequencies < 0])
 
                 _mace_frequencies = np.ndarray.flatten(np.array(mace_frequencies))
                 _mace_frequencies = _mace_frequencies.astype(complex)
-                _mace_frequencies[_mace_frequencies < 0] = 1j * np.abs(
-                    _mace_frequencies[_mace_frequencies < 0]
-                )
+                _mace_frequencies[_mace_frequencies < 0] = 1j * np.abs(_mace_frequencies[_mace_frequencies < 0])
 
-                stdev_freq = np.real(
-                    np.sqrt(
-                        np.average(
-                            np.square(
-                                np.square(_mace_frequencies)
-                                - np.square(_dft_frequencies)
-                            )
-                        )
-                    )
-                )
+                stdev_freq = np.real(np.sqrt(np.average(np.square(np.square(_mace_frequencies) - np.square(_dft_frequencies)))))
 
-                vel_stdev = np.sqrt(
-                    np.average(np.square(dft_group_velocities - mace_group_velocities))
-                )
+                vel_stdev = np.sqrt(np.average(np.square(dft_group_velocities - mace_group_velocities)))
                 stdev_frequencies.append(stdev_freq)
                 stdev_velocities.append(vel_stdev)
 
@@ -470,9 +396,7 @@ class MACEMolecularDynamicsRunner(object):
     @property
     def calculator(self):
         if not hasattr(self, "_calculator") or self._calculator is None:
-            self._calculator = mace_mp(
-                model=self.mace_model_path + self.mace_model_name, device="cpu"
-            )
+            self._calculator = mace_mp(model=self.mace_model_path + self.mace_model_name, device="cpu")
         return self._calculator
 
     def initialise_structure(self, poscar_path: str = None):
@@ -497,9 +421,7 @@ class MACEMolecularDynamicsRunner(object):
         for i in range(10):
             if "vasprun_prod_" + str(i) + ".xml" in _xml_path:
                 target = "vasprun_prod_" + str(i) + ".xml"
-        self.trajectory_file = _xml_path.replace(
-            target, "trajectory-" + self.mace_model_name.replace(".model", "") + ".traj"
-        )
+        self.trajectory_file = _xml_path.replace(target, "trajectory-" + self.mace_model_name.replace(".model", "") + ".traj")
 
     def equilibrate_structure(self):
         # doesnt work
@@ -541,9 +463,7 @@ class MACEMolecularDynamicsRunner(object):
 
         # Step 1 Initialise the velocities according to the target temperature
         start_time = time.time()
-        MaxwellBoltzmannDistribution(
-            self.structure, temperature_K=self.target_temperature
-        )
+        MaxwellBoltzmannDistribution(self.structure, temperature_K=self.target_temperature)
         # Step 2 Define the Andersen thermostat
         dyn = Andersen(
             self.structure,
@@ -575,9 +495,7 @@ class MACEMolecularDynamicsRunner(object):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Benchmarking MACE model for halide double perovskites."
-    )
+    parser = argparse.ArgumentParser(description="Benchmarking MACE model for halide double perovskites.")
     parser.add_argument(
         "--system",
         type=str,
@@ -589,18 +507,14 @@ if __name__ == "__main__":
         action="store_true",
         help="Run the benchmarking of frequencies.",
     )
-    parser.add_argument(
-        "--plot_freq", action="store_true", help="Plot the frequency data."
-    )
+    parser.add_argument("--plot_freq", action="store_true", help="Plot the frequency data.")
     parser.add_argument(
         "--summary_plot",
         action="store_true",
         help="Plot the summary of frequency data.",
     )
     parser.add_argument("--model_name", type=str, default="mace-mp-0b3-medium.model")
-    parser.add_argument(
-        "--md", action="store_true", help="Run MD simulations with MACE model."
-    )
+    parser.add_argument("--md", action="store_true", help="Run MD simulations with MACE model.")
     parser.add_argument(
         "--md_run_this",
         action="store_true",
@@ -613,9 +527,7 @@ if __name__ == "__main__":
         help="Run MD simulations with MACE model for this system.",
     )
 
-    parser.add_argument(
-        "--nsteps", type=int, default=10000, help="Number of steps to run."
-    )
+    parser.add_argument("--nsteps", type=int, default=10000, help="Number of steps to run.")
     args = parser.parse_args()
 
     import warnings
@@ -632,13 +544,9 @@ if __name__ == "__main__":
             benchmark.plot_cumulative_mace_statistics()
     else:
         if args.md_run_this:
-            md_runner = MACEMolecularDynamicsRunner(
-                mace_model_name=args.model_name, production_steps=args.nsteps
-            )
+            md_runner = MACEMolecularDynamicsRunner(mace_model_name=args.model_name, production_steps=args.nsteps)
             # md_runner.initialise_structure(poscar_path=os.getcwd()+'/SPOSCAR')
-            md_runner.initialise_structure_from_xml(
-                xml_path=os.getcwd() + "/MD/vasprun_prod_2.xml"
-            )
+            md_runner.initialise_structure_from_xml(xml_path=os.getcwd() + "/MD/vasprun_prod_2.xml")
             md_runner.andersen_thermostat_nvt()
         else:
             import glob
@@ -657,22 +565,10 @@ if __name__ == "__main__":
             for id, directory in enumerate(list(sorted(all_directories))):
                 os.chdir(directory)
                 print("\n")
-                print(
-                    ">>>>>> Working directory: "
-                    + os.getcwd().split("/")[-1]
-                    + " <<<<<<"
-                )
-                print(
-                    "......................"
-                    + str(id + 1)
-                    + "/"
-                    + str(len(all_directories))
-                    + "......................"
-                )
+                print(">>>>>> Working directory: " + os.getcwd().split("/")[-1] + " <<<<<<")
+                print("......................" + str(id + 1) + "/" + str(len(all_directories)) + "......................")
 
-                md_runner = MACEMolecularDynamicsRunner(
-                    mace_model_name=args.model_name, production_steps=args.nsteps
-                )
+                md_runner = MACEMolecularDynamicsRunner(mace_model_name=args.model_name, production_steps=args.nsteps)
 
                 for run_id in range(2):  # run 2 different MD trajectories
                     # check if this has been run before.
@@ -692,13 +588,7 @@ if __name__ == "__main__":
                         + " <<"
                     )
                     run_this = True
-                    trajectory_file = (
-                        "andersen_md_"
-                        + args.model_name.replace(".model", "")
-                        + "_run_"
-                        + str(run_id + 1)
-                        + ".traj"
-                    )
+                    trajectory_file = "andersen_md_" + args.model_name.replace(".model", "") + "_run_" + str(run_id + 1) + ".traj"
                     if os.path.exists(os.getcwd() + "/" + trajectory_file):
                         from ase.io import read as ase_read
 
@@ -721,15 +611,11 @@ if __name__ == "__main__":
                             md_runner.initialise_structure_from_xml(xml_path=xml_path)
                         except:
                             try:
-                                md_runner.initialise_structure_from_xml(
-                                    xml_path=os.getcwd() + "/MD/vasprun_prod_2.xml"
-                                )
+                                md_runner.initialise_structure_from_xml(xml_path=os.getcwd() + "/MD/vasprun_prod_2.xml")
                             except:
                                 run_this = False
                         if run_this:
-                            md_runner.andersen_thermostat_nvt(
-                                trajectory_file=trajectory_file
-                            )
+                            md_runner.andersen_thermostat_nvt(trajectory_file=trajectory_file)
 
                 os.chdir(sys_cwd)
             os.chdir(cwd)
