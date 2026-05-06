@@ -10,6 +10,9 @@ from pymatgen.io.vasp.inputs import Incar, Kpoints
 from pymatgen.core.structure import Structure
 from pymatgen.io.vasp.outputs import Vasprun
 
+import phonopy
+from phonopy.interface.vasp import write_vasp
+
 import shutil, copy
 import logging
 
@@ -347,6 +350,75 @@ def unfold_band_structrure_workflow(primitive_folder: str = None, supercell_fold
     return
 
 
+class PhononStructureModulator(object):
+
+    @property
+    def unitcell_filename(self):
+        return self._unitcell_filename
+
+    @property
+    def supercell(self):
+        return self._supercell
+
+    @property
+    def force_constants_filename(self):
+        return self._force_constants_filename
+
+    @property
+    def born_filename(self):
+        return self._born_filename
+
+    @property
+    def phonon(self):
+        if not hasattr(self, "_phonon"):
+            self._phonon = phonopy.load(
+                unitcell_filename=self.unitcell_filename,
+                supercell_matrix=self.supercell,
+                force_constants_filename=self.force_constants_filename,
+                born_filename=self.born_filename,
+            )
+        return self._phonon
+
+    @unitcell_filename.setter
+    def unitcell_filename(self, filename):
+        assert isinstance(filename, str), "filename should be a string"
+        assert os.path.isfile(filename), "filename should be a valid file path"
+        self._unitcell_filename = filename
+
+    @supercell.setter
+    def supercell(self, supercell):
+        assert len(supercell) == 3, "supercell should be a list of 3 integers"
+        self._supercell = supercell
+
+    @force_constants_filename.setter
+    def force_constants_filename(self, filename):
+        if filename is not None:
+            assert isinstance(filename, str), "filename should be a string"
+            assert os.path.isfile(filename), "filename should be a valid file path"
+        else:
+            filename = "force_constants.hdf5"  # default filename for phonopy force constants
+        self._force_constants_filename = filename
+
+    @born_filename.setter
+    def born_filename(self, filename):
+        if filename is not None:
+            assert isinstance(filename, str), "filename should be a string"
+            assert os.path.isfile(filename), "filename should be a valid file path"
+        else:
+            filename = "BORN"  # default filename for phonopy born effective charges and dielectric tensor
+        self._born_filename = filename
+
+    def generate_one_modulated_structure(self, q=[0, 0, 0], mode_index=0, amplitude=0.01, phase=0.0, output_filename="modulated_structure.poscar"):
+        self.phonon.run_modulations(
+            dimension=self.supercell,
+            phonon_modes=[[q, mode_index, amplitude, phase]],
+        )
+
+        modulated_cell = self.phonon.get_modulated_supercells()
+        modulated_cell = modulated_cell[0]  # get the first (and only) modulated structure
+        write_vasp(output_filename, modulated_cell)
+
+
 if __name__ == "__main__":
     args = eph_coupling_module_args()
     logger = setup_logger_local(args)
@@ -406,3 +478,25 @@ if __name__ == "__main__":
             supercell_folder=os.getcwd(),
             matrix="2 2 2",
         )
+
+    elif args.calculate_modulation:
+        modulator = PhononStructureModulator()
+        modulator.unitcell_filename = args.unit_cell_structure_file
+        modulator.supercell = [2, 2, 2]
+        modulator.force_constants_filename = args.fc_file
+        modulator.born_filename = args.born_file
+        # modulator.generate_one_modulated_structure(q=[0, 0, 0], mode_index=1, amplitude=0.01, phase=0.0, output_filename="modulated_structure.poscar")
+
+        for i, amplitude in enumerate([0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]):
+            if not os.path.exists(f"modulated_structure_{i}"):
+                os.mkdir(f"modulated_structure_{i}")
+            os.chdir(f"modulated_structure_{i}")
+            modulator.generate_one_modulated_structure(q=[0, 0, 0], mode_index=0, amplitude=amplitude, phase=0.0, output_filename=f"POSCAR")
+
+            unfold_band_structrure_workflow(
+                primitive_folder="../band_structure",
+                supercell_folder=os.getcwd(),
+                matrix="2 2 2",
+            )
+
+            os.chdir("..")

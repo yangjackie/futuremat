@@ -47,5 +47,15 @@ def eph_coupling_module_args():
                         help="Number of k-points for band structure calculation.")
     parser.add_argument("-gpu", "--use_gpu", action="store_true", 
                         help="Use GPU for VASP calculation.")
+    
+    # something for modulation calculations
+
+    parser.add_argument("-mod", "--calculate_modulation", action="store_true",
+                        help="Generate modulated structure for electron-phonon coupling.")
+    parser.add_argument("-fc", "--fc_file", type=str, default="force_constants.hdf5",
+                        help="Path to the force constants file for modulation calculations.")
+    parser.add_argument("-born_file", "--born_file", type=str, default="BORN",
+                        help="Path to the Born effective charges file for phonon properties.")
+
 
     return parser.parse_args()
